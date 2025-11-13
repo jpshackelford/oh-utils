@@ -11,8 +11,9 @@ A Python utility to interact with the OpenHands Cloud API for managing conversat
 
 ## Prerequisites
 
-- Python 3.6 or higher
-- `requests` library (usually included with Python)
+- Python 3.8 or higher
+- `requests` library
+- `uv` (recommended) or `pip`
 
 ## Setup
 
@@ -21,16 +22,37 @@ A Python utility to interact with the OpenHands Cloud API for managing conversat
    - Click "Create API Key"
    - Give it a descriptive name and copy the generated key
 
-2. Make the utility executable:
+2. Install the package (from the parent `oh-utils` directory):
    ```bash
-   chmod +x openhands_utility.py
+   # Using uv (recommended)
+   uv pip install -e .
+   
+   # Or using pip
+   pip install -e .
    ```
 
 ## Usage
 
-Run the utility:
+### Using uv (Recommended)
+
+Run directly without installation:
 ```bash
-python3 openhands_utility.py
+cd oh-utils
+uv run oh-conversation-downloader
+```
+
+### Using Installed Command
+
+After installation:
+```bash
+oh-conversation-downloader
+```
+
+### Direct Script Execution
+
+You can also run the script directly:
+```bash
+python3 openhands_api_utility/openhands_utility.py
 ```
 
 ### First Run

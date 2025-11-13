@@ -2,53 +2,66 @@
 
 A collection of utilities for working with OpenHands (formerly All-Hands-AI / OpenDevin) API and conversations.
 
+## Installation
+
+### Using uv (Recommended)
+
+Install using uv:
+```bash
+uv pip install -e .
+```
+
+Or run directly without installation:
+```bash
+uv run oh-conversation-downloader
+```
+
+### Using pip
+
+```bash
+pip install -e .
+```
+
 ## Utilities
 
-### [Conversation Downloader](./conversation-downloader/)
+### OpenHands API Utility / Conversation Downloader
 
 A Python utility for downloading conversations and workspace files from the OpenHands Cloud API.
 
 **Features:**
+- Secure API key management
 - List all conversations with pagination
-- Download workspace files to ZIP archives
-- Two modes: full workspace or changed files only
-- Interactive CLI interface
+- Download workspace archives
+- Download changed files from conversations
+- Interactive command-line interface
 - Secure token storage
 - Rate limit handling
 
 **Quick Start:**
+
+Using uv (recommended):
 ```bash
-cd conversation-downloader
-pip install -r requirements.txt
-./openhands_conversation_downloader.py
-```
-
-### [OpenHands API Utility](./openhands-api-utility/)
-
-A Python utility for managing OpenHands conversations via the API (if present).
-
-**Features:**
-- Secure API key management
-- List and browse conversations with pagination
-- Download workspace archives
-- Download changed files from conversations
-- Interactive command-line interface
-
-See the specific utility directory for detailed usage instructions.
-
-## Installation
-
-```bash
-git clone https://github.com/jpshackelford/oh-utils.git
+# Run directly from the project directory
 cd oh-utils
+uv run oh-conversation-downloader
 ```
 
-Each utility has its own directory with specific requirements and documentation.
+Or after installation:
+```bash
+oh-conversation-downloader  # If installed in your PATH
+```
+
+Traditional method:
+```bash
+python3 openhands_api_utility/openhands_utility.py
+```
+
+See the [OpenHands API Utility README](./openhands_api_utility/README.md) for detailed usage instructions.
 
 ## Requirements
 
-- Python 3.7+
-- requests >= 2.31.0
+- Python 3.8+
+- requests >= 2.25.0
 
 ## API Access
 
