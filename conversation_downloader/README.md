@@ -18,10 +18,20 @@ A Python utility to download conversations and their workspace files from the Op
 
 ## Installation
 
+### Using uv (Recommended)
+
+From the parent `oh-utils` directory:
+```bash
+# Run directly without installation
+uv run oh-conversation-downloader-cloud
+```
+
+### Traditional Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/jpshackelford/oh-utils.git
-cd oh-utils/conversation-downloader
+cd oh-utils/conversation_downloader
 
 # Install dependencies
 pip install -r requirements.txt
@@ -32,13 +42,24 @@ chmod +x openhands_conversation_downloader.py
 
 ## Usage
 
-```bash
-# Run the utility
-./openhands_conversation_downloader.py
+### Using uv (Recommended)
 
-# On first run, you'll be prompted for your API token
-# Get your token from: https://app.all-hands.dev/settings/api-keys
+```bash
+cd oh-utils
+uv run oh-conversation-downloader-cloud
 ```
+
+### Direct Execution
+
+```bash
+cd conversation_downloader
+./openhands_conversation_downloader.py
+# Or
+python3 openhands_conversation_downloader.py
+```
+
+On first run, you'll be prompted for your API token.  
+Get your token from: https://app.all-hands.dev/settings/api-keys
 
 ### Workflow
 
