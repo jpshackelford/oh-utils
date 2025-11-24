@@ -126,7 +126,7 @@ def interactive_mode():
 @click.argument('conversation_id_or_number')
 @click.option('--server', help='Server name to use (defaults to configured default)')
 def wake(conversation_id_or_number, server):
-    """Wake up a conversation by ID or number from the list."""
+    """Wake up a conversation by ID (full or partial), or number from the list."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
     
@@ -156,9 +156,34 @@ def wake(conversation_id_or_number, server):
             title = conv_data.get('title', 'Untitled')
             
         except ValueError:
-            # It's a conversation ID string
+            # It's a conversation ID string - could be full or partial
             conv_id = conversation_id_or_number
-            title = f"Conversation {conv_id[:8]}..."
+            
+            # If it's a short ID (8 chars or less), try to find a matching conversation
+            if len(conv_id) <= 8:
+                result = api.search_conversations(limit=100)
+                conversations = result.get('results', [])
+                
+                matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
+                
+                if not matches:
+                    click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
+                    return
+                elif len(matches) > 1:
+                    click.echo(f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:", err=True)
+                    for match in matches[:5]:  # Show first 5 matches
+                        match_id = match.get('conversation_id', '')
+                        match_title = match.get('title', 'Untitled')[:40]
+                        click.echo(f"  {match_id} - {match_title}")
+                    return
+                else:
+                    # Single match found
+                    conv_data = matches[0]
+                    conv_id = conv_data.get('conversation_id')
+                    title = conv_data.get('title', 'Untitled')
+            else:
+                # Full conversation ID
+                title = f"Conversation {conv_id[:8]}..."
         
         click.echo(f"Waking up conversation: {title}")
         
