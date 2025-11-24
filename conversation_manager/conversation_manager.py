@@ -135,9 +135,15 @@ class OpenHandsAPI:
     def start_conversation(self, conversation_id: str) -> Dict:
         """Start/wake up a conversation"""
         url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/start")
-        response = self.session.post(url)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = self.session.post(url)
+            if response.status_code != 200:
+                error_detail = f"HTTP {response.status_code}: {response.text}"
+                raise Exception(error_detail)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
 
 
 class APIKeyManager:
@@ -412,9 +418,14 @@ class ConversationManager:
                 # Refresh to get updated status
                 self.refresh_conversations()
             except Exception as e:
-                print(f"✗ Failed to wake conversation: {e}")
+                error_msg = f"✗ Failed to wake conversation: {e}"
+                print(error_msg)
+                print(f"Conversation ID: {conv.id}")
+                print(f"Conversation Title: {conv.formatted_title()}")
+                input("Press Enter to continue...")
         else:
             print(f"Invalid conversation number: {conv_number}")
+            input("Press Enter to continue...")
     
     def show_conversation_details(self, conv_number: int):
         """Show detailed information about a conversation"""
