@@ -11,7 +11,7 @@ from .config import ConfigManager
 
 
 @click.group()
-def server():
+def server() -> None:
     """Manage OpenHands server configurations."""
     pass
 
@@ -21,7 +21,7 @@ def server():
 @click.option("--url", help="Server API URL")
 @click.option("--apikey", help="API key")
 @click.option("--default", is_flag=True, help="Set as default server")
-def add(name, url, apikey, default):
+def add(name: str, url: str, apikey: str, default: bool) -> None:
     """Add a new server configuration."""
     config_manager = ConfigManager()
 
@@ -61,22 +61,25 @@ def add(name, url, apikey, default):
                 click.echo("✓ Connection successful")
             except Exception as e:
                 click.echo(
-                    f"⚠ Connection partially successful but API key may have limited permissions: {e}"
+                    f"⚠ Connection partially successful but API key may have limited "
+                    f"permissions: {e}"
                 )
                 if not click.confirm("Save server configuration anyway?"):
-                    raise click.Abort()
+                    raise click.Abort() from None
 
     except Exception as e:
         click.echo(f"✗ Connection failed: {e}", err=True)
         if not click.confirm("Save server configuration anyway?"):
-            raise click.Abort()
+            raise click.Abort() from None
 
     # Check if server name already exists
     existing_servers = config_manager.list_servers()
-    if name in existing_servers:
-        if not click.confirm(f"Server '{name}' already exists. Overwrite?"):
-            click.echo("Operation cancelled.")
-            return
+    if (
+        name in existing_servers
+        and not click.confirm(f"Server '{name}' already exists. Overwrite?")
+    ):
+        click.echo("Operation cancelled.")
+        return
 
     # Save configuration
     try:
@@ -87,11 +90,11 @@ def add(name, url, apikey, default):
         click.echo(success_msg)
     except Exception as e:
         click.echo(f"✗ Failed to save server configuration: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @server.command()
-def list():
+def list() -> None:
     """List all configured servers."""
     config_manager = ConfigManager()
     servers = config_manager.list_servers()
@@ -112,7 +115,7 @@ def list():
 @server.command()
 @click.argument("name")
 @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
-def delete(name, force):
+def delete(name: str, force: bool) -> None:
     """Delete a server configuration."""
     config_manager = ConfigManager()
 
@@ -140,7 +143,7 @@ def delete(name, force):
 
 @server.command("set-default")
 @click.argument("name")
-def set_default(name):
+def set_default(name: str) -> None:
     """Set a server as the default."""
     config_manager = ConfigManager()
 
@@ -163,7 +166,7 @@ def set_default(name):
 
 @server.command()
 @click.argument("name", required=False)
-def test(name):
+def test(name: str) -> None:
     """Test connection to a server."""
     config_manager = ConfigManager()
 
