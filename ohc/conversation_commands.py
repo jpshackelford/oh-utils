@@ -12,12 +12,12 @@ from .api import OpenHandsAPI
 
 
 @click.group()
-def conversations():
+def conv():
     """Manage OpenHands conversations."""
     pass
 
 
-@conversations.command()
+@conv.command()
 @click.option('--server', help='Server name to use (defaults to configured default)')
 @click.option('--limit', default=20, help='Number of conversations to list')
 def list(server, limit):
@@ -36,7 +36,7 @@ def list(server, limit):
     
     try:
         result = api.search_conversations(limit=limit)
-        conversations = result.get('conversations', [])
+        conversations = result.get('results', [])  # API returns 'results' not 'conversations'
         
         if not conversations:
             click.echo("No conversations found.")
@@ -122,11 +122,11 @@ def interactive_mode():
         sys.exit(1)
 
 
-@conversations.command()
-@click.argument('conversation_number', type=int)
+@conv.command()
+@click.argument('conversation_id_or_number')
 @click.option('--server', help='Server name to use (defaults to configured default)')
-def wake(conversation_number, server):
-    """Wake up a conversation by number."""
+def wake(conversation_id_or_number, server):
+    """Wake up a conversation by ID or number from the list."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
     
@@ -140,17 +140,25 @@ def wake(conversation_number, server):
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
     
     try:
-        # First get the list of conversations to find the one at the specified number
-        result = api.search_conversations(limit=100)  # Get more to ensure we find the right one
-        conversations = result.get('conversations', [])
-        
-        if conversation_number < 1 or conversation_number > len(conversations):
-            click.echo(f"✗ Invalid conversation number. Available: 1-{len(conversations)}", err=True)
-            return
-        
-        conv_data = conversations[conversation_number - 1]
-        conv_id = conv_data.get('conversation_id')
-        title = conv_data.get('title', 'Untitled')
+        # Check if input is a number or a conversation ID
+        try:
+            conversation_number = int(conversation_id_or_number)
+            # It's a number, so we need to get the list and find the conversation
+            result = api.search_conversations(limit=100)
+            conversations = result.get('results', [])  # API returns 'results' not 'conversations'
+            
+            if conversation_number < 1 or conversation_number > len(conversations):
+                click.echo(f"✗ Invalid conversation number. Available: 1-{len(conversations)}", err=True)
+                return
+            
+            conv_data = conversations[conversation_number - 1]
+            conv_id = conv_data.get('conversation_id')
+            title = conv_data.get('title', 'Untitled')
+            
+        except ValueError:
+            # It's a conversation ID string
+            conv_id = conversation_id_or_number
+            title = f"Conversation {conv_id[:8]}..."
         
         click.echo(f"Waking up conversation: {title}")
         

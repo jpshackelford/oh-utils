@@ -42,10 +42,10 @@ def main():
     """Entry point for the ohc CLI."""
     # Import commands here to avoid circular imports
     from .server_commands import server
-    from .conversation_commands import conversations
+    from .conversation_commands import conv
     
     cli.add_command(server)
-    cli.add_command(conversations)
+    cli.add_command(conv)
     cli.add_command(help_command, name='help')
     
     cli()
