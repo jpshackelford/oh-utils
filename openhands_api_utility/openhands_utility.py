@@ -68,10 +68,14 @@ class OpenHandsAPI:
         response.raise_for_status()
         return response.json()
     
-    def download_workspace_archive(self, conversation_id: str) -> bytes:
-        """Download workspace archive as zip"""
-        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/zip-directory")
-        response = self.session.get(url)
+    def download_workspace_archive(self, conversation_id: str, runtime_id: str, session_api_key: str) -> bytes:
+        """Download workspace archive as zip from runtime URL"""
+        # Use runtime URL pattern for workspace downloads
+        runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+        url = f"{runtime_url}/api/conversations/{conversation_id}/zip-directory"
+        
+        headers = {'X-Session-API-Key': session_api_key}
+        response = self.session.get(url, headers=headers)
         response.raise_for_status()
         return response.content
     
