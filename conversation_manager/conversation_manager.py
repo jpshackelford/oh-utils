@@ -151,12 +151,27 @@ class OpenHandsAPI:
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
     
-    def get_conversation_changes(self, conversation_id: str) -> List[Dict[str, str]]:
+    def get_conversation_changes(self, conversation_id: str, runtime_id: str = None, session_api_key: str = None) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation"""
-        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/git/changes")
+        if runtime_id:
+            # Use runtime URL for active conversations
+            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/git/changes")
+            
+            # Use session API key for runtime requests
+            headers = {}
+            if session_api_key:
+                headers['X-Session-API-Key'] = session_api_key
+            else:
+                # Fallback to regular authorization
+                headers['Authorization'] = f'Bearer {self.api_key}'
+        else:
+            # Fallback to main app URL (though this likely won't work for git changes)
+            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/git/changes")
+            headers = {}
         
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, headers=headers)
             if response.status_code == 404:
                 # Not a git repository or no changes
                 return []
@@ -480,7 +495,7 @@ class ConversationManager:
                 # Show uncommitted files for running conversations
                 if fresh_conv.is_active():
                     try:
-                        changes = self.api.get_conversation_changes(fresh_conv.id)
+                        changes = self.api.get_conversation_changes(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
                         if changes:
                             print(f"\n  Uncommitted Files ({len(changes)}):")
                             
