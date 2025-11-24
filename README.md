@@ -116,7 +116,6 @@ This project uses modern Python development tools and practices:
    ```
 
    This will:
-
    - Install all development dependencies
    - Set up pre-commit hooks
    - Configure the development environment
@@ -195,7 +194,6 @@ git commit -m "docs: update installation instructions"
 Releases are automated using GitHub Actions:
 
 1. **On merge to main**: If conventional commits are detected, a new version is automatically:
-
    - Bumped according to semantic versioning
    - Tagged in git
    - Released on GitHub with auto-generated release notes

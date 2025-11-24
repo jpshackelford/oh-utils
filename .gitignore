@@ -81,3 +81,9 @@ Thumbs.db
 
 # Pre-commit
 .pre-commit-config.yaml.bak
+
+# Node.js (for prettier and other tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
