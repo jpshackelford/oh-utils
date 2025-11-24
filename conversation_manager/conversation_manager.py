@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 from urllib.parse import urljoin
 
 import requests
@@ -128,13 +128,13 @@ class OpenHandsAPI:
         try:
             response = self.session.get(url, params=params)
             response.raise_for_status()
-            return response.json()
+            return cast("Dict[Any, Any]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
                 raise Exception(
                     "API key does not have permission to access conversations. "
                     "Please ensure you're using a full API key from https://app.all-hands.dev/settings/api-keys"
-                )
+                ) from e
             raise
 
     def get_conversation(self, conversation_id: str) -> Dict:
@@ -142,7 +142,7 @@ class OpenHandsAPI:
         url = urljoin(self.BASE_URL, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
-        return response.json()
+        return cast("Dict[Any, Any]", response.json())
 
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
@@ -159,12 +159,15 @@ class OpenHandsAPI:
                 error_detail = f"HTTP {response.status_code}: {response.text}"
                 raise Exception(error_detail)
             response.raise_for_status()
-            return response.json()
+            return cast("Dict[Any, Any]", response.json())
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_conversation_changes(
-        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+        self,
+        conversation_id: str,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation"""
         if runtime_id:
@@ -195,22 +198,24 @@ class OpenHandsAPI:
                 # Server error - likely git repository issue
                 raise Exception("Git repository not available or corrupted")
             response.raise_for_status()
-            return response.json()
+            return cast("List[Dict[str, str]]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return []  # No git repository or no changes
             elif e.response.status_code == 500:
-                raise Exception("Git repository not available or corrupted")
-            raise Exception(f"Failed to get changes: HTTP {e.response.status_code}")
+                raise Exception("Git repository not available or corrupted") from e
+            raise Exception(
+                f"Failed to get changes: HTTP {e.response.status_code}"
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_file_content(
         self,
         conversation_id: str,
         file_path: str,
-        runtime_id: str = None,
-        session_api_key: str = None,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> str:
         """Get the content of a specific file from the conversation workspace"""
         if runtime_id:
@@ -239,28 +244,33 @@ class OpenHandsAPI:
             response.raise_for_status()
 
             # API returns JSON with 'code' key containing file content
-            result = response.json()
+            result = cast("Dict[str, Any]", response.json())
             if isinstance(result, dict) and "code" in result:
-                return result["code"]
+                return cast("str", result["code"])
             else:
                 # Fallback if response format is different
                 return str(result)
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                raise Exception(f"File not found: {file_path}")
+                raise Exception(f"File not found: {file_path}") from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - file may be inaccessible")
+                raise Exception("Server error - file may be inaccessible") from e
             raise Exception(
                 f"Failed to get file content: HTTP {e.response.status_code}"
-            )
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def download_workspace_archive(
-        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+        self,
+        conversation_id: str,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> bytes:
         """Download the workspace archive as a ZIP file"""
         if runtime_id:
@@ -292,16 +302,18 @@ class OpenHandsAPI:
             if e.response.status_code == 404:
                 raise Exception(
                     f"Workspace not found for conversation {conversation_id}"
-                )
+                ) from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - workspace may be inaccessible")
+                raise Exception("Server error - workspace may be inaccessible") from e
             raise Exception(
                 f"Failed to download workspace: HTTP {e.response.status_code}"
-            )
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_trajectory(
         self, conversation_id: str, runtime_id: str, session_api_key: str
@@ -329,19 +341,23 @@ class OpenHandsAPI:
         try:
             response = self.session.get(url, headers=headers)
             response.raise_for_status()
-            return response.json()
+            return cast("Dict[Any, Any]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 raise Exception(
                     f"Trajectory not found for conversation {conversation_id}"
-                )
+                ) from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - trajectory may be inaccessible")
-            raise Exception(f"Failed to get trajectory: HTTP {e.response.status_code}")
+                raise Exception("Server error - trajectory may be inaccessible") from e
+            raise Exception(
+                f"Failed to get trajectory: HTTP {e.response.status_code}"
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
 
 class APIKeyManager:
@@ -439,10 +455,10 @@ class TerminalFormatter:
         try:
             size = shutil.get_terminal_size()
             return size.columns, size.lines
-        except:
+        except Exception:
             return 80, 24  # Default fallback
 
-    def clear_screen(self):
+    def clear_screen(self) -> None:
         """Clear the terminal screen"""
         os.system("clear" if os.name == "posix" else "cls")
 
@@ -717,14 +733,17 @@ class ConversationManager:
                         error_msg = str(e)
                         if "Git repository not available or corrupted" in error_msg:
                             print(
-                                "\n  ⚠️  Git repository not available for this conversation"
+                                "\n  ⚠️  Git repository not available for this "
+                                "conversation"
                             )
                             print(
-                                "      This may happen if the conversation workspace doesn't have git initialized"
+                                "      This may happen if the conversation workspace "
+                                "doesn't have git initialized"
                             )
                         elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
                             print(
-                                "\n  ⚠️  API key doesn't have permission to access git changes"
+                                "\n  ⚠️  API key doesn't have permission to access "
+                                "git changes"
                             )
                         else:
                             print(
@@ -776,7 +795,8 @@ class ConversationManager:
                     # Skip deleted files
                     if status == "D":
                         print(
-                            f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: {file_path}"
+                            f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: "
+                            f"{file_path}"
                         )
                         continue
 
@@ -823,7 +843,8 @@ class ConversationManager:
 
                 print(f"✅ Successfully created zip file: {zip_path}")
                 print(
-                    f"📊 Contains {len(downloaded_files)} files ({zip_path.stat().st_size:,} bytes)"
+                    f"📊 Contains {len(downloaded_files)} files "
+                    f"({zip_path.stat().st_size:,} bytes)"
                 )
 
         except Exception as e:
@@ -963,7 +984,8 @@ class ConversationManager:
 
         # Always show help line
         print(
-            "\nCommands: r=refresh, w <num>=wake, s <num>=show details, f <num>=download files, n/p=next/prev page, h=help, q=quit"
+            "\nCommands: r=refresh, w <num>=wake, s <num>=show details, "
+            "f <num>=download files, n/p=next/prev page, h=help, q=quit"
         )
 
     def run_interactive(self):
@@ -1082,10 +1104,13 @@ def main():
                 status_icon = "🟢" if conv.is_active() else "🔴"
                 runtime = conv.runtime_id or "─"
                 print(
-                    f"{i:2d}. {conv.short_id()} {status_icon} {conv.status:8s} {runtime:15s} {conv.formatted_title(60)}"
+                    f"{i:2d}. {conv.short_id()} {status_icon} {conv.status:8s} "
+                    f"{runtime:15s} {conv.formatted_title(60)}"
                 )
             print(
-                f"\nActive conversations: {sum(1 for c in manager.conversations if c.is_active())}/{len(manager.conversations)}"
+                f"\nActive conversations: "
+                f"{sum(1 for c in manager.conversations if c.is_active())}/"
+                f"{len(manager.conversations)}"
             )
         return
 
