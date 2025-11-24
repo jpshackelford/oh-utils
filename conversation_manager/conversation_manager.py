@@ -150,6 +150,24 @@ class OpenHandsAPI:
             return response.json()
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
+    
+    def get_conversation_changes(self, conversation_id: str) -> List[Dict[str, str]]:
+        """Get git changes (uncommitted files) for a conversation"""
+        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/git/changes")
+        
+        try:
+            response = self.session.get(url)
+            if response.status_code == 404:
+                # Not a git repository or no changes
+                return []
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                return []  # No git repository or no changes
+            raise Exception(f"Failed to get changes: {e}")
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
 
 
 class APIKeyManager:
@@ -453,6 +471,50 @@ class ConversationManager:
                 print(f"  Last Updated: {fresh_conv.last_updated}")
                 if fresh_conv.url:
                     print(f"  URL: {fresh_conv.url}")
+                
+                # Show uncommitted files for running conversations
+                if fresh_conv.is_active():
+                    try:
+                        changes = self.api.get_conversation_changes(fresh_conv.id)
+                        if changes:
+                            print(f"\n  Uncommitted Files ({len(changes)}):")
+                            
+                            # Group changes by status
+                            status_groups = {}
+                            for change in changes:
+                                status = change['status']
+                                if status not in status_groups:
+                                    status_groups[status] = []
+                                status_groups[status].append(change['path'])
+                            
+                            # Display changes by status with icons
+                            status_icons = {
+                                'M': '📝',  # Modified
+                                'A': '➕',  # Added/New
+                                'D': '🗑️',  # Deleted
+                                'U': '⚠️'   # Unmerged/Conflict
+                            }
+                            
+                            status_names = {
+                                'M': 'Modified',
+                                'A': 'Added/New',
+                                'D': 'Deleted',
+                                'U': 'Unmerged'
+                            }
+                            
+                            for status in ['M', 'A', 'D', 'U']:
+                                if status in status_groups:
+                                    icon = status_icons.get(status, '•')
+                                    name = status_names.get(status, status)
+                                    files = status_groups[status]
+                                    print(f"    {icon} {name} ({len(files)}):")
+                                    for file_path in sorted(files):
+                                        print(f"      {file_path}")
+                        else:
+                            print(f"\n  No uncommitted files")
+                    except Exception as e:
+                        print(f"\n  ⚠️  Could not fetch uncommitted files: {e}")
+                
                 print()
             except Exception as e:
                 print(f"✗ Failed to get conversation details: {e}")
