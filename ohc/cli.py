@@ -1,7 +1,8 @@
 """
 Main CLI entry point for OpenHands Cloud (ohc).
 
-Provides the multi-command CLI interface with server management and conversation functionality.
+Provides the multi-command CLI interface with server management and conversation
+functionality.
 """
 
 import click
@@ -13,7 +14,7 @@ from . import __version__
 @click.version_option(version=__version__, prog_name="ohc")
 @click.option("-i", "--interactive", is_flag=True, help="Run in interactive mode")
 @click.pass_context
-def cli(ctx, interactive):
+def cli(ctx: click.Context, interactive: bool) -> None:
     """OpenHands Cloud CLI - Manage OpenHands servers and conversations."""
     ctx.ensure_object(dict)
     ctx.obj["interactive"] = interactive
@@ -33,14 +34,17 @@ def cli(ctx, interactive):
 
 @click.command()
 @click.pass_context
-def help_command(ctx):
+def help_command(ctx: click.Context) -> None:
     """Show help information."""
     # Get the parent context (the main cli group)
     parent_ctx = ctx.parent
-    click.echo(parent_ctx.get_help())
+    if parent_ctx:
+        click.echo(parent_ctx.get_help())
+    else:
+        click.echo("No help available.")
 
 
-def main():
+def main() -> None:
     """Entry point for the ohc CLI."""
     # Import commands here to avoid circular imports
     from .conversation_commands import conv
