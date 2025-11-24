@@ -169,14 +169,15 @@ class APIKeyManager:
     
     def get_valid_key(self) -> str:
         """Get a valid API key, prompting user if necessary"""
-        # Check environment variable first
-        env_key = os.getenv('OH_API_KEY')
+        # Check environment variables first
+        env_key = os.getenv('OH_API_KEY') or os.getenv('OPENHANDS_API_KEY')
         if env_key:
             api = OpenHandsAPI(env_key)
             if api.test_connection():
                 try:
                     api.search_conversations(limit=1)
-                    print("✓ Using API key from OH_API_KEY environment variable")
+                    env_var = "OH_API_KEY" if os.getenv('OH_API_KEY') else "OPENHANDS_API_KEY"
+                    print(f"✓ Using API key from {env_var} environment variable")
                     return env_key
                 except Exception as e:
                     print(f"⚠ Environment API key error: {e}")

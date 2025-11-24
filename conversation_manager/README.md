@@ -41,7 +41,12 @@ The utility can get your OpenHands API key in several ways:
 
 #### Option 1: Environment Variable (Recommended)
 ```bash
+# Primary option
 export OH_API_KEY="your-api-key-here"
+uv run oh-conversation-manager
+
+# Alternative (also supported)
+export OPENHANDS_API_KEY="your-api-key-here"
 uv run oh-conversation-manager
 ```
 
@@ -55,6 +60,8 @@ uv run oh-conversation-manager -k "your-api-key-here"
 #### Option 3: Inline Environment Variable
 ```bash
 OH_API_KEY="your-api-key-here" uv run oh-conversation-manager
+# or
+OPENHANDS_API_KEY="your-api-key-here" uv run oh-conversation-manager
 ```
 
 #### Option 4: Interactive Prompt
