@@ -16,18 +16,42 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 .venv/
 venv/
 ENV/
 env/
+.env
+env.bak/
+venv.bak/
 
 # uv
 .uv/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+nosetests.xml
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
 
 # IDEs
 .vscode/
@@ -35,7 +59,31 @@ env/
 *.swp
 *.swo
 *~
+.spyderproject
+.spyproject
+.ropeproject
 
 # OS
 .DS_Store
 Thumbs.db
+.directory
+.fuse_hidden*
+.nfs*
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Pre-commit
+.pre-commit-config.yaml.bak
+
+# Node.js (for prettier and other tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

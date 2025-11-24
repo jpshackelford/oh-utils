@@ -17,6 +17,7 @@ A terminal-based utility for managing OpenHands conversations with an interactiv
 ### Using uv (Recommended)
 
 From the oh-utils directory:
+
 ```bash
 uv run oh-conversation-manager
 ```
@@ -24,11 +25,13 @@ uv run oh-conversation-manager
 ### Using pip
 
 After installing the package:
+
 ```bash
 oh-conversation-manager
 ```
 
 Or run directly:
+
 ```bash
 python3 conversation_manager/conversation_manager.py
 ```
@@ -40,6 +43,7 @@ python3 conversation_manager/conversation_manager.py
 The utility can get your OpenHands API key in several ways:
 
 #### Option 1: Environment Variable (Recommended)
+
 ```bash
 # Primary option
 export OH_API_KEY="your-api-key-here"
@@ -51,6 +55,7 @@ uv run oh-conversation-manager
 ```
 
 #### Option 2: Command Line Argument
+
 ```bash
 uv run oh-conversation-manager --api-key "your-api-key-here"
 # or short form
@@ -58,6 +63,7 @@ uv run oh-conversation-manager -k "your-api-key-here"
 ```
 
 #### Option 3: Inline Environment Variable
+
 ```bash
 OH_API_KEY="your-api-key-here" uv run oh-conversation-manager
 # or
@@ -65,6 +71,7 @@ OPENHANDS_API_KEY="your-api-key-here" uv run oh-conversation-manager
 ```
 
 #### Option 4: Interactive Prompt
+
 If no API key is found, the utility will prompt you to enter one and optionally save it.
 
 ### Starting the Manager
@@ -78,19 +85,20 @@ uv run oh-conversation-manager
 
 Once running, you can use these commands:
 
-| Command | Description |
-|---------|-------------|
-| `r`, `refresh` | Refresh the current page of conversations |
-| `w <num>` | Wake up conversation by number (e.g., `w 3`) |
-| `s <num>` | Show detailed info for conversation (e.g., `s 1`) |
-| `n`, `next` | Go to next page |
-| `p`, `prev` | Go to previous page |
-| `h`, `help` | Show help |
-| `q`, `quit` | Exit the program |
+| Command        | Description                                       |
+| -------------- | ------------------------------------------------- |
+| `r`, `refresh` | Refresh the current page of conversations         |
+| `w <num>`      | Wake up conversation by number (e.g., `w 3`)      |
+| `s <num>`      | Show detailed info for conversation (e.g., `s 1`) |
+| `n`, `next`    | Go to next page                                   |
+| `p`, `prev`    | Go to previous page                               |
+| `h`, `help`    | Show help                                         |
+| `q`, `quit`    | Exit the program                                  |
 
 ### Display Format
 
 The conversation list shows:
+
 - **#**: Sequential number for easy reference
 - **ID**: Short conversation ID (first 8 characters)
 - **Status**: Current status with color indicators:
@@ -137,6 +145,7 @@ Press Enter to continue...
 ## Terminal Compatibility
 
 The utility automatically adapts to your terminal size:
+
 - **Wide terminals**: Full table format with all columns
 - **Narrow terminals**: Compact format with wrapped information
 - **Dynamic pagination**: Page size adjusts based on terminal height
@@ -160,6 +169,7 @@ Get your API key from: https://app.all-hands.dev/settings/api-keys
 ## Error Handling
 
 The utility includes robust error handling for:
+
 - Network connectivity issues
 - Invalid API keys
 - API rate limits
@@ -175,6 +185,7 @@ To contribute or modify the utility:
 3. Run directly: `python3 conversation_manager/conversation_manager.py`
 
 The code is organized into several classes:
+
 - `ConversationManager`: Main application logic
 - `OpenHandsAPI`: API client for OpenHands
 - `APIKeyManager`: Handles API key storage and validation

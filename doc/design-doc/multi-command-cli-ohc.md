@@ -47,6 +47,7 @@ ohc conversations download 1
 ### 2.2 Server Configuration Workflow
 
 **Adding a server with all parameters:**
+
 ```bash
 $ ohc server add --name production --url https://app.all-hands.dev/api/ --apikey sk-abc123 --default
 ✓ Testing connection to https://app.all-hands.dev/api/...
@@ -55,6 +56,7 @@ $ ohc server add --name production --url https://app.all-hands.dev/api/ --apikey
 ```
 
 **Adding a server interactively:**
+
 ```bash
 $ ohc server add
 Server name: staging
@@ -67,6 +69,7 @@ Set as default? [y/N]: n
 ```
 
 **Listing servers:**
+
 ```bash
 $ ohc server list
 * production  https://app.all-hands.dev/api/     (default)
@@ -78,6 +81,7 @@ $ ohc server list
 ### 3.1 Click Framework
 
 We will use the Click framework for building the multi-command CLI as it provides:
+
 - Automatic help generation
 - Command grouping and nesting
 - Parameter validation and type conversion
@@ -89,10 +93,12 @@ Click installation: `pip install click`
 ### 3.2 Configuration Storage
 
 Following XDG Base Directory Specification, configuration will be stored in:
+
 - Primary: `~/.config/ohc/config.json`
 - Fallback: `~/.ohc/config.json` (for systems without XDG support)
 
 Configuration format:
+
 ```json
 {
   "servers": {
@@ -146,7 +152,7 @@ def cli(ctx, interactive):
     """OpenHands Cloud CLI - Manage OpenHands servers and conversations."""
     ctx.ensure_object(dict)
     ctx.obj['interactive'] = interactive
-    
+
     # If no subcommand and interactive mode, start conversation manager
     if ctx.invoked_subcommand is None:
         from .conversation_commands import interactive_mode
@@ -170,22 +176,22 @@ class ConfigManager:
         self.config_dir = self._get_config_dir()
         self.config_file = self.config_dir / "config.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def _get_config_dir(self) -> Path:
         """Get configuration directory following XDG spec"""
         xdg_config = os.getenv('XDG_CONFIG_HOME')
         if xdg_config:
             return Path(xdg_config) / 'ohc'
         return Path.home() / '.config' / 'ohc'
-    
+
     def load_config(self) -> Dict:
         """Load configuration from file"""
         if not self.config_file.exists():
             return {"servers": {}, "default_server": None}
-        
+
         with open(self.config_file, 'r') as f:
             return json.load(f)
-    
+
     def save_config(self, config: Dict) -> None:
         """Save configuration to file"""
         with open(self.config_file, 'w') as f:
@@ -214,14 +220,14 @@ def server():
 def add(name, url, apikey, default):
     """Add a new server configuration."""
     config_manager = ConfigManager()
-    
+
     # Test connection
     click.echo(f"✓ Testing connection to {url}...")
     api = OpenHandsAPI(apikey, url)
     if not api.test_connection():
         click.echo("✗ Connection failed", err=True)
         raise click.Abort()
-    
+
     # Save configuration
     config = config_manager.load_config()
     config['servers'][name] = {
@@ -229,14 +235,14 @@ def add(name, url, apikey, default):
         'api_key': apikey,
         'default': default
     }
-    
+
     if default:
         # Unset other defaults
         for server_config in config['servers'].values():
             server_config['default'] = False
         config['servers'][name]['default'] = True
         config['default_server'] = name
-    
+
     config_manager.save_config(config)
     click.echo(f"✓ Server '{name}' added" + (" and set as default" if default else ""))
 ```
@@ -250,11 +256,13 @@ def add(name, url, apikey, default):
 Create the basic CLI structure and configuration management system.
 
 **Files to implement:**
+
 - `ohc/__init__.py`
 - `ohc/config.py`
 - `ohc/cli.py` (basic structure)
 
 **Acceptance criteria:**
+
 - `ohc --version` and `ohc --help` work
 - Configuration directory is created properly
 - Config file format is established and tested
@@ -266,10 +274,12 @@ Create the basic CLI structure and configuration management system.
 Implement server add/list/delete functionality with connection testing.
 
 **Files to implement:**
+
 - `ohc/server_commands.py`
 - `ohc/api.py` (refactored from existing code)
 
 **Acceptance criteria:**
+
 - `ohc server add` works with all parameters and interactively
 - `ohc server list` displays configured servers
 - `ohc server delete` removes servers
@@ -283,10 +293,12 @@ Implement server add/list/delete functionality with connection testing.
 Integrate existing conversation management functionality into the new CLI structure.
 
 **Files to implement:**
+
 - `ohc/conversation_commands.py`
 - Update `ohc/cli.py` for interactive mode
 
 **Acceptance criteria:**
+
 - `ohc` (no args) starts interactive conversation manager
 - `ohc -i` explicitly starts interactive mode
 - `ohc conversations list` works with configured servers
@@ -299,10 +311,12 @@ Integrate existing conversation management functionality into the new CLI struct
 Update package configuration and provide migration path from old CLI.
 
 **Files to implement:**
+
 - Update `pyproject.toml`
 - Migration documentation
 
 **Acceptance criteria:**
+
 - `ohc` command is available after installation
 - Old `oh-conversation-manager` still works (deprecated)
 - Clear migration instructions provided
