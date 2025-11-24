@@ -33,7 +33,7 @@ class ConfigManager:
 
         try:
             with open(self.config_file) as f:
-                return cast(Dict[str, Any], json.load(f))
+                return cast("Dict[str, Any]", json.load(f))
         except (OSError, json.JSONDecodeError) as e:
             raise Exception(f"Failed to load configuration: {e}") from e
 
@@ -54,16 +54,16 @@ class ConfigManager:
         config = self.load_config()
 
         if server_name:
-            return cast(Optional[Dict[str, Any]], config["servers"].get(server_name))
+            return cast("Optional[Dict[str, Any]]", config["servers"].get(server_name))
 
         # Return default server if no specific server requested
         default_server = config.get("default_server")
         if default_server and default_server in config["servers"]:
-            return cast(Dict[str, Any], config["servers"][default_server])
+            return cast("Dict[str, Any]", config["servers"][default_server])
 
         # If no default set, return the first server if any exist
         if config["servers"]:
-            return cast(Dict[str, Any], next(iter(config["servers"].values())))
+            return cast("Dict[str, Any]", next(iter(config["servers"].values())))
 
         return None
 
@@ -141,4 +141,4 @@ class ConfigManager:
     def list_servers(self) -> Dict[str, Dict[str, Any]]:
         """Get all server configurations."""
         config = self.load_config()
-        return cast(Dict[str, Dict[str, Any]], config.get("servers", {}))
+        return cast("Dict[str, Dict[str, Any]]", config.get("servers", {}))
