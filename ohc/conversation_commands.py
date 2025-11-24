@@ -1,11 +1,13 @@
 """
 Conversation management commands for OpenHands Cloud CLI.
 
-Integrates the existing conversation management functionality into the new CLI structure.
+Integrates the existing conversation management functionality into the new CLI
+structure.
 """
 
 import os
 import sys
+from typing import Optional
 
 import click
 
@@ -14,7 +16,9 @@ from .config import ConfigManager
 from .conversation_display import show_conversation_details, show_workspace_changes
 
 
-def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) -> str:
+def _resolve_conversation_id(
+    api: OpenHandsAPI, conversation_id_or_number: str
+) -> Optional[str]:
     """Resolve conversation ID from number or partial ID."""
     try:
         # Try to parse as a number first
@@ -26,13 +30,15 @@ def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) 
 
         if conv_number < 1 or conv_number > len(conversations):
             click.echo(
-                f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})",
+                f"✗ Conversation number {conv_number} is out of range "
+                f"(1-{len(conversations)})",
                 err=True,
             )
             return None
 
         conv_data = conversations[conv_number - 1]
-        return conv_data.get("conversation_id")
+        conversation_id = conv_data.get("conversation_id")
+        return conversation_id if conversation_id else None
 
     except ValueError:
         # It's a conversation ID string - could be full or partial
@@ -57,7 +63,8 @@ def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) 
                 return None
             elif len(matches) > 1:
                 click.echo(
-                    f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:",
+                    f"✗ Multiple conversations match '{conv_id}'. "
+                    f"Please use a longer ID:",
                     err=True,
                 )
                 for match in matches[:5]:  # Show first 5 matches
@@ -67,14 +74,15 @@ def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) 
                 return None
             else:
                 # Single match found
-                return matches[0].get("conversation_id")
+                conversation_id = matches[0].get("conversation_id")
+                return conversation_id if conversation_id else None
         else:
             # Assume it's a full conversation ID
             return conv_id
 
 
 @click.group()
-def conv():
+def conv() -> None:
     """Manage OpenHands conversations."""
     pass
 
@@ -88,7 +96,7 @@ def conv():
     default=None,
     help="Number of conversations to list (default: all)",
 )
-def list(server, limit):
+def list(server: Optional[str], limit: Optional[int]) -> None:
     """List conversations."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -136,7 +144,7 @@ def list(server, limit):
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
 
-def interactive_mode():
+def interactive_mode() -> None:
     """Start the interactive conversation manager."""
     # Import the original conversation manager and adapt it
     try:
@@ -175,14 +183,14 @@ def interactive_mode():
 
             original_init = cm.OpenHandsAPI.__init__
 
-            def patched_init(self, api_key):
-                original_init(self, api_key)
-                self.BASE_URL = server_config["url"]
-                self.session.headers.update(
+            def patched_init(self: object, api_key: str) -> None:
+                original_init(self, api_key)  # type: ignore[arg-type]
+                self.BASE_URL = server_config["url"]  # type: ignore[attr-defined]
+                self.session.headers.update(  # type: ignore[attr-defined]
                     {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
                 )
 
-            cm.OpenHandsAPI.__init__ = patched_init
+            cm.OpenHandsAPI.__init__ = patched_init  # type: ignore[method-assign]
 
         click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")
@@ -203,7 +211,7 @@ def interactive_mode():
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def wake(conversation_id_or_number, server):
+def wake(conversation_id_or_number: str, server: Optional[str]) -> None:
     """Wake up a conversation by ID (full or partial), or number from the list."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -264,7 +272,8 @@ def wake(conversation_id_or_number, server):
                     return
                 elif len(matches) > 1:
                     click.echo(
-                        f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:",
+                        f"✗ Multiple conversations match '${conv_id}'. "
+                        f"Please use a longer ID:",
                         err=True,
                     )
                     for match in matches[:5]:  # Show first 5 matches
@@ -296,7 +305,7 @@ def wake(conversation_id_or_number, server):
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def show(conversation_id_or_number, server):
+def show(conversation_id_or_number: str, server: Optional[str]) -> None:
     """Show detailed information about a conversation."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -331,7 +340,9 @@ def show(conversation_id_or_number, server):
     help="Output file path (default: conversation_id.zip)",
 )
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def ws_download(conversation_id_or_number, output, server):
+def ws_download(
+    conversation_id_or_number: str, output: str, server: Optional[str]
+) -> None:
     """Download workspace files as a ZIP archive."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -360,7 +371,8 @@ def ws_download(conversation_id_or_number, output, server):
 
             if conv_number < 1 or conv_number > len(conversations):
                 click.echo(
-                    f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})",
+                    f"✗ Conversation number {conv_number} is out of range "
+                    f"(1-{len(conversations)})",
                     err=True,
                 )
                 return
@@ -392,7 +404,8 @@ def ws_download(conversation_id_or_number, output, server):
                     return
                 elif len(matches) > 1:
                     click.echo(
-                        f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:",
+                        f"✗ Multiple conversations match '${conv_id}'. "
+                        f"Please use a longer ID:",
                         err=True,
                     )
                     for match in matches[:5]:  # Show first 5 matches
@@ -449,7 +462,7 @@ def ws_download(conversation_id_or_number, output, server):
     help="Output file path (default: conversation_id.zip)",
 )
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def ws_dl(conversation_id_or_number, output, server):
+def ws_dl(conversation_id_or_number: str, output: str, server: Optional[str]) -> None:
     """Download workspace files as a ZIP archive (alias for ws-download)."""
     # Call the main ws-download function
     ctx = click.get_current_context()
@@ -464,7 +477,7 @@ def ws_dl(conversation_id_or_number, output, server):
 @conv.command(name="ws-changes")
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def ws_changes(conversation_id_or_number, server):
+def ws_changes(conversation_id_or_number: str, server: Optional[str]) -> None:
     """Show workspace file changes (git status)."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -494,7 +507,9 @@ def ws_changes(conversation_id_or_number, server):
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @click.option("--limit", default=10, help="Number of recent trajectory events to show")
-def trajectory(conversation_id_or_number, server, limit):
+def trajectory(
+    conversation_id_or_number: str, server: Optional[str], limit: int
+) -> None:
     """Show conversation trajectory (action history)."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -523,7 +538,8 @@ def trajectory(conversation_id_or_number, server, limit):
 
             if conv_number < 1 or conv_number > len(conversations):
                 click.echo(
-                    f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})",
+                    f"✗ Conversation number {conv_number} is out of range "
+                    f"(1-{len(conversations)})",
                     err=True,
                 )
                 return
@@ -555,7 +571,8 @@ def trajectory(conversation_id_or_number, server, limit):
                     return
                 elif len(matches) > 1:
                     click.echo(
-                        f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:",
+                        f"✗ Multiple conversations match '${conv_id}'. "
+                        f"Please use a longer ID:",
                         err=True,
                     )
                     for match in matches[:5]:  # Show first 5 matches
@@ -579,7 +596,15 @@ def trajectory(conversation_id_or_number, server, limit):
 
         if not runtime_id:
             click.echo(
-                "✗ Conversation is not running. Trajectory is only available for active conversations.",
+                "✗ Conversation is not running. Trajectory is only available for "
+                "active conversations.",
+                err=True,
+            )
+            return
+
+        if not session_api_key:
+            click.echo(
+                "✗ No session API key found for this conversation.",
                 err=True,
             )
             return
@@ -613,7 +638,7 @@ def trajectory(conversation_id_or_number, server, limit):
 
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                     formatted_time = dt.strftime("%H:%M:%S")
-                except:
+                except (ValueError, TypeError):
                     formatted_time = timestamp
             else:
                 formatted_time = "N/A"
@@ -651,7 +676,7 @@ def trajectory(conversation_id_or_number, server, limit):
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @click.option("--limit", default=10, help="Number of recent trajectory events to show")
-def traj(conversation_id_or_number, server, limit):
+def traj(conversation_id_or_number: str, server: Optional[str], limit: int) -> None:
     """Show conversation trajectory (action history) - alias for trajectory."""
     # Call the main trajectory function
     ctx = click.get_current_context()
