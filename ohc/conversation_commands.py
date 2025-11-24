@@ -7,8 +7,59 @@ Integrates the existing conversation management functionality into the new CLI s
 import click
 import sys
 import os
+import json
+import zipfile
+from pathlib import Path
+from datetime import datetime
 from .config import ConfigManager
 from .api import OpenHandsAPI
+from .conversation_display import show_conversation_details, show_workspace_changes
+
+
+def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) -> str:
+    """Resolve conversation ID from number or partial ID."""
+    try:
+        # Try to parse as a number first
+        conv_number = int(conversation_id_or_number)
+        
+        # Get the conversation list to find the conversation by number
+        result = api.search_conversations(limit=100)
+        conversations = result.get('results', [])
+        
+        if conv_number < 1 or conv_number > len(conversations):
+            click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
+            return None
+        
+        conv_data = conversations[conv_number - 1]
+        return conv_data.get('conversation_id')
+        
+    except ValueError:
+        # It's a conversation ID string - could be full or partial
+        conv_id = conversation_id_or_number
+        
+        # If it's a short ID (8 chars or less), try to find a matching conversation
+        if len(conv_id) <= 8:
+            result = api.search_conversations(limit=100)
+            conversations = result.get('results', [])
+            
+            matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
+            
+            if not matches:
+                click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
+                return None
+            elif len(matches) > 1:
+                click.echo(f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:", err=True)
+                for match in matches[:5]:  # Show first 5 matches
+                    match_id = match.get('conversation_id', '')
+                    match_title = match.get('title', 'Untitled')[:40]
+                    click.echo(f"  {match_id} - {match_title}")
+                return None
+            else:
+                # Single match found
+                return matches[0].get('conversation_id')
+        else:
+            # Assume it's a full conversation ID
+            return conv_id
 
 
 @click.group()
@@ -216,81 +267,13 @@ def show(conversation_id_or_number, server):
     
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
     
-    try:
-        # First, resolve the conversation ID using the same logic as wake command
-        try:
-            # Try to parse as a number first
-            conv_number = int(conversation_id_or_number)
-            
-            # Get the conversation list to find the conversation by number
-            result = api.search_conversations(limit=100)
-            conversations = result.get('results', [])
-            
-            if conv_number < 1 or conv_number > len(conversations):
-                click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
-                return
-            
-            conv_data = conversations[conv_number - 1]
-            conv_id = conv_data.get('conversation_id')
-            
-        except ValueError:
-            # It's a conversation ID string - could be full or partial
-            conv_id = conversation_id_or_number
-            
-            # If it's a short ID (8 chars or less), try to find a matching conversation
-            if len(conv_id) <= 8:
-                result = api.search_conversations(limit=100)
-                conversations = result.get('results', [])
-                
-                matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-                
-                if not matches:
-                    click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
-                    return
-                elif len(matches) > 1:
-                    click.echo(f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:", err=True)
-                    for match in matches[:5]:  # Show first 5 matches
-                        match_id = match.get('conversation_id', '')
-                        match_title = match.get('title', 'Untitled')[:40]
-                        click.echo(f"  {match_id} - {match_title}")
-                    return
-                else:
-                    # Single match found
-                    conv_id = matches[0].get('conversation_id')
-        
-        # Get detailed conversation information
-        conv_details = api.get_conversation(conv_id)
-        
-        # Display conversation details
-        click.echo(f"Conversation Details:")
-        click.echo(f"  ID: {conv_details.get('conversation_id', 'N/A')}")
-        click.echo(f"  Title: {conv_details.get('title', 'Untitled')}")
-        click.echo(f"  Status: {conv_details.get('status', 'UNKNOWN')}")
-        click.echo(f"  Created: {conv_details.get('created_at', 'N/A')}")
-        click.echo(f"  Updated: {conv_details.get('updated_at', 'N/A')}")
-        
-        # Show runtime information if available
-        runtime_id = conv_details.get('runtime_id')
-        if runtime_id:
-            click.echo(f"  Runtime ID: {runtime_id}")
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
-            click.echo(f"  Runtime URL: {runtime_url}")
-        
-        # Show session API key if available
-        session_api_key = conv_details.get('session_api_key')
-        if session_api_key:
-            click.echo(f"  Session API Key: {session_api_key[:8]}...")
-        
-        # Show additional metadata
-        if 'metadata' in conv_details:
-            metadata = conv_details['metadata']
-            if metadata:
-                click.echo(f"  Metadata:")
-                for key, value in metadata.items():
-                    click.echo(f"    {key}: {value}")
-        
-    except Exception as e:
-        click.echo(f"✗ Failed to show conversation: {e}", err=True)
+    # Resolve conversation ID using shared logic
+    conv_id = _resolve_conversation_id(api, conversation_id_or_number)
+    if not conv_id:
+        return
+    
+    # Use shared display functionality
+    show_conversation_details(api, conv_id)
 
 
 @conv.command(name='ws-download')
@@ -416,93 +399,13 @@ def ws_changes(conversation_id_or_number, server):
     
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
     
-    try:
-        # First, resolve the conversation ID using the same logic as other commands
-        try:
-            # Try to parse as a number first
-            conv_number = int(conversation_id_or_number)
-            
-            # Get the conversation list to find the conversation by number
-            result = api.search_conversations(limit=100)
-            conversations = result.get('results', [])
-            
-            if conv_number < 1 or conv_number > len(conversations):
-                click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
-                return
-            
-            conv_data = conversations[conv_number - 1]
-            conv_id = conv_data.get('conversation_id')
-            title = conv_data.get('title', 'Untitled')
-            
-        except ValueError:
-            # It's a conversation ID string - could be full or partial
-            conv_id = conversation_id_or_number
-            
-            # If it's a short ID (8 chars or less), try to find a matching conversation
-            if len(conv_id) <= 8:
-                result = api.search_conversations(limit=100)
-                conversations = result.get('results', [])
-                
-                matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-                
-                if not matches:
-                    click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
-                    return
-                elif len(matches) > 1:
-                    click.echo(f"✗ Multiple conversations match '{conv_id}'. Please use a longer ID:", err=True)
-                    for match in matches[:5]:  # Show first 5 matches
-                        match_id = match.get('conversation_id', '')
-                        match_title = match.get('title', 'Untitled')[:40]
-                        click.echo(f"  {match_id} - {match_title}")
-                    return
-                else:
-                    # Single match found
-                    conv_data = matches[0]
-                    conv_id = conv_data.get('conversation_id')
-                    title = conv_data.get('title', 'Untitled')
-            else:
-                # Full conversation ID
-                title = f"Conversation {conv_id[:8]}..."
-        
-        # Get conversation details to check for runtime info
-        conv_details = api.get_conversation(conv_id)
-        runtime_id = conv_details.get('runtime_id')
-        session_api_key = conv_details.get('session_api_key')
-        
-        click.echo(f"Workspace changes for: {title}")
-        
-        # Get workspace changes
-        changes = api.get_conversation_changes(conv_id, runtime_id, session_api_key)
-        
-        if not changes:
-            click.echo("No changes found in workspace.")
-            return
-        
-        # Group changes by status
-        status_groups = {}
-        for change in changes:
-            status = change.get('status', 'unknown')
-            if status not in status_groups:
-                status_groups[status] = []
-            status_groups[status].append(change.get('file_path', 'unknown'))
-        
-        # Display changes grouped by status
-        status_icons = {
-            'modified': '📝',
-            'added': '➕',
-            'deleted': '❌',
-            'renamed': '🔄',
-            'untracked': '❓'
-        }
-        
-        for status, files in status_groups.items():
-            icon = status_icons.get(status, '📄')
-            click.echo(f"\n{icon} {status.upper()} ({len(files)} files):")
-            for file_path in sorted(files):
-                click.echo(f"  {file_path}")
-        
-    except Exception as e:
-        click.echo(f"✗ Failed to get workspace changes: {e}", err=True)
+    # Resolve conversation ID using shared logic
+    conv_id = _resolve_conversation_id(api, conversation_id_or_number)
+    if not conv_id:
+        return
+    
+    # Use shared display functionality
+    show_workspace_changes(api, conv_id)
 
 
 @conv.command()
