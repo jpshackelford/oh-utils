@@ -69,6 +69,8 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+# Disable untyped decorator warnings for click
+disable_error_code = ["misc"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
@@ -122,3 +124,10 @@ tag_format = "v$version"
 version_scheme = "semver"
 version_provider = "pep621"
 update_changelog_on_bump = true
+
+
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+]
