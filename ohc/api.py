@@ -42,7 +42,7 @@ class OpenHandsAPI:
         try:
             response = self.session.get(url, params=params)
             response.raise_for_status()
-            return cast(Dict[str, Any], response.json())
+            return cast("Dict[str, Any]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
                 raise Exception(
@@ -57,7 +57,7 @@ class OpenHandsAPI:
         url = urljoin(self.base_url, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
-        return cast(Dict[str, Any], response.json())
+        return cast("Dict[str, Any]", response.json())
 
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
@@ -74,7 +74,7 @@ class OpenHandsAPI:
                 error_detail = f"HTTP {response.status_code}: {response.text}"
                 raise Exception(error_detail)
             response.raise_for_status()
-            return cast(Dict[str, Any], response.json())
+            return cast("Dict[str, Any]", response.json())
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}") from e
 
@@ -113,7 +113,7 @@ class OpenHandsAPI:
                 # Server error - likely git repository issue
                 raise Exception("Git repository not available or corrupted")
             response.raise_for_status()
-            return cast(List[Dict[str, str]], response.json())
+            return cast("List[Dict[str, str]]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return []  # No git repository or no changes
@@ -161,7 +161,7 @@ class OpenHandsAPI:
             # API returns JSON with 'code' key containing file content
             result = response.json()
             if isinstance(result, dict) and "code" in result:
-                return cast(str, result["code"])
+                return cast("str", result["code"])
             else:
                 # Fallback if response format is different
                 return str(result)
@@ -256,7 +256,7 @@ class OpenHandsAPI:
         try:
             response = self.session.get(url, headers=headers)
             response.raise_for_status()
-            return cast(Dict[str, Any], response.json())
+            return cast("Dict[str, Any]", response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 raise Exception(

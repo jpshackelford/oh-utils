@@ -74,9 +74,8 @@ def add(name: str, url: str, apikey: str, default: bool) -> None:
 
     # Check if server name already exists
     existing_servers = config_manager.list_servers()
-    if (
-        name in existing_servers
-        and not click.confirm(f"Server '{name}' already exists. Overwrite?")
+    if name in existing_servers and not click.confirm(
+        f"Server '{name}' already exists. Overwrite?"
     ):
         click.echo("Operation cancelled.")
         return
