@@ -261,8 +261,9 @@ class TerminalFormatter:
         width, _ = self.terminal_size
         
         # Calculate column widths based on terminal size
-        # Minimum widths: num(4) + id(10) + status(12) + runtime(15) + title(remaining)
-        min_width = 4 + 10 + 12 + 15 + 20  # 61 chars minimum
+        # Widths: num(5) + id(10) + status(12) + runtime(17) + title(remaining)
+        # Allow for 3-digit numbers with 2 spaces before ID
+        min_width = 5 + 10 + 12 + 17 + 20  # 64 chars minimum
         
         if width < min_width:
             # Fallback for very narrow terminals
@@ -276,14 +277,14 @@ class TerminalFormatter:
             return lines
         
         # Calculate dynamic column widths
-        num_width = 4
+        num_width = 5  # Allow for 3-digit numbers + 2 spaces
         id_width = 10
         status_width = 12
-        runtime_width = 15
-        title_width = max(20, width - num_width - id_width - status_width - runtime_width - 6)  # 6 for separators
+        runtime_width = 17  # Increased for better spacing
+        title_width = max(20, width - num_width - id_width - status_width - runtime_width - 4)  # 4 for separators
         
         # Header
-        header = (f"{'#':<{num_width}} "
+        header = (f"{'#':>{num_width-2}}  "  # Right-align number with 2 spaces
                  f"{'ID':<{id_width}} "
                  f"{'Status':<{status_width}} "
                  f"{'Runtime':<{runtime_width}} "
@@ -297,7 +298,7 @@ class TerminalFormatter:
         for i, conv in enumerate(conversations, start_index + 1):
             runtime_display = conv.runtime_id or "─"
             
-            row = (f"{i:<{num_width}} "
+            row = (f"{i:>{num_width-2}}  "  # Right-align number with 2 spaces
                   f"{conv.short_id():<{id_width}} "
                   f"{conv.status_display():<{status_width}} "
                   f"{runtime_display:<{runtime_width}} "
@@ -479,6 +480,9 @@ class ConversationManager:
         # Show active conversations count
         active_count = sum(1 for conv in self.conversations if conv.is_active())
         print(f"Active conversations: {active_count}/{len(self.conversations)}")
+        
+        # Always show help line
+        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, n/p=next/prev page, h=help, q=quit")
     
     def run_interactive(self):
         """Run the interactive command loop"""
