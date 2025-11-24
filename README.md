@@ -13,11 +13,7 @@ uv pip install -e .
 
 Or run directly without installation:
 ```bash
-# API Utility version (newer, recommended)
-uv run oh-conversation-downloader
-
-# Cloud API version (alternative)
-uv run oh-conversation-downloader-cloud
+uv run oh-conversation-manager
 ```
 
 ### Using pip
@@ -28,85 +24,26 @@ pip install -e .
 
 ## Utilities
 
-This repository contains three utilities for working with OpenHands conversations:
+This repository contains a comprehensive utility for working with OpenHands conversations:
 
-### 1. OpenHands API Utility (Recommended)
-
-**Command:** `uv run oh-conversation-downloader`
-
-A modern Python utility for downloading conversations and workspace files from the OpenHands Cloud API.
-
-**Features:**
-- 🔐 Secure API key management
-- 📋 List all conversations with pagination
-- 📦 Download workspace archives
-- 📄 Download changed files from conversations
-- 💬 Interactive command-line interface
-- 🗂️ User-friendly conversation browsing
-
-**Quick Start:**
-
-Using uv (recommended):
-```bash
-cd oh-utils
-uv run oh-conversation-downloader
-```
-
-Or after installation:
-```bash
-oh-conversation-downloader
-```
-
-Traditional method:
-```bash
-python3 openhands_api_utility/openhands_utility.py
-```
-
-See the [OpenHands API Utility README](./openhands_api_utility/README.md) for detailed usage instructions.
-
-### 2. Conversation Downloader - Cloud API Version
-
-**Command:** `uv run oh-conversation-downloader-cloud`
-
-An alternative implementation with different API endpoints and features.
-
-**Features:**
-- 🔐 Secure token storage in `~/.config/openhands/api_token`
-- 📋 List conversations with pagination (up to 200)
-- 📦 Full workspace archive downloads
-- 🔍 Recursive file scanning from `/workspace/project`
-- ⚡ Progress indicators for file downloads
-- 🛡️ Rate limit handling & error recovery
-
-**Quick Start:**
-
-Using uv (recommended):
-```bash
-cd oh-utils
-uv run oh-conversation-downloader-cloud
-```
-
-Traditional method:
-```bash
-python3 conversation_downloader/openhands_conversation_downloader.py
-```
-
-See the [Conversation Downloader README](./conversation_downloader/README.md) for detailed usage instructions.
-
-### 3. Conversation Manager
+### Conversation Manager
 
 **Command:** `uv run oh-conversation-manager`
 
 A terminal-based interactive utility for managing OpenHands conversations.
 
 **Features:**
+- 🔐 Secure API key management
 - 📋 List conversations with status, runtime IDs, and titles
 - 🖥️ Terminal-aware formatting that adapts to screen size
 - 📄 Pagination for handling large numbers of conversations
 - 🔄 Real-time refresh to see updated conversation states
 - ⚡ Wake up conversations by number to start inactive ones
 - 🔍 Detailed conversation info with full metadata
+- 📦 Download workspace archives
+- 📄 Download changed files from conversations
 - 🎯 Interactive commands for easy navigation and management
+- 💬 Comprehensive conversation management interface
 
 **Quick Start:**
 
@@ -131,6 +68,9 @@ python3 conversation_manager/conversation_manager.py
 - `r`, `refresh` - Refresh conversation list
 - `w <num>` - Wake up conversation by number (e.g., `w 3`)
 - `s <num>` - Show detailed info for conversation (e.g., `s 1`)
+- `d <num>` - Download changed files for conversation (e.g., `d 1`)
+- `t <num>` - Download trajectory data for conversation (e.g., `t 1`)
+- `a <num>` - Download full workspace archive for conversation (e.g., `a 1`)
 - `n`, `next` - Next page
 - `p`, `prev` - Previous page
 - `h`, `help` - Show help

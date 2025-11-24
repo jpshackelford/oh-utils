@@ -9,8 +9,6 @@ dependencies = [
 ]
 
 [project.scripts]
-oh-conversation-downloader = "openhands_api_utility.openhands_utility:main"
-oh-conversation-downloader-cloud = "conversation_downloader.openhands_conversation_downloader:main"
 oh-conversation-manager = "conversation_manager.conversation_manager:main"
 
 [build-system]
@@ -18,4 +16,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["openhands_api_utility", "conversation_downloader", "conversation_manager"]
+packages = ["conversation_manager"]
