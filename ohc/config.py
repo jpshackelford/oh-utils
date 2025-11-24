@@ -1,19 +1,20 @@
 """
 Configuration management for OpenHands Cloud CLI.
 
-Handles server configuration storage and retrieval following XDG Base Directory Specification.
+Handles server configuration storage and retrieval following XDG Base Directory
+Specification.
 """
 
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 
 class ConfigManager:
     """Manages OpenHands Cloud CLI configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_dir = self._get_config_dir()
         self.config_file = self.config_dir / "config.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -32,9 +33,9 @@ class ConfigManager:
 
         try:
             with open(self.config_file) as f:
-                return json.load(f)
+                return cast(Dict[str, Any], json.load(f))
         except (OSError, json.JSONDecodeError) as e:
-            raise Exception(f"Failed to load configuration: {e}")
+            raise Exception(f"Failed to load configuration: {e}") from e
 
     def save_config(self, config: Dict[str, Any]) -> None:
         """Save configuration to file with secure permissions."""
@@ -44,7 +45,7 @@ class ConfigManager:
             # Set restrictive permissions for security
             os.chmod(self.config_file, 0o600)
         except OSError as e:
-            raise Exception(f"Failed to save configuration: {e}")
+            raise Exception(f"Failed to save configuration: {e}") from e
 
     def get_server_config(
         self, server_name: Optional[str] = None
@@ -53,16 +54,16 @@ class ConfigManager:
         config = self.load_config()
 
         if server_name:
-            return config["servers"].get(server_name)
+            return cast(Optional[Dict[str, Any]], config["servers"].get(server_name))
 
         # Return default server if no specific server requested
         default_server = config.get("default_server")
         if default_server and default_server in config["servers"]:
-            return config["servers"][default_server]
+            return cast(Dict[str, Any], config["servers"][default_server])
 
         # If no default set, return the first server if any exist
         if config["servers"]:
-            return next(iter(config["servers"].values()))
+            return cast(Dict[str, Any], next(iter(config["servers"].values())))
 
         return None
 
@@ -94,7 +95,11 @@ class ConfigManager:
         self.save_config(config)
 
     def remove_server(self, name: str) -> bool:
-        """Remove a server configuration. Returns True if server was found and removed."""
+        """
+        Remove a server configuration.
+
+        Returns True if server was found and removed.
+        """
         config = self.load_config()
 
         if name not in config["servers"]:
@@ -136,4 +141,4 @@ class ConfigManager:
     def list_servers(self) -> Dict[str, Dict[str, Any]]:
         """Get all server configurations."""
         config = self.load_config()
-        return config.get("servers", {})
+        return cast(Dict[str, Dict[str, Any]], config.get("servers", {}))
