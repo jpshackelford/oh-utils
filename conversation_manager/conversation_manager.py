@@ -235,38 +235,68 @@ class OpenHandsAPI:
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
     
-    def get_trajectory(self, conversation_id: str) -> Dict:
+    def get_trajectory(self, conversation_id: str, runtime_id: str = None, session_api_key: str = None) -> Dict:
         """Get the trajectory data for a conversation"""
-        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/trajectory")
+        if runtime_id:
+            # Use runtime URL for active conversations
+            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/trajectory")
+            
+            # Use session API key for runtime requests
+            headers = {}
+            if session_api_key:
+                headers['X-Session-API-Key'] = session_api_key
+            else:
+                # Fallback to regular authorization
+                headers['Authorization'] = f'Bearer {self.api_key}'
+        else:
+            # Fallback to main app URL
+            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/trajectory")
+            headers = {}
         
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 raise Exception(f"Trajectory not found for conversation {conversation_id}")
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid API key")
+                raise Exception("Authentication failed - invalid session API key")
             elif e.response.status_code == 500:
                 raise Exception("Server error - trajectory may be inaccessible")
             raise Exception(f"Failed to get trajectory: HTTP {e.response.status_code}")
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
     
-    def download_workspace_archive(self, conversation_id: str) -> bytes:
+    def download_workspace_archive(self, conversation_id: str, runtime_id: str = None, session_api_key: str = None) -> bytes:
         """Download the workspace archive as a ZIP file"""
-        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/zip-directory")
+        if runtime_id:
+            # Use runtime URL for active conversations
+            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/zip-directory")
+            
+            # Use session API key for runtime requests
+            headers = {}
+            if session_api_key:
+                headers['X-Session-API-Key'] = session_api_key
+            else:
+                # Fallback to regular authorization
+                headers['Authorization'] = f'Bearer {self.api_key}'
+        else:
+            # Fallback to main app URL
+            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/zip-directory")
+            headers = {}
         
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, headers=headers)
             response.raise_for_status()
             return response.content
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 raise Exception(f"Workspace not found for conversation {conversation_id}")
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid API key")
+                raise Exception("Authentication failed - invalid session API key")
             elif e.response.status_code == 500:
                 raise Exception("Server error - workspace may be inaccessible")
             raise Exception(f"Failed to download workspace: HTTP {e.response.status_code}")
@@ -745,9 +775,13 @@ class ConversationManager:
         print(f"\n📊 Downloading trajectory from conversation: {conv.formatted_title(60)}")
         
         try:
+            # Get fresh data from API
+            fresh_conv_data = self.api.get_conversation(conv.id)
+            fresh_conv = Conversation.from_api_response(fresh_conv_data)
+            
             # Get trajectory data from API
             print("🔍 Fetching trajectory data...")
-            trajectory_data = self.api.get_trajectory(conv.id)
+            trajectory_data = self.api.get_trajectory(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
             
             # Create JSON file with unique name
             base_name = f"trajectory-{conv.short_id()}"
@@ -775,9 +809,13 @@ class ConversationManager:
         print(f"\n📦 Downloading workspace from conversation: {conv.formatted_title(60)}")
         
         try:
+            # Get fresh data from API
+            fresh_conv_data = self.api.get_conversation(conv.id)
+            fresh_conv = Conversation.from_api_response(fresh_conv_data)
+            
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
-            workspace_data = self.api.download_workspace_archive(conv.id)
+            workspace_data = self.api.download_workspace_archive(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
             
             # Create ZIP file with unique name
             base_name = f"workspace-{conv.short_id()}"
