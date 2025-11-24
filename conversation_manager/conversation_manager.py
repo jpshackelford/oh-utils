@@ -271,6 +271,40 @@ class OpenHandsAPI:
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
+    def get_trajectory(self, conversation_id: str, runtime_id: str, session_api_key: str) -> Dict:
+        """Get trajectory data for a conversation"""
+        if runtime_id:
+            # Use runtime URL for active conversations
+            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/trajectory")
+            
+            # Use session API key for runtime requests
+            headers = {}
+            if session_api_key:
+                headers['X-Session-API-Key'] = session_api_key
+            else:
+                # Fallback to regular authorization
+                headers['Authorization'] = f'Bearer {self.api_key}'
+        else:
+            # Fallback to main app URL
+            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/trajectory")
+            headers = {}
+        
+        try:
+            response = self.session.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                raise Exception(f"Trajectory not found for conversation {conversation_id}")
+            elif e.response.status_code == 401:
+                raise Exception("Authentication failed - invalid session API key")
+            elif e.response.status_code == 500:
+                raise Exception("Server error - trajectory may be inaccessible")
+            raise Exception(f"Failed to get trajectory: HTTP {e.response.status_code}")
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
+
 
 class APIKeyManager:
     """Manages OpenHands API key storage and retrieval"""
