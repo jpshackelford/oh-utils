@@ -579,7 +579,7 @@ class ConversationManager:
                                     for file_path in sorted(files):
                                         print(f"      {file_path}")
                         else:
-                            print(f"\n  No uncommitted files")
+                            print(f"\n  No changes identified")
                     except Exception as e:
                         error_msg = str(e)
                         if "Git repository not available or corrupted" in error_msg:
