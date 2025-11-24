@@ -35,17 +35,37 @@ python3 conversation_manager/conversation_manager.py
 
 ## Usage
 
+### API Key Setup
+
+The utility can get your OpenHands API key in several ways:
+
+#### Option 1: Environment Variable (Recommended)
+```bash
+export OH_API_KEY="your-api-key-here"
+uv run oh-conversation-manager
+```
+
+#### Option 2: Command Line Argument
+```bash
+uv run oh-conversation-manager --api-key "your-api-key-here"
+# or short form
+uv run oh-conversation-manager -k "your-api-key-here"
+```
+
+#### Option 3: Inline Environment Variable
+```bash
+OH_API_KEY="your-api-key-here" uv run oh-conversation-manager
+```
+
+#### Option 4: Interactive Prompt
+If no API key is found, the utility will prompt you to enter one and optionally save it.
+
 ### Starting the Manager
 
 ```bash
 cd oh-utils
 uv run oh-conversation-manager
 ```
-
-The utility will:
-1. Check for an API key in the `OH_API_KEY` environment variable
-2. Look for a stored API key in `~/.openhands/config.json`
-3. Prompt you to enter an API key if none is found
 
 ### Interactive Commands
 

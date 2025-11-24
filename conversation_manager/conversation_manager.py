@@ -528,9 +528,21 @@ class ConversationManager:
 def main():
     """Main entry point"""
     import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='OpenHands Conversation Manager')
+    parser.add_argument('--api-key', '-k', help='OpenHands API key (overrides environment variables)')
+    parser.add_argument('--test', action='store_true', help='Test mode - just list conversations once')
+    
+    args = parser.parse_args()
+    
+    # Set API key if provided
+    if args.api_key:
+        import os
+        os.environ['OH_API_KEY'] = args.api_key
     
     # Check for test mode
-    if len(sys.argv) > 1 and sys.argv[1] == '--test':
+    if args.test:
         # Simple test mode - just list conversations once
         manager = ConversationManager()
         manager.initialize()
