@@ -817,17 +817,17 @@ class ConversationManager:
             print("🔍 Fetching workspace archive...")
             workspace_data = self.api.download_workspace_archive(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
             
-            # Create ZIP file with unique name
+            # Create ZIP file with unique name (API already returns ZIP data)
             base_name = f"workspace-{conv.short_id()}"
-            zip_path = self._get_unique_zip_path(base_name)
+            zip_path = self._get_unique_file_path(base_name, ".zip")
             
-            print(f"💾 Creating workspace archive: {zip_path.name}")
+            print(f"💾 Saving workspace archive: {zip_path.name}")
             
-            # Write workspace data to ZIP file
+            # Write workspace ZIP data directly (API already returns ZIP format)
             with open(zip_path, 'wb') as f:
                 f.write(workspace_data)
             
-            print(f"✅ Successfully created workspace archive: {zip_path}")
+            print(f"✅ Successfully saved workspace archive: {zip_path}")
             print(f"📊 Archive size: {zip_path.stat().st_size:,} bytes")
             
         except Exception as e:
