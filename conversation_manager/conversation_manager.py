@@ -16,6 +16,8 @@ import sys
 import json
 import shutil
 import subprocess
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
@@ -188,6 +190,50 @@ class OpenHandsAPI:
             raise Exception(f"Failed to get changes: HTTP {e.response.status_code}")
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
+    
+    def get_file_content(self, conversation_id: str, file_path: str, runtime_id: str = None, session_api_key: str = None) -> str:
+        """Get the content of a specific file from the conversation workspace"""
+        if runtime_id:
+            # Use runtime URL for active conversations
+            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
+            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/select-file")
+            
+            # Use session API key for runtime requests
+            headers = {}
+            if session_api_key:
+                headers['X-Session-API-Key'] = session_api_key
+            else:
+                # Fallback to regular authorization
+                headers['Authorization'] = f'Bearer {self.api_key}'
+        else:
+            # Fallback to main app URL
+            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/select-file")
+            headers = {}
+        
+        params = {'file': file_path}
+        
+        try:
+            response = self.session.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            
+            # API returns JSON with 'code' key containing file content
+            result = response.json()
+            if isinstance(result, dict) and 'code' in result:
+                return result['code']
+            else:
+                # Fallback if response format is different
+                return str(result)
+                
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                raise Exception(f"File not found: {file_path}")
+            elif e.response.status_code == 401:
+                raise Exception("Authentication failed - invalid session API key")
+            elif e.response.status_code == 500:
+                raise Exception("Server error - file may be inaccessible")
+            raise Exception(f"Failed to get file content: HTTP {e.response.status_code}")
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
 
 
 class APIKeyManager:
@@ -354,6 +400,7 @@ class TerminalFormatter:
             "  r, refresh    - Refresh conversation list",
             "  w <num>       - Wake up conversation by number",
             "  s <num>       - Show detailed info for conversation",
+            "  z <num>       - Download changed files as zip",
             "  n, next       - Next page",
             "  p, prev       - Previous page",
             "  q, quit       - Quit",
@@ -362,6 +409,7 @@ class TerminalFormatter:
             "Examples:",
             "  w 3           - Wake up conversation #3",
             "  s 1           - Show details for conversation #1",
+            "  z 2           - Download changed files from conversation #2",
             ""
         ]
 
@@ -548,6 +596,103 @@ class ConversationManager:
         else:
             print(f"Invalid conversation number: {conv_number}")
     
+    def download_conversation_files(self, conv_number: int):
+        """Download all changed files from a conversation as a zip file"""
+        if not (1 <= conv_number <= len(self.conversations)):
+            print(f"Invalid conversation number: {conv_number}")
+            return
+        
+        conv = self.conversations[conv_number - 1]
+        print(f"\n📦 Downloading files from conversation: {conv.formatted_title(60)}")
+        
+        try:
+            # Get fresh data from API
+            fresh_conv = self.api.get_conversation(conv.id)
+            fresh_conv = Conversation.from_dict(fresh_conv)
+            
+            # Get list of changed files
+            print("🔍 Fetching list of changed files...")
+            changes = self.api.get_conversation_changes(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
+            
+            if not changes:
+                print("ℹ️  No changed files found in this conversation.")
+                return
+            
+            print(f"📄 Found {len(changes)} changed files")
+            
+            # Create temporary directory for files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                downloaded_files = []
+                
+                # Download each file
+                for i, change in enumerate(changes, 1):
+                    file_path = change['path']
+                    status = change['status']
+                    
+                    # Skip deleted files
+                    if status == 'D':
+                        print(f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: {file_path}")
+                        continue
+                    
+                    print(f"  {i:2d}/{len(changes)} ⬇️  Downloading: {file_path}")
+                    
+                    try:
+                        # Get file content
+                        content = self.api.get_file_content(fresh_conv.id, file_path, fresh_conv.runtime_id, fresh_conv.session_api_key)
+                        
+                        # Create directory structure in temp folder
+                        file_temp_path = temp_path / file_path
+                        file_temp_path.parent.mkdir(parents=True, exist_ok=True)
+                        
+                        # Write file content
+                        with open(file_temp_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        
+                        downloaded_files.append(file_path)
+                        
+                    except Exception as e:
+                        print(f"      ⚠️  Failed to download {file_path}: {e}")
+                        continue
+                
+                if not downloaded_files:
+                    print("❌ No files were successfully downloaded.")
+                    return
+                
+                # Create zip file with unique name
+                base_name = f"conversation-{conv.short_id()}"
+                zip_path = self._get_unique_zip_path(base_name)
+                
+                print(f"📦 Creating zip file: {zip_path.name}")
+                
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for file_path in downloaded_files:
+                        file_temp_path = temp_path / file_path
+                        if file_temp_path.exists():
+                            zipf.write(file_temp_path, file_path)
+                
+                print(f"✅ Successfully created zip file: {zip_path}")
+                print(f"📊 Contains {len(downloaded_files)} files ({zip_path.stat().st_size:,} bytes)")
+                
+        except Exception as e:
+            print(f"❌ Failed to download files: {e}")
+    
+    def _get_unique_zip_path(self, base_name: str) -> Path:
+        """Generate a unique zip file path to avoid overwrites"""
+        cwd = Path.cwd()
+        zip_path = cwd / f"{base_name}.zip"
+        
+        if not zip_path.exists():
+            return zip_path
+        
+        # Find unique name with counter
+        counter = 1
+        while True:
+            zip_path = cwd / f"{base_name} ({counter}).zip"
+            if not zip_path.exists():
+                return zip_path
+            counter += 1
+    
     def display_conversations(self):
         """Display the current list of conversations"""
         self.formatter.clear_screen()
@@ -571,7 +716,7 @@ class ConversationManager:
         print(f"Active conversations: {active_count}/{len(self.conversations)}")
         
         # Always show help line
-        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, n/p=next/prev page, h=help, q=quit")
+        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, z <num>=download zip, n/p=next/prev page, h=help, q=quit")
     
     def run_interactive(self):
         """Run the interactive command loop"""
@@ -620,10 +765,17 @@ class ConversationManager:
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
+                elif cmd == 'z' and len(parts) == 2:
+                    try:
+                        conv_num = int(parts[1])
+                        self.download_conversation_files(conv_num)
+                        input("Press Enter to continue...")
+                    except ValueError:
+                        print("Invalid conversation number")
                 else:
                     print("Unknown command. Type 'h' for help.")
                 
-                if cmd not in ['h', 'help', 's']:
+                if cmd not in ['h', 'help', 's', 'z']:
                     # Small delay to show status messages
                     import time
                     time.sleep(0.5)
