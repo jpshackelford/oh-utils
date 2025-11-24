@@ -91,7 +91,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-summary:
@@ -116,6 +116,7 @@ jobs:
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
+        continue-on-error: true
         with:
           files: test-results/*.xml
           check_name: "Test Results Summary"
