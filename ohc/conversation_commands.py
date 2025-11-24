@@ -4,15 +4,13 @@ Conversation management commands for OpenHands Cloud CLI.
 Integrates the existing conversation management functionality into the new CLI structure.
 """
 
-import click
-import sys
 import os
-import json
-import zipfile
-from pathlib import Path
-from datetime import datetime
-from .config import ConfigManager
+import sys
+
+import click
+
 from .api import OpenHandsAPI
+from .config import ConfigManager
 from .conversation_display import show_conversation_details, show_workspace_changes
 
 
@@ -21,29 +19,29 @@ def _resolve_conversation_id(api: OpenHandsAPI, conversation_id_or_number: str) 
     try:
         # Try to parse as a number first
         conv_number = int(conversation_id_or_number)
-        
+
         # Get the conversation list to find the conversation by number
         result = api.search_conversations(limit=100)
         conversations = result.get('results', [])
-        
+
         if conv_number < 1 or conv_number > len(conversations):
             click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
             return None
-        
+
         conv_data = conversations[conv_number - 1]
         return conv_data.get('conversation_id')
-        
+
     except ValueError:
         # It's a conversation ID string - could be full or partial
         conv_id = conversation_id_or_number
-        
+
         # If it's a short ID (8 chars or less), try to find a matching conversation
         if len(conv_id) <= 8:
             result = api.search_conversations(limit=100)
             conversations = result.get('results', [])
-            
+
             matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-            
+
             if not matches:
                 click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
                 return None
@@ -75,39 +73,39 @@ def list(server, limit):
     """List conversations."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     try:
         # If no limit specified, get all conversations by using a large limit
         actual_limit = limit if limit is not None else 1000
         result = api.search_conversations(limit=actual_limit)
         conversations = result.get('results', [])  # API returns 'results' not 'conversations'
-        
+
         if not conversations:
             click.echo("No conversations found.")
             return
-        
+
         click.echo(f"Found {len(conversations)} conversations:")
         for i, conv_data in enumerate(conversations, 1):
             conv_id = conv_data.get('conversation_id', 'unknown')[:8]
             title = conv_data.get('title', 'Untitled')
             status = conv_data.get('status', 'UNKNOWN')
-            
+
             # Truncate title if too long
             if len(title) > 50:
                 title = title[:47] + "..."
-            
+
             status_icon = "🟢" if status == 'RUNNING' else "🔴" if status == 'STOPPED' else "🟡"
             click.echo(f"{i:2d}. {conv_id} {status_icon} {status:8s} {title}")
-            
+
     except Exception as e:
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
@@ -119,11 +117,11 @@ def interactive_mode():
         # Check if we have a configured server
         config_manager = ConfigManager()
         server_config = config_manager.get_server_config()
-        
+
         if not server_config:
             click.echo("No servers configured.")
             click.echo("Use 'ohc server add' to add a server configuration.")
-            
+
             # Offer to add a server interactively
             if click.confirm("Would you like to add a server now?"):
                 from .server_commands import add
@@ -136,19 +134,19 @@ def interactive_mode():
                     return
             else:
                 return
-        
+
         # Set environment variable for the original conversation manager
         os.environ['OH_API_KEY'] = server_config['api_key']
-        
+
         # Import and run the original conversation manager
         from conversation_manager.conversation_manager import ConversationManager
-        
+
         # Override the base URL in the API class if needed
         if server_config['url'] != "https://app.all-hands.dev/api/":
             # We need to patch the OpenHandsAPI class in the original module
             import conversation_manager.conversation_manager as cm
             original_init = cm.OpenHandsAPI.__init__
-            
+
             def patched_init(self, api_key):
                 original_init(self, api_key)
                 self.BASE_URL = server_config['url']
@@ -156,17 +154,17 @@ def interactive_mode():
                     'X-Session-API-Key': api_key,
                     'Content-Type': 'application/json'
                 })
-            
+
             cm.OpenHandsAPI.__init__ = patched_init
-        
-        click.echo(f"Starting interactive conversation manager...")
+
+        click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")
         click.echo()
-        
+
         manager = ConversationManager()
         manager.initialize()
         manager.run_interactive()
-        
+
     except KeyboardInterrupt:
         click.echo("\nExiting...")
         sys.exit(0)
@@ -182,16 +180,16 @@ def wake(conversation_id_or_number, server):
     """Wake up a conversation by ID (full or partial), or number from the list."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     try:
         # Check if input is a number or a conversation ID
         try:
@@ -199,26 +197,26 @@ def wake(conversation_id_or_number, server):
             # It's a number, so we need to get the list and find the conversation
             result = api.search_conversations(limit=100)
             conversations = result.get('results', [])  # API returns 'results' not 'conversations'
-            
+
             if conversation_number < 1 or conversation_number > len(conversations):
                 click.echo(f"✗ Invalid conversation number. Available: 1-{len(conversations)}", err=True)
                 return
-            
+
             conv_data = conversations[conversation_number - 1]
             conv_id = conv_data.get('conversation_id')
             title = conv_data.get('title', 'Untitled')
-            
+
         except ValueError:
             # It's a conversation ID string - could be full or partial
             conv_id = conversation_id_or_number
-            
+
             # If it's a short ID (8 chars or less), try to find a matching conversation
             if len(conv_id) <= 8:
                 result = api.search_conversations(limit=100)
                 conversations = result.get('results', [])
-                
+
                 matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-                
+
                 if not matches:
                     click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
                     return
@@ -237,15 +235,15 @@ def wake(conversation_id_or_number, server):
             else:
                 # Full conversation ID
                 title = f"Conversation {conv_id[:8]}..."
-        
+
         click.echo(f"Waking up conversation: {title}")
-        
+
         result = api.start_conversation(conv_id)
         click.echo("✓ Conversation started successfully")
-        
+
         if 'url' in result:
             click.echo(f"URL: {result['url']}")
-            
+
     except Exception as e:
         click.echo(f"✗ Failed to wake conversation: {e}", err=True)
 
@@ -257,21 +255,21 @@ def show(conversation_id_or_number, server):
     """Show detailed information about a conversation."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     # Resolve conversation ID using shared logic
     conv_id = _resolve_conversation_id(api, conversation_id_or_number)
     if not conv_id:
         return
-    
+
     # Use shared display functionality
     show_conversation_details(api, conv_id)
 
@@ -284,45 +282,45 @@ def ws_download(conversation_id_or_number, output, server):
     """Download workspace files as a ZIP archive."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     try:
         # First, resolve the conversation ID using the same logic as other commands
         try:
             # Try to parse as a number first
             conv_number = int(conversation_id_or_number)
-            
+
             # Get the conversation list to find the conversation by number
             result = api.search_conversations(limit=100)
             conversations = result.get('results', [])
-            
+
             if conv_number < 1 or conv_number > len(conversations):
                 click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
                 return
-            
+
             conv_data = conversations[conv_number - 1]
             conv_id = conv_data.get('conversation_id')
             title = conv_data.get('title', 'Untitled')
-            
+
         except ValueError:
             # It's a conversation ID string - could be full or partial
             conv_id = conversation_id_or_number
-            
+
             # If it's a short ID (8 chars or less), try to find a matching conversation
             if len(conv_id) <= 8:
                 result = api.search_conversations(limit=100)
                 conversations = result.get('results', [])
-                
+
                 matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-                
+
                 if not matches:
                     click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
                     return
@@ -341,31 +339,31 @@ def ws_download(conversation_id_or_number, output, server):
             else:
                 # Full conversation ID
                 title = f"Conversation {conv_id[:8]}..."
-        
+
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
         runtime_id = conv_details.get('runtime_id')
         session_api_key = conv_details.get('session_api_key')
-        
+
         click.echo(f"Downloading workspace for: {title}")
-        
+
         # Download the workspace archive
         archive_data = api.download_workspace_archive(conv_id, runtime_id, session_api_key)
-        
+
         # Determine output filename
         if not output:
             # Create a safe filename from conversation ID
             safe_id = conv_id[:8] if len(conv_id) >= 8 else conv_id
             output = f"{safe_id}.zip"
-        
+
         # Write the archive to file
         with open(output, 'wb') as f:
             f.write(archive_data)
-        
+
         file_size = len(archive_data)
         size_mb = file_size / (1024 * 1024)
         click.echo(f"✓ Workspace downloaded successfully: {output} ({size_mb:.1f} MB)")
-        
+
     except Exception as e:
         click.echo(f"✗ Failed to download workspace: {e}", err=True)
 
@@ -389,21 +387,21 @@ def ws_changes(conversation_id_or_number, server):
     """Show workspace file changes (git status)."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     # Resolve conversation ID using shared logic
     conv_id = _resolve_conversation_id(api, conversation_id_or_number)
     if not conv_id:
         return
-    
+
     # Use shared display functionality
     show_workspace_changes(api, conv_id)
 
@@ -416,45 +414,45 @@ def trajectory(conversation_id_or_number, server, limit):
     """Show conversation trajectory (action history)."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
-    
+
     if not server_config:
         if server:
             click.echo(f"✗ Server '{server}' not found.", err=True)
         else:
             click.echo("✗ No servers configured. Use 'ohc server add' to add a server.", err=True)
         return
-    
+
     api = OpenHandsAPI(server_config['api_key'], server_config['url'])
-    
+
     try:
         # First, resolve the conversation ID using the same logic as other commands
         try:
             # Try to parse as a number first
             conv_number = int(conversation_id_or_number)
-            
+
             # Get the conversation list to find the conversation by number
             result = api.search_conversations(limit=100)
             conversations = result.get('results', [])
-            
+
             if conv_number < 1 or conv_number > len(conversations):
                 click.echo(f"✗ Conversation number {conv_number} is out of range (1-{len(conversations)})", err=True)
                 return
-            
+
             conv_data = conversations[conv_number - 1]
             conv_id = conv_data.get('conversation_id')
             title = conv_data.get('title', 'Untitled')
-            
+
         except ValueError:
             # It's a conversation ID string - could be full or partial
             conv_id = conversation_id_or_number
-            
+
             # If it's a short ID (8 chars or less), try to find a matching conversation
             if len(conv_id) <= 8:
                 result = api.search_conversations(limit=100)
                 conversations = result.get('results', [])
-                
+
                 matches = [c for c in conversations if c.get('conversation_id', '').startswith(conv_id)]
-                
+
                 if not matches:
                     click.echo(f"✗ No conversation found with ID starting with '{conv_id}'", err=True)
                     return
@@ -473,38 +471,38 @@ def trajectory(conversation_id_or_number, server, limit):
             else:
                 # Full conversation ID
                 title = f"Conversation {conv_id[:8]}..."
-        
+
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
         runtime_id = conv_details.get('runtime_id')
         session_api_key = conv_details.get('session_api_key')
-        
+
         if not runtime_id:
-            click.echo(f"✗ Conversation is not running. Trajectory is only available for active conversations.", err=True)
+            click.echo("✗ Conversation is not running. Trajectory is only available for active conversations.", err=True)
             return
-        
+
         click.echo(f"Trajectory for: {title}")
-        
+
         # Get trajectory data
         trajectory_data = api.get_trajectory(conv_id, runtime_id, session_api_key)
-        
+
         # Extract events from trajectory
         events = trajectory_data.get('events', [])
         if not events:
             click.echo("No trajectory events found.")
             return
-        
+
         # Show the most recent events (limited by --limit)
         recent_events = events[-limit:] if len(events) > limit else events
-        
+
         click.echo(f"\nShowing {len(recent_events)} most recent events:")
         click.echo("-" * 60)
-        
+
         for i, event in enumerate(recent_events, 1):
             event_type = event.get('type', 'unknown')
             timestamp = event.get('timestamp', 'N/A')
             source = event.get('source', 'unknown')
-            
+
             # Format timestamp if available
             if timestamp and timestamp != 'N/A':
                 try:
@@ -515,9 +513,9 @@ def trajectory(conversation_id_or_number, server, limit):
                     formatted_time = timestamp
             else:
                 formatted_time = 'N/A'
-            
+
             click.echo(f"{i:2d}. [{formatted_time}] {event_type} ({source})")
-            
+
             # Show event content/message if available
             content = event.get('content') or event.get('message') or event.get('text')
             if content:
@@ -525,19 +523,19 @@ def trajectory(conversation_id_or_number, server, limit):
                 if len(content) > 100:
                     content = content[:97] + "..."
                 click.echo(f"    {content}")
-            
+
             # Show additional relevant fields
             if 'tool' in event:
                 click.echo(f"    Tool: {event['tool']}")
             if 'action' in event:
                 click.echo(f"    Action: {event['action']}")
-            
+
             click.echo()  # Empty line between events
-        
+
         total_events = len(events)
         if total_events > limit:
             click.echo(f"... and {total_events - limit} more events (use --limit to see more)")
-        
+
     except Exception as e:
         click.echo(f"✗ Failed to get trajectory: {e}", err=True)
 

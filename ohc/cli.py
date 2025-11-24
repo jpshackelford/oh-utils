@@ -5,6 +5,7 @@ Provides the multi-command CLI interface with server management and conversation
 """
 
 import click
+
 from . import __version__
 
 
@@ -16,7 +17,7 @@ def cli(ctx, interactive):
     """OpenHands Cloud CLI - Manage OpenHands servers and conversations."""
     ctx.ensure_object(dict)
     ctx.obj['interactive'] = interactive
-    
+
     # If no subcommand provided
     if ctx.invoked_subcommand is None:
         if interactive:
@@ -41,13 +42,13 @@ def help_command(ctx):
 def main():
     """Entry point for the ohc CLI."""
     # Import commands here to avoid circular imports
-    from .server_commands import server
     from .conversation_commands import conv
-    
+    from .server_commands import server
+
     cli.add_command(server)
     cli.add_command(conv)
     cli.add_command(help_command, name='help')
-    
+
     cli()
 
 
