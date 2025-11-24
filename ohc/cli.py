@@ -17,10 +17,25 @@ def cli(ctx, interactive):
     ctx.ensure_object(dict)
     ctx.obj['interactive'] = interactive
     
-    # If no subcommand provided, start interactive conversation manager
+    # If no subcommand provided
     if ctx.invoked_subcommand is None:
-        from .conversation_commands import interactive_mode
-        interactive_mode()
+        if interactive:
+            # Only start interactive mode if -i flag is used
+            from .conversation_commands import interactive_mode
+            interactive_mode()
+        else:
+            # Default behavior: show help
+            click.echo(ctx.get_help())
+            ctx.exit()
+
+
+@click.command()
+@click.pass_context
+def help_command(ctx):
+    """Show help information."""
+    # Get the parent context (the main cli group)
+    parent_ctx = ctx.parent
+    click.echo(parent_ctx.get_help())
 
 
 def main():
@@ -31,6 +46,7 @@ def main():
     
     cli.add_command(server)
     cli.add_command(conversations)
+    cli.add_command(help_command, name='help')
     
     cli()
 
