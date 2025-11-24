@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.2.3)'
+        description: "Version to release (e.g., 1.2.3)"
         required: false
         type: string
 
@@ -81,7 +81,7 @@ jobs:
             # Simple patch increment
             NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
           fi
-          
+
           echo "NEW_VERSION=v${NEW_VERSION}" >> $GITHUB_ENV
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "Creating release for version: v${NEW_VERSION}"

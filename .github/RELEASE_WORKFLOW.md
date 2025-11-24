@@ -7,16 +7,19 @@ The release workflow has been updated to resolve permission issues and ensure pr
 ## Key Changes Made
 
 ### 1. **Fixed Permission Issues**
+
 - **Problem**: The release workflow was failing with "Permission denied" errors when trying to push back to the repository
 - **Solution**: Removed git push operations that required special permissions
 - **Result**: Releases now create GitHub releases and tags without modifying the repository directly
 
 ### 2. **Added Workflow Dependencies**
+
 - **Problem**: Release workflow was running in parallel with CI instead of waiting for successful build/test completion
 - **Solution**: Changed trigger from `push` to `workflow_run` that waits for CI completion
 - **Result**: Releases only happen after successful CI builds
 
 ### 3. **Modernized Actions**
+
 - Updated from deprecated `actions/create-release@v1` to `softprops/action-gh-release@v1`
 - Added proper permissions declarations
 - Improved error handling and logging
@@ -24,6 +27,7 @@ The release workflow has been updated to resolve permission issues and ensure pr
 ## How Releases Work Now
 
 ### Automatic Releases
+
 1. **Trigger**: When code is pushed to `main` branch
 2. **Dependency**: Waits for CI workflow to complete successfully
 3. **Condition**: Only creates release if conventional commits are found since last tag
@@ -35,8 +39,9 @@ The release workflow has been updated to resolve permission issues and ensure pr
    - Creates GitHub release with tag and built artifacts
 
 ### Manual Releases
+
 1. **Trigger**: Go to Actions → Release → Run workflow
-2. **Options**: 
+2. **Options**:
    - Can specify custom version (e.g., "1.2.3")
    - If no version specified, auto-increments patch version
 3. **Process**: Same as automatic, but bypasses conventional commit check
@@ -47,7 +52,7 @@ Currently using simple patch version increment. For more sophisticated versionin
 
 1. **Semantic Versioning**: Consider implementing proper semantic version detection based on commit types:
    - `feat:` → minor version bump
-   - `fix:` → patch version bump  
+   - `fix:` → patch version bump
    - `BREAKING CHANGE:` → major version bump
 
 2. **Manual Version Control**: Use the manual release trigger with specific version numbers
@@ -55,11 +60,13 @@ Currently using simple patch version increment. For more sophisticated versionin
 ## Troubleshooting
 
 ### If Releases Still Fail
+
 1. **Check CI Status**: Ensure CI workflow completed successfully
 2. **Check Permissions**: Verify repository has proper GitHub Actions permissions
 3. **Check Conventional Commits**: Ensure commits follow conventional format for automatic releases
 
 ### Permission Issues
+
 The workflow now uses minimal permissions and doesn't push back to the repository, which should resolve most permission issues. If problems persist:
 
 1. Check repository Settings → Actions → General → Workflow permissions
