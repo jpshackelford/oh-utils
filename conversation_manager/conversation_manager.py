@@ -234,6 +234,44 @@ class OpenHandsAPI:
             raise Exception(f"Failed to get file content: HTTP {e.response.status_code}")
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
+    
+    def get_trajectory(self, conversation_id: str) -> Dict:
+        """Get the trajectory data for a conversation"""
+        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/trajectory")
+        
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                raise Exception(f"Trajectory not found for conversation {conversation_id}")
+            elif e.response.status_code == 401:
+                raise Exception("Authentication failed - invalid API key")
+            elif e.response.status_code == 500:
+                raise Exception("Server error - trajectory may be inaccessible")
+            raise Exception(f"Failed to get trajectory: HTTP {e.response.status_code}")
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
+    
+    def download_workspace_archive(self, conversation_id: str) -> bytes:
+        """Download the workspace archive as a ZIP file"""
+        url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/zip-directory")
+        
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.content
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                raise Exception(f"Workspace not found for conversation {conversation_id}")
+            elif e.response.status_code == 401:
+                raise Exception("Authentication failed - invalid API key")
+            elif e.response.status_code == 500:
+                raise Exception("Server error - workspace may be inaccessible")
+            raise Exception(f"Failed to download workspace: HTTP {e.response.status_code}")
+        except Exception as e:
+            raise Exception(f"API call failed - {str(e)}")
 
 
 class APIKeyManager:
@@ -401,6 +439,8 @@ class TerminalFormatter:
             "  w <num>       - Wake up conversation by number",
             "  s <num>       - Show detailed info for conversation",
             "  f <num>       - Download changed files as zip",
+            "  t <num>       - Download trajectory as JSON",
+            "  a <num>       - Download entire workspace as zip",
             "  n, next       - Next page",
             "  p, prev       - Previous page",
             "  q, quit       - Quit",
@@ -410,6 +450,8 @@ class TerminalFormatter:
             "  w 3           - Wake up conversation #3",
             "  s 1           - Show details for conversation #1",
             "  f 2           - Download changed files from conversation #2",
+            "  t 2           - Download trajectory from conversation #2",
+            "  a 2           - Download entire workspace from conversation #2",
             ""
         ]
 
@@ -693,6 +735,82 @@ class ConversationManager:
                 return zip_path
             counter += 1
     
+    def download_trajectory(self, conv_number: int):
+        """Download trajectory data from a conversation as JSON file"""
+        if not (1 <= conv_number <= len(self.conversations)):
+            print(f"Invalid conversation number: {conv_number}")
+            return
+        
+        conv = self.conversations[conv_number - 1]
+        print(f"\n📊 Downloading trajectory from conversation: {conv.formatted_title(60)}")
+        
+        try:
+            # Get trajectory data from API
+            print("🔍 Fetching trajectory data...")
+            trajectory_data = self.api.get_trajectory(conv.id)
+            
+            # Create JSON file with unique name
+            base_name = f"trajectory-{conv.short_id()}"
+            json_path = self._get_unique_file_path(base_name, ".json")
+            
+            print(f"💾 Creating trajectory file: {json_path.name}")
+            
+            # Write trajectory data to JSON file
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"✅ Successfully created trajectory file: {json_path}")
+            print(f"📊 File size: {json_path.stat().st_size:,} bytes")
+            
+        except Exception as e:
+            print(f"❌ Failed to download trajectory: {e}")
+    
+    def download_workspace(self, conv_number: int):
+        """Download entire workspace from a conversation as ZIP file"""
+        if not (1 <= conv_number <= len(self.conversations)):
+            print(f"Invalid conversation number: {conv_number}")
+            return
+        
+        conv = self.conversations[conv_number - 1]
+        print(f"\n📦 Downloading workspace from conversation: {conv.formatted_title(60)}")
+        
+        try:
+            # Download workspace archive from API
+            print("🔍 Fetching workspace archive...")
+            workspace_data = self.api.download_workspace_archive(conv.id)
+            
+            # Create ZIP file with unique name
+            base_name = f"workspace-{conv.short_id()}"
+            zip_path = self._get_unique_zip_path(base_name)
+            
+            print(f"💾 Creating workspace archive: {zip_path.name}")
+            
+            # Write workspace data to ZIP file
+            with open(zip_path, 'wb') as f:
+                f.write(workspace_data)
+            
+            print(f"✅ Successfully created workspace archive: {zip_path}")
+            print(f"📊 Archive size: {zip_path.stat().st_size:,} bytes")
+            
+        except Exception as e:
+            print(f"❌ Failed to download workspace: {e}")
+    
+    def _get_unique_file_path(self, base_name: str, extension: str) -> Path:
+        """Generate a unique file path to avoid overwrites"""
+        cwd = Path.cwd()
+        file_path = cwd / f"{base_name}{extension}"
+        
+        if not file_path.exists():
+            return file_path
+        
+        # Find unique name with counter
+        counter = 1
+        while True:
+            file_path = cwd / f"{base_name} ({counter}){extension}"
+            if not file_path.exists():
+                return file_path
+            counter += 1
+    
     def display_conversations(self):
         """Display the current list of conversations"""
         self.formatter.clear_screen()
@@ -772,10 +890,24 @@ class ConversationManager:
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
+                elif cmd == 't' and len(parts) == 2:
+                    try:
+                        conv_num = int(parts[1])
+                        self.download_trajectory(conv_num)
+                        input("Press Enter to continue...")
+                    except ValueError:
+                        print("Invalid conversation number")
+                elif cmd == 'a' and len(parts) == 2:
+                    try:
+                        conv_num = int(parts[1])
+                        self.download_workspace(conv_num)
+                        input("Press Enter to continue...")
+                    except ValueError:
+                        print("Invalid conversation number")
                 else:
                     print("Unknown command. Type 'h' for help.")
                 
-                if cmd not in ['h', 'help', 's', 'z']:
+                if cmd not in ['h', 'help', 's', 'f', 't', 'a']:
                     # Small delay to show status messages
                     import time
                     time.sleep(0.5)
