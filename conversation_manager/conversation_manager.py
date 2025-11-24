@@ -132,11 +132,17 @@ class OpenHandsAPI:
         response.raise_for_status()
         return response.json()
     
-    def start_conversation(self, conversation_id: str) -> Dict:
+    def start_conversation(self, conversation_id: str, providers_set: Optional[List[str]] = None) -> Dict:
         """Start/wake up a conversation"""
         url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/start")
+        
+        # Prepare the request body with providers_set
+        data = {
+            "providers_set": providers_set or ["github"]
+        }
+        
         try:
-            response = self.session.post(url)
+            response = self.session.post(url, json=data)
             if response.status_code != 200:
                 error_detail = f"HTTP {response.status_code}: {response.text}"
                 raise Exception(error_detail)
