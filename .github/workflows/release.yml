@@ -12,6 +12,11 @@ on:
         description: "Version to release (e.g., 1.2.3)"
         required: false
         type: string
+      test_mode:
+        description: "Enable test mode (creates draft prerelease)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -82,8 +87,16 @@ jobs:
             NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
           fi
 
+          # Add test suffix if in test mode and not on main branch
+          if [ "${{ github.event.inputs.test_mode }}" = "true" ] && [ "${{ github.ref_name }}" != "main" ]; then
+            CLEAN_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            NEW_VERSION="${NEW_VERSION}-test-${CLEAN_BRANCH}-${TIMESTAMP}"
+          fi
+
           echo "NEW_VERSION=v${NEW_VERSION}" >> $GITHUB_ENV
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "test_mode=${{ github.event.inputs.test_mode }}" >> $GITHUB_OUTPUT
           echo "Creating release for version: v${NEW_VERSION}"
 
       - name: Build package
@@ -95,16 +108,33 @@ jobs:
         run: |
           # Create a simple changelog from recent commits
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            echo "# Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
+          
+          if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
+            echo "# Test Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
-            echo "Initial release" >> RELEASE_NOTES.md
+            echo "**⚠️ This is a test release from branch: \`${{ github.ref_name }}\`**" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
           else
             echo "# Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
+          fi
+          
+          if [ -z "$LAST_TAG" ]; then
+            echo "Initial release" >> RELEASE_NOTES.md
+          else
             echo "## Changes since ${LAST_TAG}" >> RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
             git log ${LAST_TAG}..HEAD --oneline --pretty=format:"- %s" >> RELEASE_NOTES.md
+          fi
+          
+          if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
+            echo "" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "## Test Release Information" >> RELEASE_NOTES.md
+            echo "- **Branch**: ${{ github.ref_name }}" >> RELEASE_NOTES.md
+            echo "- **Commit**: ${{ github.sha }}" >> RELEASE_NOTES.md
+            echo "- **Triggered by**: ${{ github.actor }}" >> RELEASE_NOTES.md
+            echo "- **Timestamp**: $(date -u)" >> RELEASE_NOTES.md
           fi
 
       - name: Create GitHub Release
@@ -112,10 +142,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.NEW_VERSION }}
-          name: Release ${{ env.NEW_VERSION }}
+          name: ${{ steps.version.outputs.test_mode == 'true' && '🧪 Test Release' || 'Release' }} ${{ env.NEW_VERSION }}
           body_path: RELEASE_NOTES.md
-          draft: false
-          prerelease: false
+          draft: ${{ steps.version.outputs.test_mode == 'true' }}
+          prerelease: ${{ steps.version.outputs.test_mode == 'true' }}
           files: dist/*
 
       - name: Publish to PyPI (placeholder)
