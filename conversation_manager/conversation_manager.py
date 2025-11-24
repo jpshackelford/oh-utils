@@ -160,12 +160,17 @@ class OpenHandsAPI:
             if response.status_code == 404:
                 # Not a git repository or no changes
                 return []
+            elif response.status_code == 500:
+                # Server error - likely git repository issue
+                raise Exception("Git repository not available or corrupted")
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return []  # No git repository or no changes
-            raise Exception(f"Failed to get changes: {e}")
+            elif e.response.status_code == 500:
+                raise Exception("Git repository not available or corrupted")
+            raise Exception(f"Failed to get changes: HTTP {e.response.status_code}")
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
@@ -513,7 +518,14 @@ class ConversationManager:
                         else:
                             print(f"\n  No uncommitted files")
                     except Exception as e:
-                        print(f"\n  ⚠️  Could not fetch uncommitted files: {e}")
+                        error_msg = str(e)
+                        if "Git repository not available or corrupted" in error_msg:
+                            print(f"\n  ⚠️  Git repository not available for this conversation")
+                            print(f"      This may happen if the conversation workspace doesn't have git initialized")
+                        elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
+                            print(f"\n  ⚠️  API key doesn't have permission to access git changes")
+                        else:
+                            print(f"\n  ⚠️  Could not fetch uncommitted files: {error_msg}")
                 
                 print()
             except Exception as e:
