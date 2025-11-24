@@ -400,7 +400,7 @@ class TerminalFormatter:
             "  r, refresh    - Refresh conversation list",
             "  w <num>       - Wake up conversation by number",
             "  s <num>       - Show detailed info for conversation",
-            "  z <num>       - Download changed files as zip",
+            "  f <num>       - Download changed files as zip",
             "  n, next       - Next page",
             "  p, prev       - Previous page",
             "  q, quit       - Quit",
@@ -409,7 +409,7 @@ class TerminalFormatter:
             "Examples:",
             "  w 3           - Wake up conversation #3",
             "  s 1           - Show details for conversation #1",
-            "  z 2           - Download changed files from conversation #2",
+            "  f 2           - Download changed files from conversation #2",
             ""
         ]
 
@@ -716,7 +716,7 @@ class ConversationManager:
         print(f"Active conversations: {active_count}/{len(self.conversations)}")
         
         # Always show help line
-        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, z <num>=download zip, n/p=next/prev page, h=help, q=quit")
+        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, f <num>=download files, n/p=next/prev page, h=help, q=quit")
     
     def run_interactive(self):
         """Run the interactive command loop"""
@@ -765,7 +765,7 @@ class ConversationManager:
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
-                elif cmd == 'z' and len(parts) == 2:
+                elif cmd == 'f' and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.download_conversation_files(conv_num)
