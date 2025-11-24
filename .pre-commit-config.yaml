@@ -25,6 +25,7 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests]
         args: [--ignore-missing-imports]
+        files: ^ohc/
 
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
