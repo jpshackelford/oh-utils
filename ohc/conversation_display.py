@@ -11,6 +11,7 @@ from .api import OpenHandsAPI
 @dataclass
 class Conversation:
     """Represents a conversation with all relevant information"""
+
     id: str
     title: str
     status: str
@@ -22,48 +23,48 @@ class Conversation:
     url: Optional[str]
 
     @classmethod
-    def from_api_response(cls, data: Dict[str, Any]) -> 'Conversation':
+    def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
         """Create Conversation from API response data"""
         # Extract runtime ID from URL if available
         runtime_id = None
-        if data.get('url'):
+        if data.get("url"):
             try:
                 # URL format: https://{runtime_id}.prod-runtime.all-hands.dev/...
-                runtime_id = data['url'].split('.')[0].split('//')[1]
+                runtime_id = data["url"].split(".")[0].split("//")[1]
             except (IndexError, AttributeError):
                 runtime_id = None
 
         return cls(
-            id=data['conversation_id'],
-            title=data.get('title', 'Untitled'),
-            status=data.get('status', 'UNKNOWN'),
-            runtime_status=data.get('runtime_status'),
+            id=data["conversation_id"],
+            title=data.get("title", "Untitled"),
+            status=data.get("status", "UNKNOWN"),
+            runtime_status=data.get("runtime_status"),
             runtime_id=runtime_id,
-            session_api_key=data.get('session_api_key'),
-            last_updated=data.get('last_updated_at', ''),
-            created_at=data.get('created_at', ''),
-            url=data.get('url')
+            session_api_key=data.get("session_api_key"),
+            last_updated=data.get("last_updated_at", ""),
+            created_at=data.get("created_at", ""),
+            url=data.get("url"),
         )
 
     def is_active(self) -> bool:
         """Check if conversation is currently active/running"""
-        return self.status == 'RUNNING' and self.runtime_id is not None
+        return self.status == "RUNNING" and self.runtime_id is not None
 
     def short_id(self) -> str:
         """Get shortened conversation ID for display"""
-        return self.id[:8] if self.id else 'unknown'
+        return self.id[:8] if self.id else "unknown"
 
     def formatted_title(self, max_length: int = 50) -> str:
         """Get formatted title with length limit"""
         if len(self.title) <= max_length:
             return self.title
-        return self.title[:max_length-3] + "..."
+        return self.title[: max_length - 3] + "..."
 
     def status_display(self) -> str:
         """Get formatted status for display"""
         if self.is_active():
             return f"🟢 {self.status}"
-        elif self.status == 'STOPPED':
+        elif self.status == "STOPPED":
             return f"🔴 {self.status}"
         else:
             return f"🟡 {self.status}"
@@ -90,36 +91,38 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
         # Show uncommitted files for running conversations
         if conv.is_active():
             try:
-                changes = api.get_conversation_changes(conv.id, conv.runtime_id, conv.session_api_key)
+                changes = api.get_conversation_changes(
+                    conv.id, conv.runtime_id, conv.session_api_key
+                )
                 if changes:
                     print(f"\n  Uncommitted Files ({len(changes)}):")
 
                     # Group changes by status
                     status_groups = {}
                     for change in changes:
-                        status = change['status']
+                        status = change["status"]
                         if status not in status_groups:
                             status_groups[status] = []
-                        status_groups[status].append(change['path'])
+                        status_groups[status].append(change["path"])
 
                     # Display changes by status with icons
                     status_icons = {
-                        'M': '📝',  # Modified
-                        'A': '➕',  # Added/New
-                        'D': '🗑️',  # Deleted
-                        'U': '⚠️'   # Unmerged/Conflict
+                        "M": "📝",  # Modified
+                        "A": "➕",  # Added/New
+                        "D": "🗑️",  # Deleted
+                        "U": "⚠️",  # Unmerged/Conflict
                     }
 
                     status_names = {
-                        'M': 'Modified',
-                        'A': 'Added/New',
-                        'D': 'Deleted',
-                        'U': 'Unmerged'
+                        "M": "Modified",
+                        "A": "Added/New",
+                        "D": "Deleted",
+                        "U": "Unmerged",
                     }
 
-                    for status in ['M', 'A', 'D', 'U']:
+                    for status in ["M", "A", "D", "U"]:
                         if status in status_groups:
-                            icon = status_icons.get(status, '•')
+                            icon = status_icons.get(status, "•")
                             name = status_names.get(status, status)
                             files = status_groups[status]
                             print(f"    {icon} {name} ({len(files)}):")
@@ -131,9 +134,13 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
                 error_msg = str(e)
                 if "Git repository not available or corrupted" in error_msg:
                     print("\n  ⚠️  Git repository not available for this conversation")
-                    print("      This may happen if the conversation workspace doesn't have git initialized")
+                    print(
+                        "      This may happen if the conversation workspace doesn't have git initialized"
+                    )
                 elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
-                    print("\n  ⚠️  API key doesn't have permission to access git changes")
+                    print(
+                        "\n  ⚠️  API key doesn't have permission to access git changes"
+                    )
                 else:
                     print(f"\n  ⚠️  Could not fetch uncommitted files: {error_msg}")
 
@@ -155,7 +162,9 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
             return
 
         try:
-            changes = api.get_conversation_changes(conv.id, conv.runtime_id, conv.session_api_key)
+            changes = api.get_conversation_changes(
+                conv.id, conv.runtime_id, conv.session_api_key
+            )
             if changes:
                 print(f"\nWorkspace Changes for {conv.short_id()}:")
                 print(f"Title: {conv.title}")
@@ -164,29 +173,29 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
                 # Group changes by status
                 status_groups = {}
                 for change in changes:
-                    status = change['status']
+                    status = change["status"]
                     if status not in status_groups:
                         status_groups[status] = []
-                    status_groups[status].append(change['path'])
+                    status_groups[status].append(change["path"])
 
                 # Display changes by status with icons
                 status_icons = {
-                    'M': '📝',  # Modified
-                    'A': '➕',  # Added/New
-                    'D': '🗑️',  # Deleted
-                    'U': '⚠️'   # Unmerged/Conflict
+                    "M": "📝",  # Modified
+                    "A": "➕",  # Added/New
+                    "D": "🗑️",  # Deleted
+                    "U": "⚠️",  # Unmerged/Conflict
                 }
 
                 status_names = {
-                    'M': 'Modified',
-                    'A': 'Added/New',
-                    'D': 'Deleted',
-                    'U': 'Unmerged'
+                    "M": "Modified",
+                    "A": "Added/New",
+                    "D": "Deleted",
+                    "U": "Unmerged",
                 }
 
-                for status in ['M', 'A', 'D', 'U']:
+                for status in ["M", "A", "D", "U"]:
                     if status in status_groups:
-                        icon = status_icons.get(status, '•')
+                        icon = status_icons.get(status, "•")
                         name = status_names.get(status, status)
                         files = status_groups[status]
                         print(f"\n{icon} {name} ({len(files)}):")
@@ -199,8 +208,12 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
         except Exception as e:
             error_msg = str(e)
             if "Git repository not available or corrupted" in error_msg:
-                print(f"\n⚠️  Git repository not available for conversation {conv.short_id()}")
-                print("   This may happen if the conversation workspace doesn't have git initialized")
+                print(
+                    f"\n⚠️  Git repository not available for conversation {conv.short_id()}"
+                )
+                print(
+                    "   This may happen if the conversation workspace doesn't have git initialized"
+                )
             elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
                 print("\n⚠️  API key doesn't have permission to access git changes")
             else:

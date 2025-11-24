@@ -10,6 +10,7 @@ uv run oh-conversation-downloader
 ```
 
 This will:
+
 - ✓ Automatically create a virtual environment
 - ✓ Install dependencies (requests)
 - ✓ Run the utility
@@ -24,6 +25,7 @@ uv pip install -e .
 ```
 
 Then run with:
+
 ```bash
 uv run oh-conversation-downloader
 ```
@@ -51,7 +53,7 @@ python3 openhands_api_utility/openhands_utility.py
 
 - **[number]** - Select conversation by number
 - **n** - Next page
-- **p** - Previous page  
+- **p** - Previous page
 - **q** - Quit
 
 ## Example Session

@@ -20,18 +20,15 @@ class ConfigManager:
 
     def _get_config_dir(self) -> Path:
         """Get configuration directory following XDG Base Directory Specification."""
-        xdg_config = os.getenv('XDG_CONFIG_HOME')
+        xdg_config = os.getenv("XDG_CONFIG_HOME")
         if xdg_config:
-            return Path(xdg_config) / 'ohc'
-        return Path.home() / '.config' / 'ohc'
+            return Path(xdg_config) / "ohc"
+        return Path.home() / ".config" / "ohc"
 
     def load_config(self) -> Dict[str, Any]:
         """Load configuration from file."""
         if not self.config_file.exists():
-            return {
-                "servers": {},
-                "default_server": None
-            }
+            return {"servers": {}, "default_server": None}
 
         try:
             with open(self.config_file) as f:
@@ -42,14 +39,16 @@ class ConfigManager:
     def save_config(self, config: Dict[str, Any]) -> None:
         """Save configuration to file with secure permissions."""
         try:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2)
             # Set restrictive permissions for security
             os.chmod(self.config_file, 0o600)
         except OSError as e:
             raise Exception(f"Failed to save configuration: {e}")
 
-    def get_server_config(self, server_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def get_server_config(
+        self, server_name: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific server or the default server."""
         config = self.load_config()
 
@@ -67,7 +66,9 @@ class ConfigManager:
 
         return None
 
-    def add_server(self, name: str, url: str, api_key: str, set_default: bool = False) -> None:
+    def add_server(
+        self, name: str, url: str, api_key: str, set_default: bool = False
+    ) -> None:
         """Add a new server configuration."""
         config = self.load_config()
 
@@ -75,7 +76,7 @@ class ConfigManager:
         config["servers"][name] = {
             "url": url,
             "api_key": api_key,
-            "default": set_default
+            "default": set_default,
         }
 
         # Handle default server logic

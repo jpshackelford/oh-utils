@@ -17,33 +17,33 @@ def server():
 
 
 @server.command()
-@click.option('--name', help='Server name')
-@click.option('--url', help='Server API URL')
-@click.option('--apikey', help='API key')
-@click.option('--default', is_flag=True, help='Set as default server')
+@click.option("--name", help="Server name")
+@click.option("--url", help="Server API URL")
+@click.option("--apikey", help="API key")
+@click.option("--default", is_flag=True, help="Set as default server")
 def add(name, url, apikey, default):
     """Add a new server configuration."""
     config_manager = ConfigManager()
 
     # If any required parameters are missing, prompt for them
     if not name:
-        name = click.prompt('Server name')
+        name = click.prompt("Server name")
 
     if not url:
-        url = click.prompt('Server URL', default='https://app.all-hands.dev/api/')
+        url = click.prompt("Server URL", default="https://app.all-hands.dev/api/")
 
     if not apikey:
-        apikey = click.prompt('API Key', hide_input=True)
+        apikey = click.prompt("API Key", hide_input=True)
 
-    if not default and not click.get_current_context().params.get('default'):
-        default = click.confirm('Set as default server?', default=False)
+    if not default and not click.get_current_context().params.get("default"):
+        default = click.confirm("Set as default server?", default=False)
 
     # Ensure URL ends with /api/ if it doesn't already
-    if not url.endswith('/api/') and not url.endswith('/api'):
-        if url.endswith('/'):
-            url += 'api/'
+    if not url.endswith("/api/") and not url.endswith("/api"):
+        if url.endswith("/"):
+            url += "api/"
         else:
-            url += '/api/'
+            url += "/api/"
 
     # Test connection
     click.echo(f"Testing connection to {url}...")
@@ -60,7 +60,9 @@ def add(name, url, apikey, default):
                 api.search_conversations(limit=1)
                 click.echo("✓ Connection successful")
             except Exception as e:
-                click.echo(f"⚠ Connection partially successful but API key may have limited permissions: {e}")
+                click.echo(
+                    f"⚠ Connection partially successful but API key may have limited permissions: {e}"
+                )
                 if not click.confirm("Save server configuration anyway?"):
                     raise click.Abort()
 
@@ -101,15 +103,15 @@ def list():
 
     click.echo("Configured servers:")
     for name, config in servers.items():
-        default_marker = "* " if config.get('default', False) else "  "
-        url = config.get('url', 'Unknown URL')
-        default_text = " (default)" if config.get('default', False) else ""
+        default_marker = "* " if config.get("default", False) else "  "
+        url = config.get("url", "Unknown URL")
+        default_text = " (default)" if config.get("default", False) else ""
         click.echo(f"{default_marker}{name:<15} {url}{default_text}")
 
 
 @server.command()
-@click.argument('name')
-@click.option('--force', '-f', is_flag=True, help='Skip confirmation prompt')
+@click.argument("name")
+@click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
 def delete(name, force):
     """Delete a server configuration."""
     config_manager = ConfigManager()
@@ -136,8 +138,8 @@ def delete(name, force):
         click.echo(f"✗ Failed to delete server: {e}", err=True)
 
 
-@server.command('set-default')
-@click.argument('name')
+@server.command("set-default")
+@click.argument("name")
 def set_default(name):
     """Set a server as the default."""
     config_manager = ConfigManager()
@@ -160,7 +162,7 @@ def set_default(name):
 
 
 @server.command()
-@click.argument('name', required=False)
+@click.argument("name", required=False)
 def test(name):
     """Test connection to a server."""
     config_manager = ConfigManager()
@@ -182,7 +184,7 @@ def test(name):
 
     # Test connection
     click.echo(f"Testing connection to server '{name}'...")
-    api = OpenHandsAPI(server_config['api_key'], server_config['url'])
+    api = OpenHandsAPI(server_config["api_key"], server_config["url"])
 
     try:
         if not api.test_connection():

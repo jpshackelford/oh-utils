@@ -10,19 +10,20 @@ from . import __version__
 
 
 @click.group(invoke_without_command=True)
-@click.version_option(version=__version__, prog_name='ohc')
-@click.option('-i', '--interactive', is_flag=True, help='Run in interactive mode')
+@click.version_option(version=__version__, prog_name="ohc")
+@click.option("-i", "--interactive", is_flag=True, help="Run in interactive mode")
 @click.pass_context
 def cli(ctx, interactive):
     """OpenHands Cloud CLI - Manage OpenHands servers and conversations."""
     ctx.ensure_object(dict)
-    ctx.obj['interactive'] = interactive
+    ctx.obj["interactive"] = interactive
 
     # If no subcommand provided
     if ctx.invoked_subcommand is None:
         if interactive:
             # Only start interactive mode if -i flag is used
             from .conversation_commands import interactive_mode
+
             interactive_mode()
         else:
             # Default behavior: show help
@@ -47,10 +48,10 @@ def main():
 
     cli.add_command(server)
     cli.add_command(conv)
-    cli.add_command(help_command, name='help')
+    cli.add_command(help_command, name="help")
 
     cli()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

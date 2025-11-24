@@ -37,6 +37,7 @@ except ImportError:
 @dataclass
 class Conversation:
     """Represents a conversation with all relevant information"""
+
     id: str
     title: str
     status: str
@@ -48,48 +49,48 @@ class Conversation:
     url: Optional[str]
 
     @classmethod
-    def from_api_response(cls, data: Dict[str, Any]) -> 'Conversation':
+    def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
         """Create Conversation from API response data"""
         # Extract runtime ID from URL if available
         runtime_id = None
-        if data.get('url'):
+        if data.get("url"):
             try:
                 # URL format: https://{runtime_id}.prod-runtime.all-hands.dev/...
-                runtime_id = data['url'].split('.')[0].split('//')[1]
+                runtime_id = data["url"].split(".")[0].split("//")[1]
             except (IndexError, AttributeError):
                 runtime_id = None
 
         return cls(
-            id=data['conversation_id'],
-            title=data.get('title', 'Untitled'),
-            status=data.get('status', 'UNKNOWN'),
-            runtime_status=data.get('runtime_status'),
+            id=data["conversation_id"],
+            title=data.get("title", "Untitled"),
+            status=data.get("status", "UNKNOWN"),
+            runtime_status=data.get("runtime_status"),
             runtime_id=runtime_id,
-            session_api_key=data.get('session_api_key'),
-            last_updated=data.get('last_updated_at', ''),
-            created_at=data.get('created_at', ''),
-            url=data.get('url')
+            session_api_key=data.get("session_api_key"),
+            last_updated=data.get("last_updated_at", ""),
+            created_at=data.get("created_at", ""),
+            url=data.get("url"),
         )
 
     def is_active(self) -> bool:
         """Check if conversation is currently active/running"""
-        return self.status == 'RUNNING' and self.runtime_id is not None
+        return self.status == "RUNNING" and self.runtime_id is not None
 
     def short_id(self) -> str:
         """Get shortened conversation ID for display"""
-        return self.id[:8] if self.id else 'unknown'
+        return self.id[:8] if self.id else "unknown"
 
     def formatted_title(self, max_length: int = 50) -> str:
         """Get formatted title with length limit"""
         if len(self.title) <= max_length:
             return self.title
-        return self.title[:max_length-3] + "..."
+        return self.title[: max_length - 3] + "..."
 
     def status_display(self) -> str:
         """Get formatted status for display"""
         if self.is_active():
             return f"🟢 {self.status}"
-        elif self.status == 'STOPPED':
+        elif self.status == "STOPPED":
             return f"🔴 {self.status}"
         else:
             return f"🟡 {self.status}"
@@ -103,10 +104,9 @@ class OpenHandsAPI:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.session = requests.Session()
-        self.session.headers.update({
-            'X-Session-API-Key': api_key,
-            'Content-Type': 'application/json'
-        })
+        self.session.headers.update(
+            {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
+        )
 
     def test_connection(self) -> bool:
         """Test if the API key is valid"""
@@ -116,7 +116,9 @@ class OpenHandsAPI:
         except Exception:
             return False
 
-    def search_conversations(self, page_id: Optional[str] = None, limit: int = 20) -> Dict:
+    def search_conversations(
+        self, page_id: Optional[str] = None, limit: int = 20
+    ) -> Dict:
         """Search conversations with pagination"""
         url = urljoin(self.BASE_URL, "conversations")
         params = {"limit": limit}
@@ -142,14 +144,14 @@ class OpenHandsAPI:
         response.raise_for_status()
         return response.json()
 
-    def start_conversation(self, conversation_id: str, providers_set: Optional[List[str]] = None) -> Dict:
+    def start_conversation(
+        self, conversation_id: str, providers_set: Optional[List[str]] = None
+    ) -> Dict:
         """Start/wake up a conversation"""
         url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/start")
 
         # Prepare the request body with providers_set
-        data = {
-            "providers_set": providers_set or ["github"]
-        }
+        data = {"providers_set": providers_set or ["github"]}
 
         try:
             response = self.session.post(url, json=data)
@@ -161,20 +163,24 @@ class OpenHandsAPI:
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
-    def get_conversation_changes(self, conversation_id: str, runtime_id: str = None, session_api_key: str = None) -> List[Dict[str, str]]:
+    def get_conversation_changes(
+        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+    ) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation"""
         if runtime_id:
             # Use runtime URL for active conversations
             runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
-            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/git/changes")
+            url = urljoin(
+                runtime_url, f"api/conversations/{conversation_id}/git/changes"
+            )
 
             # Use session API key for runtime requests
             headers = {}
             if session_api_key:
-                headers['X-Session-API-Key'] = session_api_key
+                headers["X-Session-API-Key"] = session_api_key
             else:
                 # Fallback to regular authorization
-                headers['Authorization'] = f'Bearer {self.api_key}'
+                headers["Authorization"] = f"Bearer {self.api_key}"
         else:
             # Fallback to main app URL (though this likely won't work for git changes)
             url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/git/changes")
@@ -199,26 +205,34 @@ class OpenHandsAPI:
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
-    def get_file_content(self, conversation_id: str, file_path: str, runtime_id: str = None, session_api_key: str = None) -> str:
+    def get_file_content(
+        self,
+        conversation_id: str,
+        file_path: str,
+        runtime_id: str = None,
+        session_api_key: str = None,
+    ) -> str:
         """Get the content of a specific file from the conversation workspace"""
         if runtime_id:
             # Use runtime URL for active conversations
             runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
-            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/select-file")
+            url = urljoin(
+                runtime_url, f"api/conversations/{conversation_id}/select-file"
+            )
 
             # Use session API key for runtime requests
             headers = {}
             if session_api_key:
-                headers['X-Session-API-Key'] = session_api_key
+                headers["X-Session-API-Key"] = session_api_key
             else:
                 # Fallback to regular authorization
-                headers['Authorization'] = f'Bearer {self.api_key}'
+                headers["Authorization"] = f"Bearer {self.api_key}"
         else:
             # Fallback to main app URL
             url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/select-file")
             headers = {}
 
-        params = {'file': file_path}
+        params = {"file": file_path}
 
         try:
             response = self.session.get(url, headers=headers, params=params)
@@ -226,8 +240,8 @@ class OpenHandsAPI:
 
             # API returns JSON with 'code' key containing file content
             result = response.json()
-            if isinstance(result, dict) and 'code' in result:
-                return result['code']
+            if isinstance(result, dict) and "code" in result:
+                return result["code"]
             else:
                 # Fallback if response format is different
                 return str(result)
@@ -239,29 +253,35 @@ class OpenHandsAPI:
                 raise Exception("Authentication failed - invalid session API key")
             elif e.response.status_code == 500:
                 raise Exception("Server error - file may be inaccessible")
-            raise Exception(f"Failed to get file content: HTTP {e.response.status_code}")
+            raise Exception(
+                f"Failed to get file content: HTTP {e.response.status_code}"
+            )
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
-
-
-    def download_workspace_archive(self, conversation_id: str, runtime_id: str = None, session_api_key: str = None) -> bytes:
+    def download_workspace_archive(
+        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+    ) -> bytes:
         """Download the workspace archive as a ZIP file"""
         if runtime_id:
             # Use runtime URL for active conversations
             runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
-            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/zip-directory")
+            url = urljoin(
+                runtime_url, f"api/conversations/{conversation_id}/zip-directory"
+            )
 
             # Use session API key for runtime requests
             headers = {}
             if session_api_key:
-                headers['X-Session-API-Key'] = session_api_key
+                headers["X-Session-API-Key"] = session_api_key
             else:
                 # Fallback to regular authorization
-                headers['Authorization'] = f'Bearer {self.api_key}'
+                headers["Authorization"] = f"Bearer {self.api_key}"
         else:
             # Fallback to main app URL
-            url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/zip-directory")
+            url = urljoin(
+                self.BASE_URL, f"conversations/{conversation_id}/zip-directory"
+            )
             headers = {}
 
         try:
@@ -270,29 +290,37 @@ class OpenHandsAPI:
             return response.content
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                raise Exception(f"Workspace not found for conversation {conversation_id}")
+                raise Exception(
+                    f"Workspace not found for conversation {conversation_id}"
+                )
             elif e.response.status_code == 401:
                 raise Exception("Authentication failed - invalid session API key")
             elif e.response.status_code == 500:
                 raise Exception("Server error - workspace may be inaccessible")
-            raise Exception(f"Failed to download workspace: HTTP {e.response.status_code}")
+            raise Exception(
+                f"Failed to download workspace: HTTP {e.response.status_code}"
+            )
         except Exception as e:
             raise Exception(f"API call failed - {str(e)}")
 
-    def get_trajectory(self, conversation_id: str, runtime_id: str, session_api_key: str) -> Dict:
+    def get_trajectory(
+        self, conversation_id: str, runtime_id: str, session_api_key: str
+    ) -> Dict:
         """Get trajectory data for a conversation"""
         if runtime_id:
             # Use runtime URL for active conversations
             runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
-            url = urljoin(runtime_url, f"api/conversations/{conversation_id}/trajectory")
+            url = urljoin(
+                runtime_url, f"api/conversations/{conversation_id}/trajectory"
+            )
 
             # Use session API key for runtime requests
             headers = {}
             if session_api_key:
-                headers['X-Session-API-Key'] = session_api_key
+                headers["X-Session-API-Key"] = session_api_key
             else:
                 # Fallback to regular authorization
-                headers['Authorization'] = f'Bearer {self.api_key}'
+                headers["Authorization"] = f"Bearer {self.api_key}"
         else:
             # Fallback to main app URL
             url = urljoin(self.BASE_URL, f"conversations/{conversation_id}/trajectory")
@@ -304,7 +332,9 @@ class OpenHandsAPI:
             return response.json()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                raise Exception(f"Trajectory not found for conversation {conversation_id}")
+                raise Exception(
+                    f"Trajectory not found for conversation {conversation_id}"
+                )
             elif e.response.status_code == 401:
                 raise Exception("Authentication failed - invalid session API key")
             elif e.response.status_code == 500:
@@ -328,15 +358,15 @@ class APIKeyManager:
             try:
                 with open(self.config_file) as f:
                     config = json.load(f)
-                    return config.get('api_key')
+                    return config.get("api_key")
             except (OSError, json.JSONDecodeError):
                 return None
         return None
 
     def store_key(self, api_key: str) -> None:
         """Store API key securely"""
-        config = {'api_key': api_key}
-        with open(self.config_file, 'w') as f:
+        config = {"api_key": api_key}
+        with open(self.config_file, "w") as f:
             json.dump(config, f, indent=2)
         # Set restrictive permissions
         os.chmod(self.config_file, 0o600)
@@ -344,13 +374,15 @@ class APIKeyManager:
     def get_valid_key(self) -> str:
         """Get a valid API key, prompting user if necessary"""
         # Check environment variables first
-        env_key = os.getenv('OH_API_KEY') or os.getenv('OPENHANDS_API_KEY')
+        env_key = os.getenv("OH_API_KEY") or os.getenv("OPENHANDS_API_KEY")
         if env_key:
             api = OpenHandsAPI(env_key)
             if api.test_connection():
                 try:
                     api.search_conversations(limit=1)
-                    env_var = "OH_API_KEY" if os.getenv('OH_API_KEY') else "OPENHANDS_API_KEY"
+                    env_var = (
+                        "OH_API_KEY" if os.getenv("OH_API_KEY") else "OPENHANDS_API_KEY"
+                    )
                     print(f"✓ Using API key from {env_var} environment variable")
                     return env_key
                 except Exception as e:
@@ -412,10 +444,11 @@ class TerminalFormatter:
 
     def clear_screen(self):
         """Clear the terminal screen"""
-        os.system('clear' if os.name == 'posix' else 'cls')
+        os.system("clear" if os.name == "posix" else "cls")
 
-    def format_conversations_table(self, conversations: List[Conversation],
-                                 start_index: int = 0) -> List[str]:
+    def format_conversations_table(
+        self, conversations: List[Conversation], start_index: int = 0
+    ) -> List[str]:
         """Format conversations as a table with proper column alignment"""
         if not conversations:
             return ["No conversations found."]
@@ -443,14 +476,18 @@ class TerminalFormatter:
         id_width = 10
         status_width = 12
         runtime_width = 17  # Increased for better spacing
-        title_width = max(20, width - num_width - id_width - status_width - runtime_width - 4)  # 4 for separators
+        title_width = max(
+            20, width - num_width - id_width - status_width - runtime_width - 4
+        )  # 4 for separators
 
         # Header
-        header = (f"{'#':>{num_width-2}}  "  # Right-align number with 2 spaces
-                 f"{'ID':<{id_width}} "
-                 f"{'Status':<{status_width}} "
-                 f"{'Runtime':<{runtime_width}} "
-                 f"{'Title':<{title_width}}")
+        header = (
+            f"{'#':>{num_width - 2}}  "  # Right-align number with 2 spaces
+            f"{'ID':<{id_width}} "
+            f"{'Status':<{status_width}} "
+            f"{'Runtime':<{runtime_width}} "
+            f"{'Title':<{title_width}}"
+        )
 
         separator = "─" * min(len(header), width - 1)
 
@@ -460,11 +497,13 @@ class TerminalFormatter:
         for i, conv in enumerate(conversations, start_index + 1):
             runtime_display = conv.runtime_id or "─"
 
-            row = (f"{i:>{num_width-2}}  "  # Right-align number with 2 spaces
-                  f"{conv.short_id():<{id_width}} "
-                  f"{conv.status_display():<{status_width}} "
-                  f"{runtime_display:<{runtime_width}} "
-                  f"{conv.formatted_title(title_width):<{title_width}}")
+            row = (
+                f"{i:>{num_width - 2}}  "  # Right-align number with 2 spaces
+                f"{conv.short_id():<{id_width}} "
+                f"{conv.status_display():<{status_width}} "
+                f"{runtime_display:<{runtime_width}} "
+                f"{conv.formatted_title(title_width):<{title_width}}"
+            )
 
             lines.append(row)
 
@@ -492,7 +531,7 @@ class TerminalFormatter:
             "  f 2           - Download changed files from conversation #2",
             "  t 2           - Download trajectory from conversation #2",
             "  a 2           - Download entire workspace from conversation #2",
-            ""
+            "",
         ]
 
 
@@ -531,11 +570,15 @@ class ConversationManager:
             available_lines = max(5, height - 10)
             self.page_size = min(20, available_lines)
 
-            response = self.api.search_conversations(page_id=page_id, limit=self.page_size)
+            response = self.api.search_conversations(
+                page_id=page_id, limit=self.page_size
+            )
 
-            conversations_data = response.get('results', [])
-            self.conversations = [Conversation.from_api_response(data) for data in conversations_data]
-            self.next_page_id = response.get('next_page_id')
+            conversations_data = response.get("results", [])
+            self.conversations = [
+                Conversation.from_api_response(data) for data in conversations_data
+            ]
+            self.next_page_id = response.get("next_page_id")
 
             return True
         except Exception as e:
@@ -544,7 +587,11 @@ class ConversationManager:
 
     def refresh_conversations(self):
         """Refresh current page of conversations"""
-        current_page_id = self.page_ids[self.current_page] if self.current_page < len(self.page_ids) else None
+        current_page_id = (
+            self.page_ids[self.current_page]
+            if self.current_page < len(self.page_ids)
+            else None
+        )
         if self.load_conversations(current_page_id):
             print("✓ Conversations refreshed")
         else:
@@ -587,7 +634,7 @@ class ConversationManager:
             conv = self.conversations[conv_number - 1]
             try:
                 print(f"Waking up conversation: {conv.formatted_title()}")
-                result = self.api.start_conversation(conv.id)
+                self.api.start_conversation(conv.id)
                 print("✓ Conversation started successfully")
 
                 # Refresh to get updated status
@@ -625,36 +672,40 @@ class ConversationManager:
                 # Show uncommitted files for running conversations
                 if fresh_conv.is_active():
                     try:
-                        changes = self.api.get_conversation_changes(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
+                        changes = self.api.get_conversation_changes(
+                            fresh_conv.id,
+                            fresh_conv.runtime_id,
+                            fresh_conv.session_api_key,
+                        )
                         if changes:
                             print(f"\n  Uncommitted Files ({len(changes)}):")
 
                             # Group changes by status
                             status_groups = {}
                             for change in changes:
-                                status = change['status']
+                                status = change["status"]
                                 if status not in status_groups:
                                     status_groups[status] = []
-                                status_groups[status].append(change['path'])
+                                status_groups[status].append(change["path"])
 
                             # Display changes by status with icons
                             status_icons = {
-                                'M': '📝',  # Modified
-                                'A': '➕',  # Added/New
-                                'D': '🗑️',  # Deleted
-                                'U': '⚠️'   # Unmerged/Conflict
+                                "M": "📝",  # Modified
+                                "A": "➕",  # Added/New
+                                "D": "🗑️",  # Deleted
+                                "U": "⚠️",  # Unmerged/Conflict
                             }
 
                             status_names = {
-                                'M': 'Modified',
-                                'A': 'Added/New',
-                                'D': 'Deleted',
-                                'U': 'Unmerged'
+                                "M": "Modified",
+                                "A": "Added/New",
+                                "D": "Deleted",
+                                "U": "Unmerged",
                             }
 
-                            for status in ['M', 'A', 'D', 'U']:
+                            for status in ["M", "A", "D", "U"]:
                                 if status in status_groups:
-                                    icon = status_icons.get(status, '•')
+                                    icon = status_icons.get(status, "•")
                                     name = status_names.get(status, status)
                                     files = status_groups[status]
                                     print(f"    {icon} {name} ({len(files)}):")
@@ -665,12 +716,20 @@ class ConversationManager:
                     except Exception as e:
                         error_msg = str(e)
                         if "Git repository not available or corrupted" in error_msg:
-                            print("\n  ⚠️  Git repository not available for this conversation")
-                            print("      This may happen if the conversation workspace doesn't have git initialized")
+                            print(
+                                "\n  ⚠️  Git repository not available for this conversation"
+                            )
+                            print(
+                                "      This may happen if the conversation workspace doesn't have git initialized"
+                            )
                         elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
-                            print("\n  ⚠️  API key doesn't have permission to access git changes")
+                            print(
+                                "\n  ⚠️  API key doesn't have permission to access git changes"
+                            )
                         else:
-                            print(f"\n  ⚠️  Could not fetch uncommitted files: {error_msg}")
+                            print(
+                                f"\n  ⚠️  Could not fetch uncommitted files: {error_msg}"
+                            )
 
                 print()
             except Exception as e:
@@ -694,7 +753,9 @@ class ConversationManager:
 
             # Get list of changed files
             print("🔍 Fetching list of changed files...")
-            changes = self.api.get_conversation_changes(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
+            changes = self.api.get_conversation_changes(
+                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+            )
 
             if not changes:
                 print("ℹ️  No changed files found in this conversation.")
@@ -709,26 +770,33 @@ class ConversationManager:
 
                 # Download each file
                 for i, change in enumerate(changes, 1):
-                    file_path = change['path']
-                    status = change['status']
+                    file_path = change["path"]
+                    status = change["status"]
 
                     # Skip deleted files
-                    if status == 'D':
-                        print(f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: {file_path}")
+                    if status == "D":
+                        print(
+                            f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: {file_path}"
+                        )
                         continue
 
                     print(f"  {i:2d}/{len(changes)} ⬇️  Downloading: {file_path}")
 
                     try:
                         # Get file content
-                        content = self.api.get_file_content(fresh_conv.id, file_path, fresh_conv.runtime_id, fresh_conv.session_api_key)
+                        content = self.api.get_file_content(
+                            fresh_conv.id,
+                            file_path,
+                            fresh_conv.runtime_id,
+                            fresh_conv.session_api_key,
+                        )
 
                         # Create directory structure in temp folder
                         file_temp_path = temp_path / file_path
                         file_temp_path.parent.mkdir(parents=True, exist_ok=True)
 
                         # Write file content
-                        with open(file_temp_path, 'w', encoding='utf-8') as f:
+                        with open(file_temp_path, "w", encoding="utf-8") as f:
                             f.write(content)
 
                         downloaded_files.append(file_path)
@@ -747,14 +815,16 @@ class ConversationManager:
 
                 print(f"📦 Creating zip file: {zip_path.name}")
 
-                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
                     for file_path in downloaded_files:
                         file_temp_path = temp_path / file_path
                         if file_temp_path.exists():
                             zipf.write(file_temp_path, file_path)
 
                 print(f"✅ Successfully created zip file: {zip_path}")
-                print(f"📊 Contains {len(downloaded_files)} files ({zip_path.stat().st_size:,} bytes)")
+                print(
+                    f"📊 Contains {len(downloaded_files)} files ({zip_path.stat().st_size:,} bytes)"
+                )
 
         except Exception as e:
             print(f"❌ Failed to download files: {e}")
@@ -782,7 +852,9 @@ class ConversationManager:
             return
 
         conv = self.conversations[conv_number - 1]
-        print(f"\n📊 Downloading trajectory from conversation: {conv.formatted_title(60)}")
+        print(
+            f"\n📊 Downloading trajectory from conversation: {conv.formatted_title(60)}"
+        )
 
         try:
             # Get fresh data from API
@@ -791,7 +863,9 @@ class ConversationManager:
 
             # Get trajectory data from API
             print("🔍 Fetching trajectory data...")
-            trajectory_data = self.api.get_trajectory(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
+            trajectory_data = self.api.get_trajectory(
+                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+            )
 
             # Create JSON file with unique name
             base_name = f"trajectory-{conv.short_id()}"
@@ -800,7 +874,7 @@ class ConversationManager:
             print(f"💾 Creating trajectory file: {json_path.name}")
 
             # Write trajectory data to JSON file
-            with open(json_path, 'w', encoding='utf-8') as f:
+            with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
 
             print(f"✅ Successfully created trajectory file: {json_path}")
@@ -816,7 +890,9 @@ class ConversationManager:
             return
 
         conv = self.conversations[conv_number - 1]
-        print(f"\n📦 Downloading workspace from conversation: {conv.formatted_title(60)}")
+        print(
+            f"\n📦 Downloading workspace from conversation: {conv.formatted_title(60)}"
+        )
 
         try:
             # Get fresh data from API
@@ -825,7 +901,9 @@ class ConversationManager:
 
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
-            workspace_data = self.api.download_workspace_archive(fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key)
+            workspace_data = self.api.download_workspace_archive(
+                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+            )
 
             # Create ZIP file with unique name (API already returns ZIP data)
             base_name = f"workspace-{conv.short_id()}"
@@ -834,7 +912,7 @@ class ConversationManager:
             print(f"💾 Saving workspace archive: {zip_path.name}")
 
             # Write workspace ZIP data directly (API already returns ZIP format)
-            with open(zip_path, 'wb') as f:
+            with open(zip_path, "wb") as f:
                 f.write(workspace_data)
 
             print(f"✅ Successfully saved workspace archive: {zip_path}")
@@ -867,7 +945,9 @@ class ConversationManager:
         start_index = self.current_page * self.page_size
 
         # Format and display table
-        table_lines = self.formatter.format_conversations_table(self.conversations, start_index)
+        table_lines = self.formatter.format_conversations_table(
+            self.conversations, start_index
+        )
         for line in table_lines:
             print(line)
 
@@ -882,7 +962,9 @@ class ConversationManager:
         print(f"Active conversations: {active_count}/{len(self.conversations)}")
 
         # Always show help line
-        print("\nCommands: r=refresh, w <num>=wake, s <num>=show details, f <num>=download files, n/p=next/prev page, h=help, q=quit")
+        print(
+            "\nCommands: r=refresh, w <num>=wake, s <num>=show details, f <num>=download files, n/p=next/prev page, h=help, q=quit"
+        )
 
     def run_interactive(self):
         """Run the interactive command loop"""
@@ -905,47 +987,47 @@ class ConversationManager:
                 parts = command.split()
                 cmd = parts[0]
 
-                if cmd in ['q', 'quit']:
+                if cmd in ["q", "quit"]:
                     break
-                elif cmd in ['h', 'help']:
+                elif cmd in ["h", "help"]:
                     help_lines = self.formatter.format_help()
                     for line in help_lines:
                         print(line)
                     input("Press Enter to continue...")
-                elif cmd in ['r', 'refresh']:
+                elif cmd in ["r", "refresh"]:
                     self.refresh_conversations()
-                elif cmd in ['n', 'next']:
+                elif cmd in ["n", "next"]:
                     self.next_page()
-                elif cmd in ['p', 'prev']:
+                elif cmd in ["p", "prev"]:
                     self.prev_page()
-                elif cmd == 'w' and len(parts) == 2:
+                elif cmd == "w" and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.wake_conversation(conv_num)
                     except ValueError:
                         print("Invalid conversation number")
-                elif cmd == 's' and len(parts) == 2:
+                elif cmd == "s" and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.show_conversation_details(conv_num)
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
-                elif cmd == 'f' and len(parts) == 2:
+                elif cmd == "f" and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.download_conversation_files(conv_num)
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
-                elif cmd == 't' and len(parts) == 2:
+                elif cmd == "t" and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.download_trajectory(conv_num)
                         input("Press Enter to continue...")
                     except ValueError:
                         print("Invalid conversation number")
-                elif cmd == 'a' and len(parts) == 2:
+                elif cmd == "a" and len(parts) == 2:
                     try:
                         conv_num = int(parts[1])
                         self.download_workspace(conv_num)
@@ -955,9 +1037,10 @@ class ConversationManager:
                 else:
                     print("Unknown command. Type 'h' for help.")
 
-                if cmd not in ['h', 'help', 's', 'f', 't', 'a']:
+                if cmd not in ["h", "help", "s", "f", "t", "a"]:
                     # Small delay to show status messages
                     import time
+
                     time.sleep(0.5)
 
             except KeyboardInterrupt:
@@ -972,16 +1055,21 @@ def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='OpenHands Conversation Manager')
-    parser.add_argument('--api-key', '-k', help='OpenHands API key (overrides environment variables)')
-    parser.add_argument('--test', action='store_true', help='Test mode - just list conversations once')
+    parser = argparse.ArgumentParser(description="OpenHands Conversation Manager")
+    parser.add_argument(
+        "--api-key", "-k", help="OpenHands API key (overrides environment variables)"
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="Test mode - just list conversations once"
+    )
 
     args = parser.parse_args()
 
     # Set API key if provided
     if args.api_key:
         import os
-        os.environ['OH_API_KEY'] = args.api_key
+
+        os.environ["OH_API_KEY"] = args.api_key
 
     # Check for test mode
     if args.test:
@@ -993,8 +1081,12 @@ def main():
             for i, conv in enumerate(manager.conversations, 1):
                 status_icon = "🟢" if conv.is_active() else "🔴"
                 runtime = conv.runtime_id or "─"
-                print(f"{i:2d}. {conv.short_id()} {status_icon} {conv.status:8s} {runtime:15s} {conv.formatted_title(60)}")
-            print(f"\nActive conversations: {sum(1 for c in manager.conversations if c.is_active())}/{len(manager.conversations)}")
+                print(
+                    f"{i:2d}. {conv.short_id()} {status_icon} {conv.status:8s} {runtime:15s} {conv.formatted_title(60)}"
+                )
+            print(
+                f"\nActive conversations: {sum(1 for c in manager.conversations if c.is_active())}/{len(manager.conversations)}"
+            )
         return
 
     manager = ConversationManager()
