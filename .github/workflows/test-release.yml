@@ -1,0 +1,152 @@
+name: Test Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.2.3-test)"
+        required: false
+        type: string
+      create_actual_release:
+        description: "Create actual GitHub release (vs dry-run)"
+        required: false
+        type: boolean
+        default: false
+      branch_name:
+        description: "Branch name for test release (auto-detected if empty)"
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Determine branch and version
+        id: version
+        run: |
+          # Get current branch name
+          CURRENT_BRANCH="${{ github.event.inputs.branch_name }}"
+          if [ -z "$CURRENT_BRANCH" ]; then
+            CURRENT_BRANCH="${{ github.ref_name }}"
+          fi
+
+          # Clean branch name for use in version (replace / with -)
+          CLEAN_BRANCH=$(echo "$CURRENT_BRANCH" | sed 's/\//-/g')
+
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            NEW_VERSION="${{ github.event.inputs.version }}"
+          else
+            # Get current version and create test version
+            CURRENT_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+            # Create test version with branch name and timestamp
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            NEW_VERSION="${CURRENT_VERSION}-test-${CLEAN_BRANCH}-${TIMESTAMP}"
+          fi
+
+          echo "NEW_VERSION=v${NEW_VERSION}" >> $GITHUB_ENV
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "branch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
+          echo "clean_branch=${CLEAN_BRANCH}" >> $GITHUB_OUTPUT
+          echo "Creating test release for version: v${NEW_VERSION} from branch: ${CURRENT_BRANCH}"
+
+      - name: Build package
+        run: uv build
+
+      - name: Generate test changelog
+        run: |
+          echo "# Test Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "**⚠️ This is a test release from branch: \`${{ steps.version.outputs.branch }}\`**" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Recent Changes" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          # Get recent commits (last 10)
+          git log --oneline -10 --pretty=format:"- %s (%h)" >> RELEASE_NOTES.md
+
+          echo "" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Test Release Information" >> RELEASE_NOTES.md
+          echo "- **Branch**: ${{ steps.version.outputs.branch }}" >> RELEASE_NOTES.md
+          echo "- **Commit**: ${{ github.sha }}" >> RELEASE_NOTES.md
+          echo "- **Triggered by**: ${{ github.actor }}" >> RELEASE_NOTES.md
+          echo "- **Timestamp**: $(date -u)" >> RELEASE_NOTES.md
+
+      - name: Show release notes (dry-run)
+        run: |
+          echo "=== RELEASE NOTES PREVIEW ==="
+          cat RELEASE_NOTES.md
+          echo ""
+          echo "=== PACKAGE FILES ==="
+          ls -la dist/
+          echo ""
+          echo "=== PACKAGE CONTENTS ==="
+          for file in dist/*.whl; do
+            echo "Contents of $file:"
+            unzip -l "$file" | head -20
+            echo ""
+          done
+
+      - name: Create GitHub Release
+        if: github.event.inputs.create_actual_release == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.NEW_VERSION }}
+          name: "🧪 Test Release ${{ env.NEW_VERSION }}"
+          body_path: RELEASE_NOTES.md
+          draft: true # Always create as draft for test releases
+          prerelease: true # Mark as prerelease
+          files: dist/*
+
+      - name: Dry-run summary
+        if: github.event.inputs.create_actual_release != 'true'
+        run: |
+          echo "🧪 DRY-RUN COMPLETED"
+          echo "==================="
+          echo "This was a dry-run of the release process."
+          echo ""
+          echo "To create an actual test release, re-run this workflow with:"
+          echo "  create_actual_release: true"
+          echo ""
+          echo "The test release would be created as:"
+          echo "  Tag: ${{ env.NEW_VERSION }}"
+          echo "  Name: 🧪 Test Release ${{ env.NEW_VERSION }}"
+          echo "  Status: Draft + Prerelease"
+          echo "  Branch: ${{ steps.version.outputs.branch }}"
+
+      - name: Test PyPI simulation
+        run: |
+          echo "🧪 SIMULATING PYPI PUBLISH"
+          echo "=========================="
+          echo "In a real release, this would publish to PyPI:"
+          echo ""
+          echo "Package: oh-utils"
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "Files:"
+          ls -la dist/
+          echo ""
+          echo "Command that would be run:"
+          echo "  uv publish --token \$PYPI_TOKEN dist/*"
