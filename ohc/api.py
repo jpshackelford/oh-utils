@@ -1,10 +1,11 @@
 """
 OpenHands API client for the ohc CLI.
 
-Refactored from the original conversation_manager module to support multiple server configurations.
+Refactored from the original conversation_manager module to support multiple server
+configurations.
 """
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
@@ -31,35 +32,36 @@ class OpenHandsAPI:
 
     def search_conversations(
         self, page_id: Optional[str] = None, limit: int = 20
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Search conversations with pagination."""
         url = urljoin(self.base_url, "conversations")
-        params = {"limit": limit}
+        params: Dict[str, Any] = {"limit": limit}
         if page_id:
             params["page_id"] = page_id
 
         try:
             response = self.session.get(url, params=params)
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
                 raise Exception(
                     "API key does not have permission to access conversations. "
-                    "Please ensure you're using a full API key from your OpenHands settings."
-                )
+                    "Please ensure you're using a full API key from your OpenHands "
+                    "settings."
+                ) from e
             raise
 
-    def get_conversation(self, conversation_id: str) -> Dict:
+    def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         """Get detailed information about a specific conversation."""
         url = urljoin(self.base_url, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
-        return response.json()
+        return cast(Dict[str, Any], response.json())
 
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Start/wake up a conversation."""
         url = urljoin(self.base_url, f"conversations/{conversation_id}/start")
 
@@ -72,12 +74,15 @@ class OpenHandsAPI:
                 error_detail = f"HTTP {response.status_code}: {response.text}"
                 raise Exception(error_detail)
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_conversation_changes(
-        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+        self,
+        conversation_id: str,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation."""
         if runtime_id:
@@ -108,22 +113,24 @@ class OpenHandsAPI:
                 # Server error - likely git repository issue
                 raise Exception("Git repository not available or corrupted")
             response.raise_for_status()
-            return response.json()
+            return cast(List[Dict[str, str]], response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 return []  # No git repository or no changes
             elif e.response.status_code == 500:
-                raise Exception("Git repository not available or corrupted")
-            raise Exception(f"Failed to get changes: HTTP {e.response.status_code}")
+                raise Exception("Git repository not available or corrupted") from e
+            raise Exception(
+                f"Failed to get changes: HTTP {e.response.status_code}"
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_file_content(
         self,
         conversation_id: str,
         file_path: str,
-        runtime_id: str = None,
-        session_api_key: str = None,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> str:
         """Get the content of a specific file from the conversation workspace."""
         if runtime_id:
@@ -154,26 +161,31 @@ class OpenHandsAPI:
             # API returns JSON with 'code' key containing file content
             result = response.json()
             if isinstance(result, dict) and "code" in result:
-                return result["code"]
+                return cast(str, result["code"])
             else:
                 # Fallback if response format is different
                 return str(result)
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                raise Exception(f"File not found: {file_path}")
+                raise Exception(f"File not found: {file_path}") from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - file may be inaccessible")
+                raise Exception("Server error - file may be inaccessible") from e
             raise Exception(
                 f"Failed to get file content: HTTP {e.response.status_code}"
-            )
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def download_workspace_archive(
-        self, conversation_id: str, runtime_id: str = None, session_api_key: str = None
+        self,
+        conversation_id: str,
+        runtime_id: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> bytes:
         """Download the workspace archive as a ZIP file."""
         if runtime_id:
@@ -205,20 +217,22 @@ class OpenHandsAPI:
             if e.response.status_code == 404:
                 raise Exception(
                     f"Workspace not found for conversation {conversation_id}"
-                )
+                ) from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - workspace may be inaccessible")
+                raise Exception("Server error - workspace may be inaccessible") from e
             raise Exception(
                 f"Failed to download workspace: HTTP {e.response.status_code}"
-            )
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
 
     def get_trajectory(
         self, conversation_id: str, runtime_id: str, session_api_key: str
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Get trajectory data for a conversation."""
         if runtime_id:
             # Use runtime URL for active conversations
@@ -242,16 +256,20 @@ class OpenHandsAPI:
         try:
             response = self.session.get(url, headers=headers)
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 raise Exception(
                     f"Trajectory not found for conversation {conversation_id}"
-                )
+                ) from e
             elif e.response.status_code == 401:
-                raise Exception("Authentication failed - invalid session API key")
+                raise Exception(
+                    "Authentication failed - invalid session API key"
+                ) from e
             elif e.response.status_code == 500:
-                raise Exception("Server error - trajectory may be inaccessible")
-            raise Exception(f"Failed to get trajectory: HTTP {e.response.status_code}")
+                raise Exception("Server error - trajectory may be inaccessible") from e
+            raise Exception(
+                f"Failed to get trajectory: HTTP {e.response.status_code}"
+            ) from e
         except Exception as e:
-            raise Exception(f"API call failed - {str(e)}")
+            raise Exception(f"API call failed - {str(e)}") from e
