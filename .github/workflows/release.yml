@@ -108,7 +108,7 @@ jobs:
         run: |
           # Create a simple changelog from recent commits
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
+
           if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
             echo "# Test Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
@@ -118,7 +118,7 @@ jobs:
             echo "# Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
           fi
-          
+
           if [ -z "$LAST_TAG" ]; then
             echo "Initial release" >> RELEASE_NOTES.md
           else
@@ -126,7 +126,7 @@ jobs:
             echo "" >> RELEASE_NOTES.md
             git log ${LAST_TAG}..HEAD --oneline --pretty=format:"- %s" >> RELEASE_NOTES.md
           fi
-          
+
           if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
             echo "" >> RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md

@@ -14,6 +14,7 @@ We now have two ways to test releases:
 The `test-release.yml` workflow is designed specifically for testing releases on any branch.
 
 ### Features:
+
 - ✅ Runs on any branch
 - ✅ Creates test versions with branch name and timestamp
 - ✅ Dry-run mode by default (no actual release created)
@@ -31,6 +32,7 @@ The `test-release.yml` workflow is designed specifically for testing releases on
    - `branch_name`: Auto-detected, but can override
 
 ### Example Test Versions:
+
 - Auto-generated: `v0.1.0-test-jps-ci-20241124-143022`
 - Custom: `v1.2.3-test` (if you specify version)
 
@@ -48,6 +50,7 @@ The main `release.yml` workflow now supports a test mode.
    - `test_mode`: Set to `true` for testing
 
 ### Test Mode Behavior:
+
 - Creates draft + prerelease on GitHub
 - Adds test suffix to version if not on main branch
 - Includes test metadata in release notes
@@ -69,14 +72,17 @@ Both workflows test the complete release process:
 The following aspects of the release process are tied to the main branch:
 
 ### Automatic Triggers
+
 - `workflow_run` trigger only works on main branch
 - This is by design - automatic releases should only happen from main
 
 ### Production Releases
+
 - Non-test releases should only be created from main branch
 - This ensures release integrity and proper versioning
 
 ### What Works on Any Branch
+
 - Manual workflow triggers (`workflow_dispatch`)
 - Package building and testing
 - Version determination
@@ -86,40 +92,48 @@ The following aspects of the release process are tied to the main branch:
 ## Testing Scenarios
 
 ### Scenario 1: Dry-Run Test (Recommended First)
+
 ```
 Workflow: Test Release
 Options:
   - create_actual_release: false (default)
   - version: (leave empty for auto-generation)
 ```
+
 **Result**: Complete process simulation with detailed logging, no actual release
 
 ### Scenario 2: Draft Test Release
+
 ```
 Workflow: Test Release
 Options:
   - create_actual_release: true
   - version: (leave empty for auto-generation)
 ```
+
 **Result**: Creates actual draft prerelease on GitHub
 
 ### Scenario 3: Test Mode with Main Workflow
+
 ```
 Workflow: Release
 Options:
   - test_mode: true
   - version: (optional)
 ```
+
 **Result**: Creates draft prerelease using main workflow logic
 
 ## Cleanup
 
 Test releases are created as:
+
 - **Draft**: Won't appear in main releases list
 - **Prerelease**: Clearly marked as test/beta
 - **Deletable**: Can be safely deleted after testing
 
 To clean up test releases:
+
 1. Go to repository Releases page
 2. Find draft/prerelease test releases
 3. Delete them (this also removes the git tag)
@@ -143,6 +157,7 @@ To clean up test releases:
 ## Integration with CI
 
 The test workflows are independent of CI requirements:
+
 - Don't wait for CI completion (unlike main branch releases)
 - Can run even if CI is failing (useful for testing fixes)
 - Provide immediate feedback on release process
@@ -150,6 +165,7 @@ The test workflows are independent of CI requirements:
 ## Next Steps
 
 After successful testing:
+
 1. Merge PR to main branch
 2. Automatic release will trigger after CI passes
 3. Production release will be created with proper versioning
@@ -157,6 +173,7 @@ After successful testing:
 ## Future Enhancements
 
 Potential improvements for testing:
+
 - Test PyPI publishing to test.pypi.org
 - Integration testing of published packages
 - Automated cleanup of old test releases
