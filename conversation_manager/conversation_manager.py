@@ -31,7 +31,8 @@ try:
     )
 except ImportError:
     # Fallback if ohc module is not available
-    shared_show_conversation_details = None
+    def shared_show_conversation_details(*args: Any, **kwargs: Any) -> None:
+        pass
 
 
 @dataclass
@@ -121,7 +122,7 @@ class OpenHandsAPI:
     ) -> Dict:
         """Search conversations with pagination"""
         url = urljoin(self.BASE_URL, "conversations")
-        params = {"limit": limit}
+        params: Dict[str, Any] = {"limit": limit}
         if page_id:
             params["page_id"] = page_id
 
@@ -363,7 +364,7 @@ class OpenHandsAPI:
 class APIKeyManager:
     """Manages OpenHands API key storage and retrieval"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_dir = Path.home() / ".openhands"
         self.config_file = self.config_dir / "config.json"
         self.config_dir.mkdir(exist_ok=True)
@@ -374,7 +375,7 @@ class APIKeyManager:
             try:
                 with open(self.config_file) as f:
                     config = json.load(f)
-                    return config.get("api_key")
+                    return cast("Optional[str]", config.get("api_key"))
             except (OSError, json.JSONDecodeError):
                 return None
         return None
@@ -447,7 +448,7 @@ class APIKeyManager:
 class TerminalFormatter:
     """Handles terminal formatting and display"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.terminal_size = self.get_terminal_size()
 
     def get_terminal_size(self) -> Tuple[int, int]:
@@ -554,7 +555,7 @@ class TerminalFormatter:
 class ConversationManager:
     """Main conversation manager application"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.api_key_manager = APIKeyManager()
         self.formatter = TerminalFormatter()
         self.api: Optional[OpenHandsAPI] = None
@@ -564,7 +565,7 @@ class ConversationManager:
         self.next_page_id: Optional[str] = None
         self.page_ids: List[Optional[str]] = [None]  # Track page IDs for navigation
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Initialize the application with API key"""
         try:
             api_key = self.api_key_manager.get_valid_key()
@@ -580,6 +581,10 @@ class ConversationManager:
     def load_conversations(self, page_id: Optional[str] = None) -> bool:
         """Load conversations from API"""
         try:
+            if self.api is None:
+                print("✗ API not initialized")
+                return False
+
             # Adjust page size based on terminal height
             _, height = self.formatter.terminal_size
             # Reserve space for header, separator, help, and command prompt
@@ -601,7 +606,7 @@ class ConversationManager:
             print(f"✗ Failed to load conversations: {e}")
             return False
 
-    def refresh_conversations(self):
+    def refresh_conversations(self) -> None:
         """Refresh current page of conversations"""
         current_page_id = (
             self.page_ids[self.current_page]
@@ -613,7 +618,7 @@ class ConversationManager:
         else:
             print("✗ Failed to refresh conversations")
 
-    def next_page(self):
+    def next_page(self) -> None:
         """Go to next page"""
         if self.next_page_id:
             if self.current_page + 1 >= len(self.page_ids):
@@ -630,7 +635,7 @@ class ConversationManager:
         else:
             print("No more pages available")
 
-    def prev_page(self):
+    def prev_page(self) -> None:
         """Go to previous page"""
         if self.current_page > 0:
             self.current_page -= 1
@@ -644,11 +649,15 @@ class ConversationManager:
         else:
             print("Already on first page")
 
-    def wake_conversation(self, conv_number: int):
+    def wake_conversation(self, conv_number: int) -> None:
         """Wake up a conversation by its display number"""
         if 1 <= conv_number <= len(self.conversations):
             conv = self.conversations[conv_number - 1]
             try:
+                if self.api is None:
+                    print("✗ API not initialized")
+                    return
+
                 print(f"Waking up conversation: {conv.formatted_title()}")
                 self.api.start_conversation(conv.id)
                 print("✓ Conversation started successfully")
@@ -665,11 +674,15 @@ class ConversationManager:
             print(f"Invalid conversation number: {conv_number}")
             input("Press Enter to continue...")
 
-    def show_conversation_details(self, conv_number: int):
+    def show_conversation_details(self, conv_number: int) -> None:
         """Show detailed information about a conversation"""
         if 1 <= conv_number <= len(self.conversations):
             conv = self.conversations[conv_number - 1]
             try:
+                if self.api is None:
+                    print("✗ API not initialized")
+                    return
+
                 # Get fresh data from API
                 data = self.api.get_conversation(conv.id)
                 fresh_conv = Conversation.from_api_response(data)
@@ -697,7 +710,7 @@ class ConversationManager:
                             print(f"\n  Uncommitted Files ({len(changes)}):")
 
                             # Group changes by status
-                            status_groups = {}
+                            status_groups: Dict[str, List[str]] = {}
                             for change in changes:
                                 status = change["status"]
                                 if status not in status_groups:
@@ -756,7 +769,7 @@ class ConversationManager:
         else:
             print(f"Invalid conversation number: {conv_number}")
 
-    def download_conversation_files(self, conv_number: int):
+    def download_conversation_files(self, conv_number: int) -> None:
         """Download all changed files from a conversation as a zip file"""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
@@ -766,6 +779,10 @@ class ConversationManager:
         print(f"\n📦 Downloading files from conversation: {conv.formatted_title(60)}")
 
         try:
+            if self.api is None:
+                print("✗ API not initialized")
+                return
+
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
@@ -866,7 +883,7 @@ class ConversationManager:
                 return zip_path
             counter += 1
 
-    def download_trajectory(self, conv_number: int):
+    def download_trajectory(self, conv_number: int) -> None:
         """Download trajectory data from a conversation as JSON file"""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
@@ -878,12 +895,20 @@ class ConversationManager:
         )
 
         try:
+            if self.api is None:
+                print("✗ API not initialized")
+                return
+
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get trajectory data from API
             print("🔍 Fetching trajectory data...")
+            if fresh_conv.runtime_id is None or fresh_conv.session_api_key is None:
+                print("✗ Conversation is not active or missing runtime information")
+                return
+
             trajectory_data = self.api.get_trajectory(
                 fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
             )
@@ -904,7 +929,7 @@ class ConversationManager:
         except Exception as e:
             print(f"❌ Failed to download trajectory: {e}")
 
-    def download_workspace(self, conv_number: int):
+    def download_workspace(self, conv_number: int) -> None:
         """Download entire workspace from a conversation as ZIP file"""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
@@ -916,6 +941,10 @@ class ConversationManager:
         )
 
         try:
+            if self.api is None:
+                print("✗ API not initialized")
+                return
+
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
@@ -958,7 +987,7 @@ class ConversationManager:
                 return file_path
             counter += 1
 
-    def display_conversations(self):
+    def display_conversations(self) -> None:
         """Display the current list of conversations"""
         self.formatter.clear_screen()
 
@@ -988,7 +1017,7 @@ class ConversationManager:
             "f <num>=download files, n/p=next/prev page, h=help, q=quit"
         )
 
-    def run_interactive(self):
+    def run_interactive(self) -> None:
         """Run the interactive command loop"""
         print("\nOpenHands Conversation Manager")
         print("Type 'h' for help, 'q' to quit")
@@ -1073,7 +1102,7 @@ class ConversationManager:
                 input("Press Enter to continue...")
 
 
-def main():
+def main() -> None:
     """Main entry point"""
     import argparse
 
