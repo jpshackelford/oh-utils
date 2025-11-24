@@ -3,7 +3,7 @@ Shared conversation display functionality for both CLI and interactive modes.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from .api import OpenHandsAPI
 
@@ -98,7 +98,7 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
                     print(f"\n  Uncommitted Files ({len(changes)}):")
 
                     # Group changes by status
-                    status_groups = {}
+                    status_groups: Dict[str, List[str]] = {}
                     for change in changes:
                         status = change["status"]
                         if status not in status_groups:
@@ -135,7 +135,8 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
                 if "Git repository not available or corrupted" in error_msg:
                     print("\n  ⚠️  Git repository not available for this conversation")
                     print(
-                        "      This may happen if the conversation workspace doesn't have git initialized"
+                        "      This may happen if the conversation workspace "
+                        "doesn't have git initialized"
                     )
                 elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
                     print(
@@ -171,7 +172,7 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
                 print(f"Total files changed: {len(changes)}")
 
                 # Group changes by status
-                status_groups = {}
+                status_groups: Dict[str, List[str]] = {}
                 for change in changes:
                     status = change["status"]
                     if status not in status_groups:
@@ -209,10 +210,12 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
             error_msg = str(e)
             if "Git repository not available or corrupted" in error_msg:
                 print(
-                    f"\n⚠️  Git repository not available for conversation {conv.short_id()}"
+                    f"\n⚠️  Git repository not available for conversation "
+                    f"{conv.short_id()}"
                 )
                 print(
-                    "   This may happen if the conversation workspace doesn't have git initialized"
+                    "   This may happen if the conversation workspace doesn't have "
+                    "git initialized"
                 )
             elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
                 print("\n⚠️  API key doesn't have permission to access git changes")
