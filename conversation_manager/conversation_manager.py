@@ -25,6 +25,13 @@ from datetime import datetime
 import requests
 from urllib.parse import urljoin
 
+# Import shared display functionality
+try:
+    from ohc.conversation_display import show_conversation_details as shared_show_conversation_details
+except ImportError:
+    # Fallback if ohc module is not available
+    shared_show_conversation_details = None
+
 
 @dataclass
 class Conversation:
