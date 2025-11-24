@@ -607,8 +607,8 @@ class ConversationManager:
         
         try:
             # Get fresh data from API
-            fresh_conv = self.api.get_conversation(conv.id)
-            fresh_conv = Conversation.from_dict(fresh_conv)
+            fresh_conv_data = self.api.get_conversation(conv.id)
+            fresh_conv = Conversation.from_api_response(fresh_conv_data)
             
             # Get list of changed files
             print("🔍 Fetching list of changed files...")
