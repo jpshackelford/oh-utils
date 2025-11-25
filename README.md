@@ -15,7 +15,7 @@ uv pip install -e .
 Or run directly without installation:
 
 ```bash
-uv run oh-conversation-manager
+uv run ohc
 ```
 
 ### Using pip
@@ -24,19 +24,119 @@ uv run oh-conversation-manager
 pip install -e .
 ```
 
-## Utilities
+## Quick Start
 
-This repository contains a comprehensive utility for working with OpenHands conversations:
+### 1. First-time Setup: Add a Server
 
-### Conversation Manager
+Before using any commands, you need to configure a server with your API token:
 
-**Command:** `uv run oh-conversation-manager`
+```bash
+# Add a server configuration
+uv run ohc server add --name my-server --url https://app.all-hands.dev/api/ --apikey YOUR_API_KEY --default
 
-A terminal-based interactive utility for managing OpenHands conversations.
+# Or add interactively (will prompt for details)
+uv run ohc server add
+```
+
+**Required Information:**
+
+- **Server name**: A friendly name for your server (e.g., "production", "my-server")
+- **Server URL**: The API endpoint URL (default: `https://app.all-hands.dev/api/`)
+- **API Key**: Your OpenHands API token from [https://app.all-hands.dev/settings/api-keys](https://app.all-hands.dev/settings/api-keys)
+
+### 2. Basic Usage
+
+```bash
+# List your conversations
+uv run ohc conv list
+
+# Show detailed info about a conversation (by number or ID)
+uv run ohc conv show 1
+
+# Wake up a stopped conversation
+uv run ohc conv wake 2
+
+# Download workspace files
+uv run ohc conv ws-download 1
+
+# Start interactive mode for full-featured management
+uv run ohc -i
+```
+
+## Commands Reference
+
+### Server Management
+
+```bash
+# Add a new server configuration
+uv run ohc server add [--name NAME] [--url URL] [--apikey KEY] [--default]
+
+# List configured servers
+uv run ohc server list
+
+# Test connection to a server
+uv run ohc server test [SERVER_NAME]
+
+# Set a server as default
+uv run ohc server set-default SERVER_NAME
+
+# Delete a server configuration
+uv run ohc server delete SERVER_NAME [--force]
+```
+
+### Conversation Management
+
+```bash
+# List conversations
+uv run ohc conv list [--server SERVER] [-n NUMBER]
+
+# Show detailed conversation information
+uv run ohc conv show CONVERSATION_ID_OR_NUMBER [--server SERVER]
+
+# Wake up (start) a conversation
+uv run ohc conv wake CONVERSATION_ID_OR_NUMBER [--server SERVER]
+
+# Show conversation trajectory (action history)
+uv run ohc conv trajectory CONVERSATION_ID_OR_NUMBER [--server SERVER] [--limit N]
+uv run ohc conv traj CONVERSATION_ID_OR_NUMBER  # Short alias
+
+# Show workspace file changes (git status)
+uv run ohc conv ws-changes CONVERSATION_ID_OR_NUMBER [--server SERVER]
+
+# Download workspace as ZIP archive
+uv run ohc conv ws-download CONVERSATION_ID_OR_NUMBER [-o OUTPUT_FILE] [--server SERVER]
+uv run ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
+```
+
+**Conversation ID/Number Options:**
+
+- Use conversation number from list (e.g., `1`, `2`, `3`)
+- Use full conversation ID (e.g., `a7f6c3c8-1234-5678-9abc-def012345678`)
+- Use partial conversation ID (e.g., `a7f6c3c8` - must be unique)
+
+### Interactive Mode
+
+Launch the full-featured interactive conversation manager:
+
+```bash
+uv run ohc -i
+```
+
+**Interactive Commands:**
+
+- `r` - Refresh conversation list
+- `w <num>` - Wake up conversation by number (e.g., `w 3`)
+- `s <num>` - Show detailed info for conversation (e.g., `s 1`)
+- `f <num>` - Download workspace files for conversation (e.g., `f 1`)
+- `t <num>` - Show trajectory for conversation (e.g., `t 1`)
+- `a <num>` - Download entire workspace as ZIP archive (e.g., `a 1`)
+- `n`, `p` - Next/previous page
+- `h` - Show help
+- `q` - Quit
 
 **Features:**
 
-- 🔐 Secure API key management
+- 🔐 Secure server configuration management
 - 📋 List conversations with status, runtime IDs, and titles
 - 🖥️ Terminal-aware formatting that adapts to screen size
 - 📄 Pagination for handling large numbers of conversations
@@ -44,56 +144,47 @@ A terminal-based interactive utility for managing OpenHands conversations.
 - ⚡ Wake up conversations by number to start inactive ones
 - 🔍 Detailed conversation info with full metadata
 - 📦 Download workspace archives
-- 📄 Download changed files from conversations
 - 🎯 Interactive commands for easy navigation and management
-- 💬 Comprehensive conversation management interface
-
-**Quick Start:**
-
-Using uv (recommended):
-
-```bash
-cd oh-utils
-uv run oh-conversation-manager
-```
-
-Test mode (simple list):
-
-```bash
-cd oh-utils
-python3 conversation_manager/conversation_manager.py --test
-```
-
-Traditional method:
-
-```bash
-python3 conversation_manager/conversation_manager.py
-```
-
-**Interactive Commands:**
-
-- `r`, `refresh` - Refresh conversation list
-- `w <num>` - Wake up conversation by number (e.g., `w 3`)
-- `s <num>` - Show detailed info for conversation (e.g., `s 1`)
-- `d <num>` - Download changed files for conversation (e.g., `d 1`)
-- `t <num>` - Download trajectory data for conversation (e.g., `t 1`)
-- `a <num>` - Download full workspace archive for conversation (e.g., `a 1`)
-- `n`, `next` - Next page
-- `p`, `prev` - Previous page
-- `h`, `help` - Show help
-- `q`, `quit` - Exit
-
-See the [Conversation Manager README](./conversation_manager/README.md) for detailed usage instructions.
 
 ## Requirements
 
 - Python 3.8+
 - requests >= 2.25.0
+- click >= 8.0.0
 
 ## API Access
 
-These utilities require an OpenHands API token from:
-https://app.all-hands.dev/settings/api-keys
+Get your OpenHands API token from: [https://app.all-hands.dev/settings/api-keys](https://app.all-hands.dev/settings/api-keys)
+
+## Legacy Command
+
+The original conversation manager is still available as:
+
+```bash
+uv run oh-conversation-manager
+```
+
+However, we recommend using the new `ohc` CLI for better functionality and server management.
+
+## Troubleshooting
+
+### No servers configured
+
+If you see "No servers configured", run:
+
+```bash
+uv run ohc server add
+```
+
+### Connection failed
+
+- Verify your API key is correct
+- Check that the server URL ends with `/api/`
+- Test the connection: `uv run ohc server test`
+
+### Command not found
+
+Make sure you're in the project directory and using `uv run ohc` or install the package first.
 
 ## Development
 

@@ -1014,7 +1014,8 @@ class ConversationManager:
         # Always show help line
         print(
             "\nCommands: r=refresh, w <num>=wake, s <num>=show details, "
-            "f <num>=download files, n/p=next/prev page, h=help, q=quit"
+            "f <num>=download files, t <num>=trajectory, a <num>=workspace, "
+            "n/p=next/prev page, h=help, q=quit"
         )
 
     def run_interactive(self) -> None:
