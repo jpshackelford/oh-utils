@@ -39,6 +39,7 @@ uv run ohc server add
 ```
 
 **Required Information:**
+
 - **Server name**: A friendly name for your server (e.g., "production", "my-server")
 - **Server URL**: The API endpoint URL (default: `https://app.all-hands.dev/api/`)
 - **API Key**: Your OpenHands API token from [https://app.all-hands.dev/settings/api-keys](https://app.all-hands.dev/settings/api-keys)
@@ -108,6 +109,7 @@ uv run ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
 ```
 
 **Conversation ID/Number Options:**
+
 - Use conversation number from list (e.g., `1`, `2`, `3`)
 - Use full conversation ID (e.g., `a7f6c3c8-1234-5678-9abc-def012345678`)
 - Use partial conversation ID (e.g., `a7f6c3c8` - must be unique)
@@ -121,6 +123,7 @@ uv run ohc -i
 ```
 
 **Interactive Commands:**
+
 - `r` - Refresh conversation list
 - `w <num>` - Wake up conversation by number (e.g., `w 3`)
 - `s <num>` - Show detailed info for conversation (e.g., `s 1`)
@@ -130,6 +133,7 @@ uv run ohc -i
 - `q` - Quit
 
 **Features:**
+
 - 🔐 Secure server configuration management
 - 📋 List conversations with status, runtime IDs, and titles
 - 🖥️ Terminal-aware formatting that adapts to screen size
@@ -163,17 +167,21 @@ However, we recommend using the new `ohc` CLI for better functionality and serve
 ## Troubleshooting
 
 ### No servers configured
+
 If you see "No servers configured", run:
+
 ```bash
 uv run ohc server add
 ```
 
 ### Connection failed
+
 - Verify your API key is correct
 - Check that the server URL ends with `/api/`
 - Test the connection: `uv run ohc server test`
 
 ### Command not found
+
 Make sure you're in the project directory and using `uv run ohc` or install the package first.
 
 ## Development
