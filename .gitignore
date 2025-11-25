@@ -88,9 +88,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Test fixtures - exclude large binary files
+# Test fixtures - exclude large binary files and unsanitized fixtures
 tests/fixtures/workspace_archive.json
 tests/fixtures/sanitized/workspace_archive.json
+
+# Prevent unsanitized fixtures from being committed
+# Only allow sanitized fixtures in the sanitized/ subdirectory
+tests/fixtures/*.json
+tests/fixtures/*.yaml
+tests/fixtures/*.yml
+!tests/fixtures/sanitized/
 
 # Test results
 test-results.xml
