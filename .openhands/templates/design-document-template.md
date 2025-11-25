@@ -1,6 +1,5 @@
 Use this template for your designs.
 
-
 # Title
 
 ## 1. Introduction
@@ -39,6 +38,7 @@ Describe the design starting from most fundamental concept of the proposal and p
 solution in its own subsection. Number subsections as follows:
 
 ### 4.1
+
 #### 4.1.1
 
 Ilustrate with code examples, example output, diagrams, etc. Always specify a language for illustrations fenced with
