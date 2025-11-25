@@ -7,8 +7,9 @@ set -e  # Exit on any error
 
 echo "🔍 Running pre-commit checks for oh-utils..."
 
-# Ensure we're in the project root
-cd "$(dirname "$0")/.."
+# Ensure we're in the project root (hooks run from .git directory)
+PROJECT_ROOT="/workspace/project/oh-utils"
+cd "$PROJECT_ROOT"
 
 # Clear conflicting environment variables that interfere with pre-commit
 unset VIRTUAL_ENV
@@ -30,7 +31,6 @@ echo "🧹 Running code quality checks..."
 export PYTHONPATH="/workspace/project/oh-utils/.venv/lib/python3.12/site-packages:$PYTHONPATH"
 
 # Get list of staged Python files (with absolute paths)
-PROJECT_ROOT="/workspace/project/oh-utils"
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py)$' | sed "s|^|$PROJECT_ROOT/|" || true)
 
 if [ -n "$STAGED_FILES" ]; then
@@ -52,7 +52,7 @@ if [ -n "$STAGED_FILES" ]; then
     
     # Run mypy type checking
     echo "Running mypy type checking..."
-    if ! python3 -m mypy $STAGED_FILES; then
+    if ! VIRTUAL_ENV="" uv run mypy $STAGED_FILES; then
         echo "❌ Type checking failed. Please fix the issues above."
         exit 1
     fi
@@ -67,7 +67,9 @@ echo "🧪 Running additional project checks..."
 
 # Ensure tests pass
 echo "Running tests..."
-if python3 -m pytest --tb=short -q; then
+# Use uv run to ensure we have the right environment, disable coverage for commit hooks
+cd "$PROJECT_ROOT"
+if VIRTUAL_ENV="" uv run pytest tests/ --tb=short -q --no-cov; then
     echo "✅ All tests passed!"
 else
     echo "❌ Tests failed. Please fix failing tests before committing."
@@ -76,7 +78,7 @@ fi
 
 # Check that the package can be imported
 echo "Verifying package imports..."
-if python3 -c "import conversation_manager; import ohc" 2>/dev/null; then
+if VIRTUAL_ENV="" uv run python -c "import conversation_manager; import ohc" 2>/dev/null; then
     echo "✅ Package imports successfully!"
 else
     echo "❌ Package import failed. Please check for import errors."
