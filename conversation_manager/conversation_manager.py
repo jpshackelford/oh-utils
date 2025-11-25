@@ -935,12 +935,14 @@ class ConversationManager:
                 return
 
             # Extract base runtime URL from the full conversation URL
-            runtime_url = None
-            if fresh_conv.url:
-                from urllib.parse import urlparse
+            if not fresh_conv.url:
+                print("✗ Conversation URL is missing")
+                return
 
-                parsed_url = urlparse(fresh_conv.url)
-                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            from urllib.parse import urlparse
+
+            parsed_url = urlparse(fresh_conv.url)
+            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
             trajectory_data = self.api.get_trajectory(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
