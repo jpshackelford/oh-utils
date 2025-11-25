@@ -90,3 +90,17 @@ These utilities require an OpenHands API token from: https://app.all-hands.dev/s
 - Test fixtures and VCR for API response recording
 - Cross-platform testing (Ubuntu, Windows, macOS)
 - Multiple Python version support (3.8+, tested on 3.9-3.12)
+
+# Design Documents
+
+When creating design documents for this repository, use the template located at:
+
+`.openhands/templates/design-document-template.md`
+
+This template provides a structured format for documenting technical designs, including problem statements, proposed solutions, technical specifications, and implementation plans.
+
+To use the template:
+
+```bash
+cp .openhands/templates/design-document-template.md path/to/your-design-doc.md
+```
