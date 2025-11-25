@@ -7,17 +7,21 @@ This project is a collection of utilities for working with OpenHands (formerly A
 This project uses modern Python development tools with uv as the package manager:
 
 1. **Install uv** (if not already installed):
+
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 2. **Development setup**:
+
    ```bash
    make dev-setup
    ```
+
    This installs all dependencies and sets up pre-commit hooks.
 
 3. **Quick installation**:
+
    ```bash
    uv pip install -e .
    ```
