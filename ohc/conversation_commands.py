@@ -620,7 +620,7 @@ def trajectory(
         trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
 
         # Extract events from trajectory
-        events = trajectory_data.get("events", [])
+        events = trajectory_data.get("trajectory", [])  # Changed from "events" to "trajectory"
         if not events:
             click.echo("No trajectory events found.")
             return
