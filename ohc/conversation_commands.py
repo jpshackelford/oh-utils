@@ -506,11 +506,10 @@ def ws_changes(conversation_id_or_number: str, server: Optional[str]) -> None:
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-@click.option("--limit", default=10, help="Number of recent trajectory events to show")
 def trajectory(
-    conversation_id_or_number: str, server: Optional[str], limit: int
+    conversation_id_or_number: str, server: Optional[str]
 ) -> None:
-    """Show conversation trajectory (action history)."""
+    """Download conversation trajectory as JSON file."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
 
@@ -649,14 +648,12 @@ def trajectory(
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-@click.option("--limit", default=10, help="Number of recent trajectory events to show")
-def traj(conversation_id_or_number: str, server: Optional[str], limit: int) -> None:
-    """Show conversation trajectory (action history) - alias for trajectory."""
+def traj(conversation_id_or_number: str, server: Optional[str]) -> None:
+    """Download conversation trajectory as JSON file - alias for trajectory."""
     # Call the main trajectory function
     ctx = click.get_current_context()
     ctx.invoke(
         trajectory,
         conversation_id_or_number=conversation_id_or_number,
         server=server,
-        limit=limit,
     )
