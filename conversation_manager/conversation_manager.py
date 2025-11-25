@@ -917,8 +917,15 @@ class ConversationManager:
                 print("✗ Conversation is not active or missing runtime information")
                 return
 
+            # Extract base runtime URL from the full conversation URL
+            runtime_url = None
+            if fresh_conv.url:
+                from urllib.parse import urlparse
+                parsed_url = urlparse(fresh_conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            
             trajectory_data = self.api.get_trajectory(
-                fresh_conv.id, fresh_conv.url, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             # Create JSON file with unique name

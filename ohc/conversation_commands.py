@@ -591,10 +591,10 @@ def trajectory(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_url = conv_details.get("url")
+        full_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
 
-        if not runtime_url:
+        if not full_url:
             click.echo(
                 "✗ Conversation is not running. Trajectory is only available for "
                 "active conversations.",
@@ -608,6 +608,11 @@ def trajectory(
                 err=True,
             )
             return
+
+        # Extract base runtime URL from the full conversation URL
+        from urllib.parse import urlparse
+        parsed_url = urlparse(full_url)
+        runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
         click.echo(f"Trajectory for: {title}")
 
