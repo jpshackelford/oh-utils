@@ -1014,7 +1014,7 @@ class ConversationManager:
         # Always show help line
         print(
             "\nCommands: r=refresh, w <num>=wake, s <num>=show details, "
-            "f <num>=download files, t <num>=trajectory, a <num>=workspace, "
+            "f <num>=download files, t <num>=trajectory, a <num>=download workspace, "
             "n/p=next/prev page, h=help, q=quit"
         )
 
