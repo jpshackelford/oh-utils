@@ -99,8 +99,15 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
         # Show uncommitted files for running conversations
         if conv.is_active():
             try:
+                # Extract runtime base URL from conversation URL
+                runtime_url = None
+                if conv.url:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(conv.url)
+                    runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                
                 changes = api.get_conversation_changes(
-                    conv.id, conv.url, conv.session_api_key
+                    conv.id, runtime_url, conv.session_api_key
                 )
                 if changes:
                     print(f"\n  Uncommitted Files ({len(changes)}):")
@@ -171,8 +178,15 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
             return
 
         try:
+            # Extract runtime base URL from conversation URL
+            runtime_url = None
+            if conv.url:
+                from urllib.parse import urlparse
+                parsed_url = urlparse(conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            
             changes = api.get_conversation_changes(
-                conv.id, conv.url, conv.session_api_key
+                conv.id, runtime_url, conv.session_api_key
             )
             if changes:
                 print(f"\nWorkspace Changes for {conv.short_id()}:")
