@@ -52,13 +52,21 @@ class Conversation:
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
         """Create Conversation from API response data"""
-        # Extract runtime ID from URL if available
+        # Extract runtime ID from URL if available (for backward compatibility)
+        # Note: This is kept for display purposes only, the URL should be used
+        # directly for API calls
         runtime_id = None
         if data.get("url"):
             try:
-                # URL format: https://{runtime_id}.prod-runtime.all-hands.dev/...
-                runtime_id = data["url"].split(".")[0].split("//")[1]
-            except (IndexError, AttributeError):
+                # Try to extract runtime ID from URL for display purposes
+                # This is more flexible and doesn't assume specific domain patterns
+                from urllib.parse import urlparse
+
+                parsed_url = urlparse(data["url"])
+                if parsed_url.hostname:
+                    # Extract the first part of the hostname as runtime ID
+                    runtime_id = parsed_url.hostname.split(".")[0]
+            except (IndexError, AttributeError, ValueError):
                 runtime_id = None
 
         return cls(
@@ -167,13 +175,12 @@ class OpenHandsAPI:
     def get_conversation_changes(
         self,
         conversation_id: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation"""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/git/changes"
             )
@@ -215,13 +222,12 @@ class OpenHandsAPI:
         self,
         conversation_id: str,
         file_path: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> str:
         """Get the content of a specific file from the conversation workspace"""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/select-file"
             )
@@ -270,13 +276,12 @@ class OpenHandsAPI:
     def download_workspace_archive(
         self,
         conversation_id: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> bytes:
         """Download the workspace archive as a ZIP file"""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/zip-directory"
             )
@@ -317,12 +322,11 @@ class OpenHandsAPI:
             raise Exception(f"API call failed - {str(e)}") from e
 
     def get_trajectory(
-        self, conversation_id: str, runtime_id: str, session_api_key: str
+        self, conversation_id: str, runtime_url: str, session_api_key: str
     ) -> Dict:
         """Get trajectory data for a conversation"""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/trajectory"
             )
@@ -701,9 +705,17 @@ class ConversationManager:
                 # Show uncommitted files for running conversations
                 if fresh_conv.is_active():
                     try:
+                        # Extract runtime base URL from conversation URL
+                        runtime_url = None
+                        if fresh_conv.url:
+                            from urllib.parse import urlparse
+
+                            parsed_url = urlparse(fresh_conv.url)
+                            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
                         changes = self.api.get_conversation_changes(
                             fresh_conv.id,
-                            fresh_conv.runtime_id,
+                            runtime_url,
                             fresh_conv.session_api_key,
                         )
                         if changes:
@@ -789,8 +801,17 @@ class ConversationManager:
 
             # Get list of changed files
             print("🔍 Fetching list of changed files...")
+
+            # Extract runtime base URL from conversation URL
+            runtime_url = None
+            if fresh_conv.url:
+                from urllib.parse import urlparse
+
+                parsed_url = urlparse(fresh_conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
             changes = self.api.get_conversation_changes(
-                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             if not changes:
@@ -824,7 +845,7 @@ class ConversationManager:
                         content = self.api.get_file_content(
                             fresh_conv.id,
                             file_path,
-                            fresh_conv.runtime_id,
+                            runtime_url,
                             fresh_conv.session_api_key,
                         )
 
@@ -905,12 +926,26 @@ class ConversationManager:
 
             # Get trajectory data from API
             print("🔍 Fetching trajectory data...")
-            if fresh_conv.runtime_id is None or fresh_conv.session_api_key is None:
+            if (
+                fresh_conv.runtime_id is None
+                or fresh_conv.session_api_key is None
+                or fresh_conv.url is None
+            ):
                 print("✗ Conversation is not active or missing runtime information")
                 return
 
+            # Extract base runtime URL from the full conversation URL
+            if not fresh_conv.url:
+                print("✗ Conversation URL is missing")
+                return
+
+            from urllib.parse import urlparse
+
+            parsed_url = urlparse(fresh_conv.url)
+            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
             trajectory_data = self.api.get_trajectory(
-                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             # Create JSON file with unique name
@@ -951,8 +986,17 @@ class ConversationManager:
 
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
+
+            # Extract runtime base URL from conversation URL
+            runtime_url = None
+            if fresh_conv.url:
+                from urllib.parse import urlparse
+
+                parsed_url = urlparse(fresh_conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
             workspace_data = self.api.download_workspace_archive(
-                fresh_conv.id, fresh_conv.runtime_id, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             # Create ZIP file with unique name (API already returns ZIP data)

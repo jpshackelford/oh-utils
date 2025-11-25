@@ -424,14 +424,22 @@ def ws_download(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_id = conv_details.get("runtime_id")
+        conversation_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
+
+        # Extract runtime base URL from conversation URL
+        runtime_url = None
+        if conversation_url:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(conversation_url)
+            runtime_url = f"{parsed.scheme}://{parsed.netloc}"
 
         click.echo(f"Downloading workspace for: {title}")
 
         # Download the workspace archive
         archive_data = api.download_workspace_archive(
-            conv_id, runtime_id, session_api_key
+            conv_id, runtime_url, session_api_key
         )
 
         # Determine output filename
@@ -506,11 +514,8 @@ def ws_changes(conversation_id_or_number: str, server: Optional[str]) -> None:
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-@click.option("--limit", default=10, help="Number of recent trajectory events to show")
-def trajectory(
-    conversation_id_or_number: str, server: Optional[str], limit: int
-) -> None:
-    """Show conversation trajectory (action history)."""
+def trajectory(conversation_id_or_number: str, server: Optional[str]) -> None:
+    """Download conversation trajectory as JSON file."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
 
@@ -591,10 +596,10 @@ def trajectory(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_id = conv_details.get("runtime_id")
+        full_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
 
-        if not runtime_id:
+        if not full_url:
             click.echo(
                 "✗ Conversation is not running. Trajectory is only available for "
                 "active conversations.",
@@ -609,63 +614,38 @@ def trajectory(
             )
             return
 
+        # Extract base runtime URL from the full conversation URL
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(full_url)
+        runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
         click.echo(f"Trajectory for: {title}")
 
         # Get trajectory data
-        trajectory_data = api.get_trajectory(conv_id, runtime_id, session_api_key)
+        trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
 
-        # Extract events from trajectory
-        events = trajectory_data.get("events", [])
-        if not events:
-            click.echo("No trajectory events found.")
-            return
+        # Create JSON file with unique name
+        import json
+        from pathlib import Path
 
-        # Show the most recent events (limited by --limit)
-        recent_events = events[-limit:] if len(events) > limit else events
+        base_name = f"trajectory-{conv_id[:8]}"
+        json_path = Path(f"{base_name}.json")
 
-        click.echo(f"\nShowing {len(recent_events)} most recent events:")
-        click.echo("-" * 60)
+        # Handle file name conflicts
+        counter = 1
+        while json_path.exists():
+            json_path = Path(f"{base_name} ({counter}).json")
+            counter += 1
 
-        for i, event in enumerate(recent_events, 1):
-            event_type = event.get("type", "unknown")
-            timestamp = event.get("timestamp", "N/A")
-            source = event.get("source", "unknown")
+        click.echo(f"💾 Creating trajectory file: {json_path.name}")
 
-            # Format timestamp if available
-            if timestamp and timestamp != "N/A":
-                try:
-                    from datetime import datetime
+        # Write trajectory data to JSON file
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
 
-                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                    formatted_time = dt.strftime("%H:%M:%S")
-                except (ValueError, TypeError):
-                    formatted_time = timestamp
-            else:
-                formatted_time = "N/A"
-
-            click.echo(f"{i:2d}. [{formatted_time}] {event_type} ({source})")
-
-            # Show event content/message if available
-            content = event.get("content") or event.get("message") or event.get("text")
-            if content:
-                # Truncate long content
-                if len(content) > 100:
-                    content = content[:97] + "..."
-                click.echo(f"    {content}")
-
-            # Show additional relevant fields
-            if "tool" in event:
-                click.echo(f"    Tool: {event['tool']}")
-            if "action" in event:
-                click.echo(f"    Action: {event['action']}")
-
-            click.echo()  # Empty line between events
-
-        total_events = len(events)
-        if total_events > limit:
-            click.echo(
-                f"... and {total_events - limit} more events (use --limit to see more)"
-            )
+        click.echo(f"✅ Successfully created trajectory file: {json_path}")
+        click.echo(f"📊 File size: {json_path.stat().st_size:,} bytes")
 
     except Exception as e:
         click.echo(f"✗ Failed to get trajectory: {e}", err=True)
@@ -675,14 +655,12 @@ def trajectory(
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-@click.option("--limit", default=10, help="Number of recent trajectory events to show")
-def traj(conversation_id_or_number: str, server: Optional[str], limit: int) -> None:
-    """Show conversation trajectory (action history) - alias for trajectory."""
+def traj(conversation_id_or_number: str, server: Optional[str]) -> None:
+    """Download conversation trajectory as JSON file - alias for trajectory."""
     # Call the main trajectory function
     ctx = click.get_current_context()
     ctx.invoke(
         trajectory,
         conversation_id_or_number=conversation_id_or_number,
         server=server,
-        limit=limit,
     )

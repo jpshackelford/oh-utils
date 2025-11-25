@@ -57,7 +57,12 @@ class OpenHandsAPI:
         url = urljoin(self.base_url, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
-        return cast("Dict[str, Any]", response.json())
+
+        data = response.json()
+        if data is None:
+            raise Exception(f"Conversation '{conversation_id}' not found")
+
+        return cast("Dict[str, Any]", data)
 
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
@@ -81,13 +86,12 @@ class OpenHandsAPI:
     def get_conversation_changes(
         self,
         conversation_id: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """Get git changes (uncommitted files) for a conversation."""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/git/changes"
             )
@@ -129,13 +133,12 @@ class OpenHandsAPI:
         self,
         conversation_id: str,
         file_path: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> str:
         """Get the content of a specific file from the conversation workspace."""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/select-file"
             )
@@ -184,13 +187,12 @@ class OpenHandsAPI:
     def download_workspace_archive(
         self,
         conversation_id: str,
-        runtime_id: Optional[str] = None,
+        runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> bytes:
         """Download the workspace archive as a ZIP file."""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/zip-directory"
             )
@@ -231,12 +233,11 @@ class OpenHandsAPI:
             raise Exception(f"API call failed - {str(e)}") from e
 
     def get_trajectory(
-        self, conversation_id: str, runtime_id: str, session_api_key: str
+        self, conversation_id: str, runtime_url: str, session_api_key: str
     ) -> Dict[str, Any]:
         """Get trajectory data for a conversation."""
-        if runtime_id:
+        if runtime_url:
             # Use runtime URL for active conversations
-            runtime_url = f"https://{runtime_id}.prod-runtime.all-hands.dev"
             url = urljoin(
                 runtime_url, f"api/conversations/{conversation_id}/trajectory"
             )
