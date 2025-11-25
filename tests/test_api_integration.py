@@ -158,18 +158,18 @@ class TestOpenHandsAPIIntegration:
             pytest.skip("git_changes fixture not available")
 
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
         session_api_key = "sess_fakexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/git/changes",
+            f"{runtime_url}/api/conversations/{conversation_id}/git/changes",
             json=fixture["response"]["json"],
             status=fixture["response"]["status_code"],
         )
 
         result = api_client.get_conversation_changes(
-            conversation_id, runtime_id, session_api_key
+            conversation_id, runtime_url, session_api_key
         )
 
         assert isinstance(result, list)
@@ -178,33 +178,33 @@ class TestOpenHandsAPIIntegration:
     def test_get_conversation_changes_not_found(self, api_client):
         """Test getting conversation changes when not found."""
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/git/changes",
+            f"{runtime_url}/api/conversations/{conversation_id}/git/changes",
             status=404,
         )
 
-        result = api_client.get_conversation_changes(conversation_id, runtime_id)
+        result = api_client.get_conversation_changes(conversation_id, runtime_url)
         assert result == []
 
     @responses.activate
     def test_get_file_content(self, api_client):
         """Test getting file content."""
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
         file_path = "example.py"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/select-file",
+            f"{runtime_url}/api/conversations/{conversation_id}/select-file",
             json={"code": "print('Hello, World!')"},
             status=200,
         )
 
         result = api_client.get_file_content(
-            conversation_id, file_path, runtime_id, "fake-session-key"
+            conversation_id, file_path, runtime_url, "fake-session-key"
         )
 
         assert result == "print('Hello, World!')"
@@ -213,17 +213,17 @@ class TestOpenHandsAPIIntegration:
     def test_get_file_content_not_found(self, api_client):
         """Test getting file content when file not found."""
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
         file_path = "nonexistent.txt"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/select-file",
+            f"{runtime_url}/api/conversations/{conversation_id}/select-file",
             status=404,
         )
 
         with pytest.raises(Exception) as exc_info:
-            api_client.get_file_content(conversation_id, file_path, runtime_id)
+            api_client.get_file_content(conversation_id, file_path, runtime_url)
 
         assert "File not found" in str(exc_info.value)
 
@@ -231,19 +231,19 @@ class TestOpenHandsAPIIntegration:
     def test_download_workspace_archive(self, api_client):
         """Test downloading workspace archive."""
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
         fake_zip_content = b"PK\x03\x04fake zip content"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/zip-directory",
+            f"{runtime_url}/api/conversations/{conversation_id}/zip-directory",
             body=fake_zip_content,
             status=200,
             headers={"Content-Type": "application/zip"},
         )
 
         result = api_client.download_workspace_archive(
-            conversation_id, runtime_id, "fake-session-key"
+            conversation_id, runtime_url, "fake-session-key"
         )
 
         assert result == fake_zip_content
@@ -258,17 +258,19 @@ class TestOpenHandsAPIIntegration:
             pytest.skip("trajectory fixture not available")
 
         conversation_id = "fake-conversation-id"
-        runtime_id = "work-1-fakeworkspace001"
+        runtime_url = "https://work-1-fakeworkspace001.prod-runtime.all-hands.dev"
         session_api_key = "sess_fakexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
         responses.add(
             responses.GET,
-            f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/trajectory",
+            f"{runtime_url}/api/conversations/{conversation_id}/trajectory",
             json=fixture["response"]["json"],
             status=fixture["response"]["status_code"],
         )
 
-        result = api_client.get_trajectory(conversation_id, runtime_id, session_api_key)
+        result = api_client.get_trajectory(
+            conversation_id, runtime_url, session_api_key
+        )
 
         assert isinstance(result, dict)
 
