@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://app.all-hands.dev/api/conversations",
+    "params": {
+      "limit": 5
+    },
+    "json": null,
+    "headers": {
+      "User-Agent": "python-requests/2.32.5",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Accept": "*/*",
+      "Connection": "keep-alive",
+      "X-Session-API-Key": "fake-api-key",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status_code": 200,
+    "headers": {
+      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+      "Content-Length": "250",
+      "Content-Type": "application/json",
+      "Date": "Mon, 24 Nov 2025 23:04:29 GMT",
+      "Expires": "0",
+      "Pragma": "no-cache",
+      "Server": "uvicorn"
+    },
+    "content": "{\"conversations\":[{\"id\":\"fake-uuid-12345678\",\"title\":\"Example Conversation 1\",\"created_at\":\"2025-11-24T10:00:00Z\",\"updated_at\":\"2025-11-24T10:30:00Z\"},{\"id\":\"fake-uuid-87654321\",\"title\":\"Example Conversation 2\",\"created_at\":\"2025-11-24T09:00:00Z\",\"updated_at\":\"2025-11-24T09:45:00Z\"}],\"total\":2,\"page_id\":null,\"has_more\":false}",
+    "json": {
+      "conversations": [
+        {
+          "id": "fake-uuid-12345678",
+          "title": "Example Conversation 1",
+          "created_at": "2025-11-24T10:00:00Z",
+          "updated_at": "2025-11-24T10:30:00Z"
+        },
+        {
+          "id": "fake-uuid-87654321",
+          "title": "Example Conversation 2",
+          "created_at": "2025-11-24T09:00:00Z",
+          "updated_at": "2025-11-24T09:45:00Z"
+        }
+      ],
+      "total": 2,
+      "page_id": null,
+      "has_more": false
+    }
+  }
+}

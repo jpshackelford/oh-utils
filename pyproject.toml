@@ -20,6 +20,13 @@ dev = [
     "commitizen>=3.0.0",
     "types-requests>=2.25.0",
 ]
+test = [
+    "pytest>=7.0.0",
+    "pytest-vcr>=1.0.0",
+    "responses>=0.23.0",
+    "pytest-httpserver>=1.0.0",
+    "vcrpy>=6.0.0",
+]
 
 [project.scripts]
 ohc = "ohc.cli:main"
@@ -131,4 +138,12 @@ update_changelog_on_bump = true
 dev = [
     "mypy>=1.14.1",
     "pre-commit>=3.5.0",
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
+    "pytest-httpserver>=1.1.1",
+    "pytest-vcr>=1.0.2",
+    "responses>=0.25.8",
+    "vcrpy>=4.3.0",
 ]
