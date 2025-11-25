@@ -705,9 +705,16 @@ class ConversationManager:
                 # Show uncommitted files for running conversations
                 if fresh_conv.is_active():
                     try:
+                        # Extract runtime base URL from conversation URL
+                        runtime_url = None
+                        if fresh_conv.url:
+                            from urllib.parse import urlparse
+                            parsed_url = urlparse(fresh_conv.url)
+                            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                        
                         changes = self.api.get_conversation_changes(
                             fresh_conv.id,
-                            fresh_conv.url,
+                            runtime_url,
                             fresh_conv.session_api_key,
                         )
                         if changes:
@@ -793,8 +800,16 @@ class ConversationManager:
 
             # Get list of changed files
             print("🔍 Fetching list of changed files...")
+            
+            # Extract runtime base URL from conversation URL
+            runtime_url = None
+            if fresh_conv.url:
+                from urllib.parse import urlparse
+                parsed_url = urlparse(fresh_conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            
             changes = self.api.get_conversation_changes(
-                fresh_conv.id, fresh_conv.url, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             if not changes:
@@ -828,7 +843,7 @@ class ConversationManager:
                         content = self.api.get_file_content(
                             fresh_conv.id,
                             file_path,
-                            fresh_conv.url,
+                            runtime_url,
                             fresh_conv.session_api_key,
                         )
 
@@ -966,8 +981,16 @@ class ConversationManager:
 
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
+            
+            # Extract runtime base URL from conversation URL
+            runtime_url = None
+            if fresh_conv.url:
+                from urllib.parse import urlparse
+                parsed_url = urlparse(fresh_conv.url)
+                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            
             workspace_data = self.api.download_workspace_archive(
-                fresh_conv.id, fresh_conv.url, fresh_conv.session_api_key
+                fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
             # Create ZIP file with unique name (API already returns ZIP data)

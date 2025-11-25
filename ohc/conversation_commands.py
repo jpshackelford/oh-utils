@@ -424,8 +424,15 @@ def ws_download(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_url = conv_details.get("url")
+        conversation_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
+        
+        # Extract runtime base URL from conversation URL
+        runtime_url = None
+        if conversation_url:
+            from urllib.parse import urlparse
+            parsed = urlparse(conversation_url)
+            runtime_url = f"{parsed.scheme}://{parsed.netloc}"
 
         click.echo(f"Downloading workspace for: {title}")
 
