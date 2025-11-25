@@ -12,21 +12,32 @@ This project uses modern Python development tools with uv as the package manager
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. **Development setup**:
+2. **Complete development setup** (recommended):
 
    ```bash
    make dev-setup
    ```
 
-   This installs all dependencies and sets up pre-commit hooks.
+   This command will:
+   - Install all dependencies including development and test dependencies
+   - Set up pre-commit hooks using the standard pre-commit framework
+   - Configure commit message validation with commitizen
 
-3. **Quick installation**:
+3. **Alternative: Quick installation** (for basic usage):
 
    ```bash
-   uv pip install -e .
+   uv sync --all-extras --dev
    ```
 
-4. **Run the main utility**:
+4. **Install pre-commit hooks** (if not using `make dev-setup`):
+
+   ```bash
+   make pre-commit-install
+   ```
+
+   This ensures code quality checks run automatically before each commit.
+
+5. **Run the main utility**:
    ```bash
    uv run oh-conversation-manager
    ```
@@ -61,13 +72,15 @@ This project uses modern Python development tools with uv as the package manager
 
 # Pre-commit Hooks
 
-The project uses comprehensive pre-commit hooks that run automatically before commits:
+The project uses comprehensive pre-commit hooks that run automatically before commits. These are configured in `.pre-commit-config.yaml` and installed via the standard pre-commit framework:
 
 - **Code Quality**: Ruff linting and formatting, MyPy type checking
 - **File Checks**: Trailing whitespace, end-of-file-fixer, YAML/TOML/JSON validation
 - **Security**: Check for debug statements, large files, merge conflicts
 - **Commit Standards**: Commitizen for conventional commit message format
 - **Documentation**: Prettier formatting for Markdown, YAML, and JSON files
+
+**Important**: Always use `make dev-setup` or `make pre-commit-install` to install hooks. This ensures the standard pre-commit framework is used correctly and avoids conflicts with custom hook implementations.
 
 # Development Guidelines
 
