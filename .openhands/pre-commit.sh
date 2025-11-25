@@ -35,28 +35,28 @@ STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py)
 
 if [ -n "$STAGED_FILES" ]; then
     echo "Checking staged Python files: $STAGED_FILES"
-    
+
     # Run ruff linting
     echo "Running ruff linting..."
     if ! /workspace/project/oh-utils/.venv/bin/ruff check $STAGED_FILES; then
         echo "❌ Ruff linting failed. Please fix the issues above."
         exit 1
     fi
-    
+
     # Run ruff formatting check
     echo "Running ruff format check..."
     if ! /workspace/project/oh-utils/.venv/bin/ruff format --check $STAGED_FILES; then
         echo "❌ Code formatting issues found. Run 'make format' to fix."
         exit 1
     fi
-    
+
     # Run mypy type checking
     echo "Running mypy type checking..."
     if ! VIRTUAL_ENV="" uv run mypy $STAGED_FILES; then
         echo "❌ Type checking failed. Please fix the issues above."
         exit 1
     fi
-    
+
     echo "✅ All code quality checks passed!"
 else
     echo "No Python files staged for commit."
