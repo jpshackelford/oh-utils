@@ -619,58 +619,27 @@ def trajectory(
         # Get trajectory data
         trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
 
-        # Extract events from trajectory
-        events = trajectory_data.get("trajectory", [])  # Changed from "events" to "trajectory"
-        if not events:
-            click.echo("No trajectory events found.")
-            return
+        # Create JSON file with unique name
+        import json
+        from pathlib import Path
+        
+        base_name = f"trajectory-{conv_id[:8]}"
+        json_path = Path(f"{base_name}.json")
+        
+        # Handle file name conflicts
+        counter = 1
+        while json_path.exists():
+            json_path = Path(f"{base_name} ({counter}).json")
+            counter += 1
 
-        # Show the most recent events (limited by --limit)
-        recent_events = events[-limit:] if len(events) > limit else events
+        click.echo(f"💾 Creating trajectory file: {json_path.name}")
 
-        click.echo(f"\nShowing {len(recent_events)} most recent events:")
-        click.echo("-" * 60)
+        # Write trajectory data to JSON file
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
 
-        for i, event in enumerate(recent_events, 1):
-            event_type = event.get("type", "unknown")
-            timestamp = event.get("timestamp", "N/A")
-            source = event.get("source", "unknown")
-
-            # Format timestamp if available
-            if timestamp and timestamp != "N/A":
-                try:
-                    from datetime import datetime
-
-                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                    formatted_time = dt.strftime("%H:%M:%S")
-                except (ValueError, TypeError):
-                    formatted_time = timestamp
-            else:
-                formatted_time = "N/A"
-
-            click.echo(f"{i:2d}. [{formatted_time}] {event_type} ({source})")
-
-            # Show event content/message if available
-            content = event.get("content") or event.get("message") or event.get("text")
-            if content:
-                # Truncate long content
-                if len(content) > 100:
-                    content = content[:97] + "..."
-                click.echo(f"    {content}")
-
-            # Show additional relevant fields
-            if "tool" in event:
-                click.echo(f"    Tool: {event['tool']}")
-            if "action" in event:
-                click.echo(f"    Action: {event['action']}")
-
-            click.echo()  # Empty line between events
-
-        total_events = len(events)
-        if total_events > limit:
-            click.echo(
-                f"... and {total_events - limit} more events (use --limit to see more)"
-            )
+        click.echo(f"✅ Successfully created trajectory file: {json_path}")
+        click.echo(f"📊 File size: {json_path.stat().st_size:,} bytes")
 
     except Exception as e:
         click.echo(f"✗ Failed to get trajectory: {e}", err=True)
