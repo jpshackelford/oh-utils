@@ -426,11 +426,12 @@ def ws_download(
         conv_details = api.get_conversation(conv_id)
         conversation_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
-        
+
         # Extract runtime base URL from conversation URL
         runtime_url = None
         if conversation_url:
             from urllib.parse import urlparse
+
             parsed = urlparse(conversation_url)
             runtime_url = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -513,9 +514,7 @@ def ws_changes(conversation_id_or_number: str, server: Optional[str]) -> None:
 @conv.command()
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
-def trajectory(
-    conversation_id_or_number: str, server: Optional[str]
-) -> None:
+def trajectory(conversation_id_or_number: str, server: Optional[str]) -> None:
     """Download conversation trajectory as JSON file."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config(server)
@@ -617,6 +616,7 @@ def trajectory(
 
         # Extract base runtime URL from the full conversation URL
         from urllib.parse import urlparse
+
         parsed_url = urlparse(full_url)
         runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
@@ -628,10 +628,10 @@ def trajectory(
         # Create JSON file with unique name
         import json
         from pathlib import Path
-        
+
         base_name = f"trajectory-{conv_id[:8]}"
         json_path = Path(f"{base_name}.json")
-        
+
         # Handle file name conflicts
         counter = 1
         while json_path.exists():

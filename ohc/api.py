@@ -57,11 +57,11 @@ class OpenHandsAPI:
         url = urljoin(self.base_url, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
-        
+
         data = response.json()
         if data is None:
             raise Exception(f"Conversation '{conversation_id}' not found")
-        
+
         return cast("Dict[str, Any]", data)
 
     def start_conversation(
