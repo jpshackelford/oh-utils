@@ -129,7 +129,7 @@ uv run ohc -i
 - `s <num>` - Show detailed info for conversation (e.g., `s 1`)
 - `f <num>` - Download workspace files for conversation (e.g., `f 1`)
 - `t <num>` - Show trajectory for conversation (e.g., `t 1`)
-- `a <num>` - Show workspace changes for conversation (e.g., `a 1`)
+- `a <num>` - Download entire workspace as ZIP archive (e.g., `a 1`)
 - `n`, `p` - Next/previous page
 - `h` - Show help
 - `q` - Quit
