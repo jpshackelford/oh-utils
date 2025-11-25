@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://bqeiqcnuedgsqjuo.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/git/changes",
+    "params": null,
+    "json": null,
+    "headers": {
+      "User-Agent": "python-requests/2.32.5",
+      "Accept-Encoding": "gzip, deflate",
+      "Accept": "*/*",
+      "Connection": "keep-alive",
+      "X-Session-API-Key": "ac46bc1b-5219-440c-b9b6-8edfda77c556",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status_code": 200,
+    "headers": {
+      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+      "Content-Length": "2",
+      "Content-Type": "application/json",
+      "Date": "Mon, 24 Nov 2025 23:42:20 GMT",
+      "Expires": "0",
+      "Pragma": "no-cache",
+      "Server": "uvicorn"
+    },
+    "content": "[]",
+    "json": []
+  }
+}

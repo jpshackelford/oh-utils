@@ -10,11 +10,26 @@ install: ## Install the package
 install-dev: ## Install development dependencies
 	uv pip install -e ".[dev]"
 
+install-test: ## Install test dependencies
+	uv pip install -e ".[test]"
+
 test: ## Run tests
 	uv run pytest
 
+test-integration: ## Run integration tests
+	uv run pytest tests/test_api_integration.py -v
+
 test-cov: ## Run tests with coverage
-	uv run pytest --cov=conversation_manager --cov-report=html --cov-report=term-missing
+	uv run pytest --cov=conversation_manager --cov=ohc --cov-report=html --cov-report=term-missing
+
+update-fixtures: ## Update API test fixtures
+	python scripts/update_fixtures.py
+
+record-fixtures: ## Record API responses only
+	python scripts/record_api_responses.py
+
+sanitize-fixtures: ## Sanitize existing fixtures only
+	python scripts/sanitize_fixtures.py
 
 lint: ## Run linting
 	uv run ruff check .

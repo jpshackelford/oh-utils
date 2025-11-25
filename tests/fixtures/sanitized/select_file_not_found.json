@@ -1,0 +1,34 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://fakeworkspace114.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/select-file",
+    "params": {
+      "file": "nonexistent.txt"
+    },
+    "json": null,
+    "headers": {
+      "User-Agent": "python-requests/2.32.5",
+      "Accept-Encoding": "gzip, deflate",
+      "Accept": "*/*",
+      "Connection": "keep-alive",
+      "X-Session-API-Key": "6510f16e-d319-4c78-9257-e3cd9da8e12c",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status_code": 500,
+    "headers": {
+      "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+      "Content-Length": "168",
+      "Content-Type": "application/json",
+      "Date": "Mon, 24 Nov 2025 23:42:21 GMT",
+      "Expires": "0",
+      "Pragma": "no-cache",
+      "Server": "uvicorn"
+    },
+    "content": "{\"error\":\"Error opening file: **ErrorObservation**\\nFile not found: /workspace/project/nonexistent.txt. Your current working directory is /workspace/project/oh-utils.\"}",
+    "json": {
+      "error": "Error opening file: **ErrorObservation**\nFile not found: /workspace/project/nonexistent.txt. Your current working directory is /workspace/project/oh-utils."
+    }
+  }
+}
