@@ -65,11 +65,15 @@ jobs:
               # Check for conventional commits since last tag
               COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --grep="^feat\|^fix\|^perf\|BREAKING CHANGE" || true)
               if [ -n "$COMMITS" ]; then
-                echo "Found conventional commits since last tag"
+                echo "Found conventional commits since last tag: $LAST_TAG"
+                echo "Commits:"
+                echo "$COMMITS"
                 echo "should_release=true" >> $GITHUB_OUTPUT
               else
-                echo "No conventional commits found since last tag"
+                echo "No conventional commits found since last tag: $LAST_TAG"
+                echo "Skipping release - no changes warrant a new version"
                 echo "should_release=false" >> $GITHUB_OUTPUT
+                exit 0
               fi
             fi
           fi
@@ -81,10 +85,29 @@ jobs:
           if [ -n "${{ github.event.inputs.version }}" ]; then
             NEW_VERSION="${{ github.event.inputs.version }}"
           else
-            # Get current version and increment patch
-            CURRENT_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+            # Get the latest tag as base version, fallback to pyproject.toml if no tags exist
+            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -n "$LAST_TAG" ]; then
+              # Remove 'v' prefix if present and increment patch version
+              CURRENT_VERSION=$(echo "$LAST_TAG" | sed 's/^v//')
+              echo "Using latest tag as base version: $CURRENT_VERSION"
+            else
+              # Fallback to pyproject.toml for initial release
+              CURRENT_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+              echo "No tags found, using pyproject.toml version: $CURRENT_VERSION"
+            fi
+
             # Simple patch increment
             NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          fi
+
+          # Check if the new version tag already exists
+          if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+            echo "ERROR: Tag v${NEW_VERSION} already exists!"
+            echo "This suggests the version calculation is incorrect or a release already exists."
+            echo "Existing tags:"
+            git tag --list | sort -V
+            exit 1
           fi
 
           # Add test suffix if in test mode and not on main branch
@@ -147,6 +170,8 @@ jobs:
           draft: ${{ steps.version.outputs.test_mode == 'true' }}
           prerelease: ${{ steps.version.outputs.test_mode == 'true' }}
           files: dist/*
+          fail_on_unmatched_files: true
+          make_latest: ${{ steps.version.outputs.test_mode != 'true' }}
 
       - name: Publish to PyPI (placeholder)
         if: steps.check_release.outputs.should_release == 'true'
