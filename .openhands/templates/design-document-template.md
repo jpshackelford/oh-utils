@@ -12,7 +12,7 @@ Susinctly state the problem and impact of the problem. Avoid flowery or hyperbol
 ### 1.2 Proposed Solution
 
 Susinctly state the design we propose to solve the problem starting with how the beficiary of the design experiences the
-benefits of the proposed approach and working toward technical choices that enable it. 
+benefits of the proposed approach and working toward technical choices that enable it.
 
 If there are notable limitations or trade-offs made by our design choice, note them briefly in a seperate paragraph. If
 limitations are noted, also note why the chosen design is proposed as opposed to alternatives we considered.
@@ -20,16 +20,16 @@ limitations are noted, also note why the chosen design is proposed as opposed to
 ## 2. User Interface - OR - New Concepts (Optional Section)
 
 If user-facing functionality, describe the user experience for a specific scenario. Explain the scenario and the steps
-the user would take using the new or altered UX. If a CLI show how the user would accomplish tasks using commands and 
+the user would take using the new or altered UX. If a CLI show how the user would accomplish tasks using commands and
 their flags and arguments.
 
-If not a user-facing change, describe any new or significanlty altered concepts in the system introduced by the 
+If not a user-facing change, describe any new or significanlty altered concepts in the system introduced by the
 proposed changed. Omit the section if the design may easily be understood without illustrations.
 
 ## 3. Other Context (Optional Section)
 
 If the proposed change introduces a new technology or technique background on that approach may be included here so that
-the implementor does not have to do background reading to understand the design, how to call new third-party libraries or 
+the implementor does not have to do background reading to understand the design, how to call new third-party libraries or
 APIs, etc.. Include links to material for futher exploration but aim to provide all of the basics needed for the reader to
 understand and start work on the proposed solution.
 
@@ -48,11 +48,11 @@ backtics, even for plaintext illustrations.
 
 This section describes the steps required to realize the plan. Include general acceptance criteria like passing lints, and
 tests immediately after the heading. Use subsections for milestones each of which could be reviewed as a complete PR with
-a given goal and the code and tests required to achieve it. If user facing functionality susinctly describe what we should 
-be able to demo with the completed PR. Organize the milestones such that the solution is developed in an iterative and 
-incremental way, starting with foundational elements and simplest user-facing functionality that achieves the stated goal 
+a given goal and the code and tests required to achieve it. If user facing functionality susinctly describe what we should
+be able to demo with the completed PR. Organize the milestones such that the solution is developed in an iterative and
+incremental way, starting with foundational elements and simplest user-facing functionality that achieves the stated goal
 of the solution and expanding it in future milestones to become more robust, functional, flexible, scalable, etc.
-In the sections below, note the path of each implementation and test file. 
+In the sections below, note the path of each implementation and test file.
 
 Example:
 
@@ -75,4 +75,3 @@ Most basic demo of the proposed functionality
 ## 5.3 New Option for Command (M3)
 
 User can now...
-
