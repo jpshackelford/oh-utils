@@ -25,13 +25,21 @@ class Conversation:
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
         """Create Conversation from API response data"""
-        # Extract runtime ID from URL if available
+        # Extract runtime ID from URL if available (for backward compatibility)
+        # Note: This is kept for display purposes only, the URL should be used
+        # directly for API calls
         runtime_id = None
         if data.get("url"):
             try:
-                # URL format: https://{runtime_id}.prod-runtime.all-hands.dev/...
-                runtime_id = data["url"].split(".")[0].split("//")[1]
-            except (IndexError, AttributeError):
+                # Try to extract runtime ID from URL for display purposes
+                # This is more flexible and doesn't assume specific domain patterns
+                from urllib.parse import urlparse
+
+                parsed_url = urlparse(data["url"])
+                if parsed_url.hostname:
+                    # Extract the first part of the hostname as runtime ID
+                    runtime_id = parsed_url.hostname.split(".")[0]
+            except (IndexError, AttributeError, ValueError):
                 runtime_id = None
 
         return cls(
@@ -92,7 +100,7 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
         if conv.is_active():
             try:
                 changes = api.get_conversation_changes(
-                    conv.id, conv.runtime_id, conv.session_api_key
+                    conv.id, conv.url, conv.session_api_key
                 )
                 if changes:
                     print(f"\n  Uncommitted Files ({len(changes)}):")
@@ -164,7 +172,7 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
 
         try:
             changes = api.get_conversation_changes(
-                conv.id, conv.runtime_id, conv.session_api_key
+                conv.id, conv.url, conv.session_api_key
             )
             if changes:
                 print(f"\nWorkspace Changes for {conv.short_id()}:")

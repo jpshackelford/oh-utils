@@ -424,14 +424,14 @@ def ws_download(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_id = conv_details.get("runtime_id")
+        runtime_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
 
         click.echo(f"Downloading workspace for: {title}")
 
         # Download the workspace archive
         archive_data = api.download_workspace_archive(
-            conv_id, runtime_id, session_api_key
+            conv_id, runtime_url, session_api_key
         )
 
         # Determine output filename
@@ -591,10 +591,10 @@ def trajectory(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
-        runtime_id = conv_details.get("runtime_id")
+        runtime_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
 
-        if not runtime_id:
+        if not runtime_url:
             click.echo(
                 "✗ Conversation is not running. Trajectory is only available for "
                 "active conversations.",
@@ -612,7 +612,7 @@ def trajectory(
         click.echo(f"Trajectory for: {title}")
 
         # Get trajectory data
-        trajectory_data = api.get_trajectory(conv_id, runtime_id, session_api_key)
+        trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
 
         # Extract events from trajectory
         events = trajectory_data.get("events", [])
