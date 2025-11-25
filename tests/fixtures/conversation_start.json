@@ -4,9 +4,7 @@
     "url": "https://app.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/start",
     "params": null,
     "json": {
-      "providers_set": [
-        "github"
-      ]
+      "providers_set": ["github"]
     },
     "headers": {
       "User-Agent": "python-requests/2.32.5",

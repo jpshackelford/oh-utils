@@ -7,7 +7,6 @@ without making actual HTTP requests.
 
 import pytest
 import responses
-from unittest.mock import patch
 
 from ohc.api import OpenHandsAPI
 
@@ -19,8 +18,7 @@ class TestOpenHandsAPIIntegration:
     def api_client(self) -> OpenHandsAPI:
         """Create an API client instance for testing."""
         return OpenHandsAPI(
-            api_key="fake-api-key",
-            base_url="https://app.all-hands.dev/api/"
+            api_key="fake-api-key", base_url="https://app.all-hands.dev/api/"
         )
 
     @responses.activate
@@ -32,9 +30,9 @@ class TestOpenHandsAPIIntegration:
             responses.GET,
             "https://app.all-hands.dev/api/options/models",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         # Test the connection
         result = api_client.test_connection()
         assert result is True
@@ -43,11 +41,9 @@ class TestOpenHandsAPIIntegration:
     def test_test_connection_failure(self, api_client):
         """Test connection failure."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/options/models",
-            status=401
+            responses.GET, "https://app.all-hands.dev/api/options/models", status=401
         )
-        
+
         result = api_client.test_connection()
         assert result is False
 
@@ -59,11 +55,11 @@ class TestOpenHandsAPIIntegration:
             responses.GET,
             "https://app.all-hands.dev/api/conversations",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         result = api_client.search_conversations(limit=5)
-        
+
         assert isinstance(result, dict)
         assert "conversations" in result
         assert isinstance(result["conversations"], list)
@@ -78,11 +74,11 @@ class TestOpenHandsAPIIntegration:
             responses.GET,
             "https://app.all-hands.dev/api/conversations",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         result = api_client.search_conversations(page_id="some-page-id", limit=2)
-        
+
         assert isinstance(result, dict)
         assert "conversations" in result
         assert result["has_more"] is True
@@ -92,14 +88,12 @@ class TestOpenHandsAPIIntegration:
     def test_search_conversations_unauthorized(self, api_client):
         """Test unauthorized access to conversations."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/conversations",
-            status=401
+            responses.GET, "https://app.all-hands.dev/api/conversations", status=401
         )
-        
+
         with pytest.raises(Exception) as exc_info:
             api_client.search_conversations()
-        
+
         assert "API key does not have permission" in str(exc_info.value)
 
     @responses.activate
@@ -107,16 +101,16 @@ class TestOpenHandsAPIIntegration:
         """Test getting conversation details using fixture."""
         fixture = fixture_loader.load("conversation_details")
         conversation_id = "fake-conversation-id"
-        
+
         responses.add(
             responses.GET,
             f"https://app.all-hands.dev/api/conversations/{conversation_id}",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         result = api_client.get_conversation(conversation_id)
-        
+
         assert isinstance(result, dict)
         assert "conversation_id" in result
 
@@ -124,16 +118,16 @@ class TestOpenHandsAPIIntegration:
     def test_start_conversation(self, api_client):
         """Test starting a conversation."""
         conversation_id = "fake-conversation-id"
-        
+
         responses.add(
             responses.POST,
             f"https://app.all-hands.dev/api/conversations/{conversation_id}/start",
             json={"status": "started", "runtime_id": "work-1-fakeworkspace001"},
-            status=200
+            status=200,
         )
-        
+
         result = api_client.start_conversation(conversation_id, ["github"])
-        
+
         assert isinstance(result, dict)
         assert result["status"] == "started"
 
@@ -141,17 +135,17 @@ class TestOpenHandsAPIIntegration:
     def test_start_conversation_failure(self, api_client):
         """Test conversation start failure."""
         conversation_id = "fake-conversation-id"
-        
+
         responses.add(
             responses.POST,
             f"https://app.all-hands.dev/api/conversations/{conversation_id}/start",
             status=500,
-            body="Internal Server Error"
+            body="Internal Server Error",
         )
-        
+
         with pytest.raises(Exception) as exc_info:
             api_client.start_conversation(conversation_id)
-        
+
         assert "API call failed" in str(exc_info.value)
 
     @responses.activate
@@ -162,22 +156,22 @@ class TestOpenHandsAPIIntegration:
         except FileNotFoundError:
             # Skip test if fixture doesn't exist
             pytest.skip("git_changes fixture not available")
-        
+
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
         session_api_key = "sess_fakexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/git/changes",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         result = api_client.get_conversation_changes(
             conversation_id, runtime_id, session_api_key
         )
-        
+
         assert isinstance(result, list)
 
     @responses.activate
@@ -185,13 +179,13 @@ class TestOpenHandsAPIIntegration:
         """Test getting conversation changes when not found."""
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/git/changes",
-            status=404
+            status=404,
         )
-        
+
         result = api_client.get_conversation_changes(conversation_id, runtime_id)
         assert result == []
 
@@ -201,18 +195,18 @@ class TestOpenHandsAPIIntegration:
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
         file_path = "example.py"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/select-file",
             json={"code": "print('Hello, World!')"},
-            status=200
+            status=200,
         )
-        
+
         result = api_client.get_file_content(
             conversation_id, file_path, runtime_id, "fake-session-key"
         )
-        
+
         assert result == "print('Hello, World!')"
 
     @responses.activate
@@ -221,16 +215,16 @@ class TestOpenHandsAPIIntegration:
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
         file_path = "nonexistent.txt"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/select-file",
-            status=404
+            status=404,
         )
-        
+
         with pytest.raises(Exception) as exc_info:
             api_client.get_file_content(conversation_id, file_path, runtime_id)
-        
+
         assert "File not found" in str(exc_info.value)
 
     @responses.activate
@@ -239,19 +233,19 @@ class TestOpenHandsAPIIntegration:
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
         fake_zip_content = b"PK\x03\x04fake zip content"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/zip-directory",
             body=fake_zip_content,
             status=200,
-            headers={"Content-Type": "application/zip"}
+            headers={"Content-Type": "application/zip"},
         )
-        
+
         result = api_client.download_workspace_archive(
             conversation_id, runtime_id, "fake-session-key"
         )
-        
+
         assert result == fake_zip_content
 
     @responses.activate
@@ -262,20 +256,20 @@ class TestOpenHandsAPIIntegration:
         except FileNotFoundError:
             # Skip test if fixture doesn't exist
             pytest.skip("trajectory fixture not available")
-        
+
         conversation_id = "fake-conversation-id"
         runtime_id = "work-1-fakeworkspace001"
         session_api_key = "sess_fakexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-        
+
         responses.add(
             responses.GET,
             f"https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conversation_id}/trajectory",
             json=fixture["response"]["json"],
-            status=fixture["response"]["status_code"]
+            status=fixture["response"]["status_code"],
         )
-        
+
         result = api_client.get_trajectory(conversation_id, runtime_id, session_api_key)
-        
+
         assert isinstance(result, dict)
 
 

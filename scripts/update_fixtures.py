@@ -24,63 +24,62 @@ def main():
         description="Update API test fixtures by recording and sanitizing responses"
     )
     parser.add_argument(
-        "--record-only", 
+        "--record-only",
         action="store_true",
-        help="Only record responses, don't sanitize"
+        help="Only record responses, don't sanitize",
     )
     parser.add_argument(
         "--sanitize-only",
-        action="store_true", 
-        help="Only sanitize existing fixtures, don't record new ones"
+        action="store_true",
+        help="Only sanitize existing fixtures, don't record new ones",
     )
     parser.add_argument(
-        "--api-key",
-        help="OpenHands API key (overrides environment variables)"
+        "--api-key", help="OpenHands API key (overrides environment variables)"
     )
     parser.add_argument(
         "--base-url",
         default="https://app.all-hands.dev/api/",
-        help="Base URL for the OpenHands API"
+        help="Base URL for the OpenHands API",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Get API key
     api_key = args.api_key or os.getenv("OPENHANDS_API_KEY") or os.getenv("OH_API_KEY")
     if not api_key and not args.sanitize_only:
         print("Error: API key required for recording")
         print("Set OPENHANDS_API_KEY environment variable or use --api-key")
         sys.exit(1)
-    
+
     fixtures_dir = Path(__file__).parent.parent / "tests" / "fixtures"
-    
+
     # Record new responses
     if not args.sanitize_only:
         print("=" * 60)
         print("STEP 1: Recording API responses")
         print("=" * 60)
-        
+
         recorder = APIResponseRecorder(api_key, args.base_url)
         recorder.record_all_endpoints()
-        
+
         if args.record_only:
             print("\nRecording complete. Use --sanitize-only to sanitize the fixtures.")
             return
-    
+
     # Sanitize fixtures
     if not args.record_only:
         print("\n" + "=" * 60)
         print("STEP 2: Sanitizing fixtures")
         print("=" * 60)
-        
+
         if not fixtures_dir.exists():
             print(f"Error: Fixtures directory not found: {fixtures_dir}")
             print("Run with recording enabled first.")
             sys.exit(1)
-        
+
         sanitizer = FixtureSanitizer(fixtures_dir)
         sanitizer.sanitize_all_fixtures()
-    
+
     print("\n" + "=" * 60)
     print("FIXTURE UPDATE COMPLETE")
     print("=" * 60)

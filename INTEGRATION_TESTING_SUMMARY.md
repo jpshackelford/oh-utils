@@ -7,6 +7,7 @@ We have successfully implemented a comprehensive integration testing framework f
 ## Framework Components
 
 ### 1. Recording Script (`scripts/record_api_responses.py`)
+
 - **Purpose**: Records real API responses from OpenHands API endpoints
 - **Features**:
   - Handles both main API and runtime API authentication flows
@@ -16,6 +17,7 @@ We have successfully implemented a comprehensive integration testing framework f
   - Saves responses as JSON fixtures
 
 ### 2. Sanitization Script (`scripts/sanitize_fixtures.py`)
+
 - **Purpose**: Replaces sensitive data with fictitious data while preserving structure
 - **Features**:
   - Consistent replacement mapping (same real value → same fake value)
@@ -25,6 +27,7 @@ We have successfully implemented a comprehensive integration testing framework f
   - Generates replacement mapping for reference
 
 ### 3. Integration Test Suite (`tests/test_api_integration.py`)
+
 - **Purpose**: Comprehensive testing of API client functionality
 - **Features**:
   - 14 integration tests covering all API endpoints
@@ -34,6 +37,7 @@ We have successfully implemented a comprehensive integration testing framework f
   - 100% test pass rate
 
 ### 4. Test Configuration (`tests/conftest.py`)
+
 - **Purpose**: Pytest configuration and fixture management
 - **Features**:
   - Automatic fixture loading from sanitized directory
@@ -44,12 +48,14 @@ We have successfully implemented a comprehensive integration testing framework f
 ## API Endpoints Covered
 
 ### Main API (api.all-hands.dev)
+
 1. **GET /api/options/models** - List available models
 2. **GET /api/conversations** - List conversations (with pagination)
 3. **GET /api/conversations/{id}** - Get conversation details
 4. **POST /api/conversations** - Start new conversation
 
 ### Runtime API (runtime-specific endpoints)
+
 5. **GET /api/conversations/{id}/git_changes** - Get git changes
 6. **GET /api/conversations/{id}/trajectory** - Get conversation trajectory
 7. **GET /api/conversations/{id}/workspace_archive** - Download workspace
@@ -59,18 +65,21 @@ We have successfully implemented a comprehensive integration testing framework f
 ## Testing Approaches Supported
 
 ### 1. Fixture-Based Testing (Primary)
+
 - Uses pre-recorded, sanitized API responses
 - Fast, reliable, no external dependencies
 - Consistent test results
 - Safe for CI/CD environments
 
 ### 2. VCR.py Integration (Optional)
+
 - Can record new interactions when needed
 - Useful for API changes or new endpoints
 - Configurable recording modes
 - Automatic cassette management
 
 ### 3. Mock Server Testing (Available)
+
 - pytest-httpserver integration
 - Custom response scenarios
 - Network failure simulation
@@ -79,16 +88,19 @@ We have successfully implemented a comprehensive integration testing framework f
 ## Key Technical Achievements
 
 ### Authentication Flow Resolution
+
 - **Critical Discovery**: Runtime API authentication requires session keys from conversation details, not conversation start response
 - **Implementation**: Fixed recording script to extract `session_api_key` from `/api/conversations/{id}` response
 - **Result**: All runtime API endpoints now return 200 status codes with real content
 
 ### Large File Handling
+
 - **Challenge**: Workspace archives can be 600MB+ of base64-encoded ZIP data
 - **Solution**: Sanitization script skips files >50MB to avoid memory/performance issues
 - **Result**: Fast sanitization while preserving binary content for testing
 
 ### Comprehensive Coverage
+
 - **Scope**: All identified API endpoints in the codebase
 - **Scenarios**: Success cases, error cases, authentication failures, not found errors
 - **Validation**: Tests verify response structure, status codes, and data types
@@ -96,6 +108,7 @@ We have successfully implemented a comprehensive integration testing framework f
 ## Usage Instructions
 
 ### Recording New Fixtures
+
 ```bash
 # Set up environment
 export OH_API_KEY="your-api-key"
@@ -109,6 +122,7 @@ uv run python scripts/sanitize_fixtures.py
 ```
 
 ### Running Integration Tests
+
 ```bash
 # Run all integration tests
 uv run pytest tests/test_api_integration.py -v
@@ -118,6 +132,7 @@ uv run pytest tests/test_api_integration.py --cov=ohc --cov-report=html
 ```
 
 ### Adding New API Endpoints
+
 1. Add endpoint details to `record_api_responses.py`
 2. Record new fixtures
 3. Sanitize fixtures
@@ -152,6 +167,7 @@ uv run pytest tests/test_api_integration.py --cov=ohc --cov-report=html
 ## Files Created/Modified
 
 ### New Files
+
 - `scripts/record_api_responses.py` - API response recording
 - `scripts/sanitize_fixtures.py` - Fixture sanitization
 - `tests/test_api_integration.py` - Integration test suite
@@ -161,6 +177,7 @@ uv run pytest tests/test_api_integration.py --cov=ohc --cov-report=html
 - `tests/fixtures/sanitized/` - Directory with sanitized fixtures
 
 ### Dependencies Added
+
 - `pytest` - Testing framework
 - `pytest-cov` - Coverage reporting
 - `responses` - HTTP mocking

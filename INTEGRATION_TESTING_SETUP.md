@@ -5,6 +5,7 @@ This document describes the comprehensive integration testing framework that has
 ## Overview
 
 The integration testing framework provides:
+
 - **Real API response fixtures** recorded from the OpenHands API
 - **Sanitized test data** with fictitious information replacing sensitive data
 - **Multiple testing approaches** using different Python testing frameworks
@@ -25,12 +26,14 @@ The integration testing framework provides:
 The framework includes fixtures for all major OpenHands API endpoints:
 
 #### Main API (app.all-hands.dev)
+
 - `GET /api/options/models` - Available AI models
 - `GET /api/conversations` - List conversations (with pagination)
 - `GET /api/conversations/{id}` - Get conversation details
 - `POST /api/conversations/{id}/start` - Start conversation session
 
 #### Runtime API ({runtime-id}.prod-runtime.all-hands.dev)
+
 - `GET /api/conversations/{id}/git/changes` - Git changes
 - `GET /api/conversations/{id}/trajectory` - Conversation trajectory
 - `GET /api/conversations/{id}/select-file` - File content
@@ -67,6 +70,7 @@ uv run python scripts/record_api_responses.py
 ```
 
 Features:
+
 - Uses environment API keys (OH_API_KEY or OPENHANDS_API_KEY)
 - Handles authentication flow: main API → conversation details → start session → runtime API
 - Records both successful responses and error cases (401, 404, etc.)
@@ -82,6 +86,7 @@ uv run python scripts/sanitize_fixtures.py
 ```
 
 Features:
+
 - Replaces conversation IDs, user emails, timestamps with fictitious data
 - Preserves API structure and response format
 - Maintains consistent fake data across all fixtures
@@ -90,18 +95,21 @@ Features:
 ## Test Execution
 
 ### Run All Integration Tests
+
 ```bash
 cd oh-utils
 uv run pytest tests/test_api_integration.py -v
 ```
 
 ### Run with Coverage
+
 ```bash
 cd oh-utils
 uv run pytest tests/test_api_integration.py --cov=ohc --cov-report=html
 ```
 
 ### Run Specific Test Categories
+
 ```bash
 # Test with responses mocking
 uv run pytest tests/test_api_integration.py::TestOpenHandsAPIIntegration -v
@@ -127,11 +135,13 @@ The "failing" tests are actually working correctly - they test error handling fo
 When the OpenHands API changes, update fixtures by:
 
 1. **Record new responses**:
+
    ```bash
    uv run python scripts/record_api_responses.py
    ```
 
 2. **Sanitize the data**:
+
    ```bash
    uv run python scripts/sanitize_fixtures.py
    ```
@@ -144,11 +154,13 @@ When the OpenHands API changes, update fixtures by:
 ### Fixture Content
 
 Each fixture contains:
+
 - **Request data**: Method, URL, headers, parameters
 - **Response data**: Status code, headers, JSON content
 - **Metadata**: Timestamps, content types
 
 Example fixture structure:
+
 ```json
 {
   "request": {
@@ -167,11 +179,13 @@ Example fixture structure:
 ## Authentication
 
 The framework handles multiple authentication methods:
+
 - **Bearer tokens** for main API endpoints
 - **Session API keys** for runtime API endpoints
 - **Fallback authentication** when session keys are unavailable
 
 Environment variables used:
+
 - `OH_API_KEY`: Primary API key (full permissions)
 - `OPENHANDS_API_KEY`: Secondary API key (limited permissions)
 
@@ -207,6 +221,7 @@ pytest-cov = "^7.0.0"
 ```
 
 Install with:
+
 ```bash
 cd oh-utils
 uv sync

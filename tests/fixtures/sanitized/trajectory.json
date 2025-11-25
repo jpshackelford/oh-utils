@@ -63,10 +63,7 @@
                       "is_input": {
                         "type": "string",
                         "description": "If True, the command is an input to the running process. If False, the command is a bash command to be executed in the terminal. Default is False.",
-                        "enum": [
-                          "true",
-                          "false"
-                        ]
+                        "enum": ["true", "false"]
                       },
                       "timeout": {
                         "type": "number",
@@ -75,17 +72,10 @@
                       "security_risk": {
                         "type": "string",
                         "description": "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions.",
-                        "enum": [
-                          "LOW",
-                          "MEDIUM",
-                          "HIGH"
-                        ]
+                        "enum": ["LOW", "MEDIUM", "HIGH"]
                       }
                     },
-                    "required": [
-                      "command",
-                      "security_risk"
-                    ]
+                    "required": ["command", "security_risk"]
                   }
                 }
               },
@@ -102,9 +92,7 @@
                         "description": "The thought to log."
                       }
                     },
-                    "required": [
-                      "thought"
-                    ]
+                    "required": ["thought"]
                   }
                 }
               },
@@ -115,9 +103,7 @@
                   "description": "Signals the completion of the current task or conversation.\n\nUse this tool when:\n- You have successfully completed the user's requested task\n- You cannot proceed further due to technical limitations or missing information\n\nThe message should include:\n- A clear summary of actions taken and their results\n- Any next steps for the user\n- Explanation if you're unable to complete the task\n- Any follow-up questions if more information is needed\n",
                   "parameters": {
                     "type": "object",
-                    "required": [
-                      "message"
-                    ],
+                    "required": ["message"],
                     "properties": {
                       "message": {
                         "type": "string",
@@ -142,17 +128,10 @@
                       "security_risk": {
                         "type": "string",
                         "description": "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions.",
-                        "enum": [
-                          "LOW",
-                          "MEDIUM",
-                          "HIGH"
-                        ]
+                        "enum": ["LOW", "MEDIUM", "HIGH"]
                       }
                     },
-                    "required": [
-                      "code",
-                      "security_risk"
-                    ]
+                    "required": ["code", "security_risk"]
                   }
                 }
               },
@@ -171,17 +150,10 @@
                       "security_risk": {
                         "type": "string",
                         "description": "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions.",
-                        "enum": [
-                          "LOW",
-                          "MEDIUM",
-                          "HIGH"
-                        ]
+                        "enum": ["LOW", "MEDIUM", "HIGH"]
                       }
                     },
-                    "required": [
-                      "code",
-                      "security_risk"
-                    ]
+                    "required": ["code", "security_risk"]
                   }
                 }
               },
@@ -195,10 +167,7 @@
                     "properties": {
                       "command": {
                         "type": "string",
-                        "enum": [
-                          "view",
-                          "plan"
-                        ],
+                        "enum": ["view", "plan"],
                         "description": "The command to execute. `view` shows the current task list. `plan` creates or updates the task list based on provided requirements and progress. Always `view` the current list before making changes."
                       },
                       "task_list": {
@@ -218,29 +187,19 @@
                             "status": {
                               "type": "string",
                               "description": "Current task status",
-                              "enum": [
-                                "todo",
-                                "in_progress",
-                                "done"
-                              ]
+                              "enum": ["todo", "in_progress", "done"]
                             },
                             "notes": {
                               "type": "string",
                               "description": "Optional additional context or details"
                             }
                           },
-                          "required": [
-                            "title",
-                            "status",
-                            "id"
-                          ],
+                          "required": ["title", "status", "id"],
                           "additionalProperties": false
                         }
                       }
                     },
-                    "required": [
-                      "command"
-                    ],
+                    "required": ["command"],
                     "additionalProperties": false
                   }
                 }
@@ -294,18 +253,10 @@
                       "security_risk": {
                         "type": "string",
                         "description": "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions.",
-                        "enum": [
-                          "LOW",
-                          "MEDIUM",
-                          "HIGH"
-                        ]
+                        "enum": ["LOW", "MEDIUM", "HIGH"]
                       }
                     },
-                    "required": [
-                      "command",
-                      "path",
-                      "security_risk"
-                    ]
+                    "required": ["command", "path", "security_risk"]
                   }
                 }
               },
@@ -346,9 +297,7 @@
                         "type": "boolean"
                       }
                     },
-                    "required": [
-                      "url"
-                    ],
+                    "required": ["url"],
                     "title": "Fetch",
                     "type": "object"
                   }
@@ -368,19 +317,13 @@
                       },
                       "search_depth": {
                         "type": "string",
-                        "enum": [
-                          "basic",
-                          "advanced"
-                        ],
+                        "enum": ["basic", "advanced"],
                         "description": "The depth of the search. It can be 'basic' or 'advanced'",
                         "default": "basic"
                       },
                       "topic": {
                         "type": "string",
-                        "enum": [
-                          "general",
-                          "news"
-                        ],
+                        "enum": ["general", "news"],
                         "description": "The category of the search. This will determine which of our agents will be used for the search",
                         "default": "general"
                       },
@@ -442,9 +385,7 @@
                         "default": []
                       }
                     },
-                    "required": [
-                      "query"
-                    ]
+                    "required": ["query"]
                   }
                 }
               },
@@ -465,10 +406,7 @@
                       },
                       "extract_depth": {
                         "type": "string",
-                        "enum": [
-                          "basic",
-                          "advanced"
-                        ],
+                        "enum": ["basic", "advanced"],
                         "description": "Depth of extraction - 'basic' or 'advanced', if usrls are linkedin use 'advanced' or if explicitly told to use advanced",
                         "default": "basic"
                       },
@@ -478,9 +416,7 @@
                         "default": false
                       }
                     },
-                    "required": [
-                      "urls"
-                    ]
+                    "required": ["urls"]
                   }
                 }
               },
@@ -560,17 +496,12 @@
                       },
                       "extract_depth": {
                         "type": "string",
-                        "enum": [
-                          "basic",
-                          "advanced"
-                        ],
+                        "enum": ["basic", "advanced"],
                         "description": "Advanced extraction retrieves more data, including tables and embedded content, with higher success but may increase latency",
                         "default": "basic"
                       }
                     },
-                    "required": [
-                      "url"
-                    ]
+                    "required": ["url"]
                   }
                 }
               },
@@ -649,9 +580,7 @@
                         "default": []
                       }
                     },
-                    "required": [
-                      "url"
-                    ]
+                    "required": ["url"]
                   }
                 }
               },

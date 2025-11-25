@@ -82,16 +82,19 @@ tests/
 This approach uses pre-recorded API responses that have been sanitized to remove sensitive data.
 
 **Pros:**
+
 - Fast test execution
 - No external dependencies during testing
 - Consistent test results
 - Safe for CI/CD (no real API keys needed)
 
 **Cons:**
+
 - Fixtures need to be updated when API changes
 - May not catch all edge cases
 
 **Example:**
+
 ```python
 @responses.activate
 def test_search_conversations(self, api_client, fixture_loader):
@@ -102,7 +105,7 @@ def test_search_conversations(self, api_client, fixture_loader):
         json=fixture["response"]["json"],
         status=fixture["response"]["status_code"]
     )
-    
+
     result = api_client.search_conversations(limit=5)
     assert isinstance(result, dict)
 ```
@@ -112,16 +115,19 @@ def test_search_conversations(self, api_client, fixture_loader):
 VCR.py automatically records HTTP interactions on first run and replays them on subsequent runs.
 
 **Pros:**
+
 - Automatic recording and replay
 - More realistic than fixtures
 - Good for exploratory testing
 
 **Cons:**
+
 - Requires real API access for initial recording
 - Cassettes may contain sensitive data
 - Slower than fixture-based tests
 
 **Example:**
+
 ```python
 @pytest.mark.vcr()
 def test_with_vcr(self, api_client):
@@ -136,6 +142,7 @@ def test_with_vcr(self, api_client):
 For unit tests that need simple HTTP mocking without recorded data.
 
 **Example:**
+
 ```python
 @responses.activate
 def test_simple_mock(self, api_client):
@@ -145,7 +152,7 @@ def test_simple_mock(self, api_client):
         json={"conversations": []},
         status=200
     )
-    
+
     result = api_client.search_conversations()
     assert result == {"conversations": []}
 ```
@@ -204,31 +211,37 @@ The following pytest markers are available:
 ## Troubleshooting
 
 ### Fixture Not Found Error
+
 ```
 FileNotFoundError: Fixture file not found: tests/fixtures/sanitized/some_fixture.json
 ```
 
 **Solution:** Run the fixture recording script:
+
 ```bash
 python scripts/update_fixtures.py
 ```
 
 ### API Key Error
+
 ```
 Error: OPENHANDS_API_KEY or OH_API_KEY environment variable not set
 ```
 
 **Solution:** Set your API key:
+
 ```bash
 export OPENHANDS_API_KEY=your_api_key_here
 ```
 
 ### VCR Import Error
+
 ```
 ImportError: No module named 'vcr'
 ```
 
 **Solution:** Install VCR.py:
+
 ```bash
 pip install vcrpy pytest-vcr
 ```
@@ -236,6 +249,7 @@ pip install vcrpy pytest-vcr
 ### Tests Failing After API Changes
 
 **Solution:** Update your fixtures:
+
 ```bash
 python scripts/update_fixtures.py
 ```
