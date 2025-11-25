@@ -18,13 +18,16 @@ fi
 echo "📋 Installing project dependencies..."
 uv sync --all-extras --dev
 
-# Install pre-commit hooks if not already installed
-if [ ! -f .git/hooks/pre-commit ]; then
-    echo "🔧 Installing pre-commit hooks..."
-    uv run pre-commit install
+# Ensure OpenHands pre-commit hook is installed (don't use standard pre-commit install)
+if [ ! -f .git/hooks/pre-commit ] || ! grep -q "openhands/pre-commit.sh" .git/hooks/pre-commit; then
+    echo "🔧 Installing OpenHands pre-commit hooks..."
+    # Copy the OpenHands pre-commit hook
+    cp .git/hooks/pre-commit.legacy .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+    # Install commit-msg hook separately since we still want that
     uv run pre-commit install --hook-type commit-msg
 else
-    echo "✅ Pre-commit hooks already installed"
+    echo "✅ OpenHands pre-commit hooks already installed"
 fi
 
 # Set up environment variables for development
