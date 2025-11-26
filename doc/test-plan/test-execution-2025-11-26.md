@@ -213,8 +213,8 @@ Working in /workspace/project/oh-utils directory.
 - [ ] `w [ID/NUM]` - Wake conversation - ⏭️ SKIP (tested via CLI commands)
 - [ ] `s [ID/NUM]` - Show details - ⏭️ SKIP (tested via CLI commands)
 - [ ] `f [ID/NUM]` - Download changed files - ⏭️ SKIP (tested via CLI commands)
-- [ ] `t [ID/NUM]` - Download trajectory - ⏭️ SKIP (requires manual testing)
-- [ ] `a [ID/NUM]` - Download workspace - ⏭️ SKIP (requires manual testing)
+- [x] `t [ID/NUM]` - Download trajectory - ✅ PASS (downloaded trajectory-3ff2ee98 (1).json, 1.2MB, valid JSON)
+- [x] `a [ID/NUM]` - Download workspace - ✅ PASS (downloaded workspace-3ff2ee98.zip, 224MB, valid ZIP)
 - [ ] `n` - Next page - ⏭️ SKIP (requires manual testing)
 - [ ] `p` - Previous page - ⏭️ SKIP (requires manual testing)
 - [ ] `q` - Quit - ⏭️ SKIP (requires manual testing)
@@ -293,9 +293,9 @@ Working in /workspace/project/oh-utils directory.
 - [ ] `r` - Refresh command - ⏭️ SKIP (basic functionality confirmed)
 - [ ] `w [NUM/ID]` - Wake conversation - ⏭️ SKIP (tested via CLI equivalents)
 - [ ] `s [NUM/ID]` - Show details - ⏭️ SKIP (tested via CLI equivalents)
-- [ ] `f [NUM/ID]` - Download files - ⏭️ SKIP (requires manual testing)
-- [ ] `t [NUM/ID]` - Download trajectory - ⏭️ SKIP (requires manual testing)
-- [ ] `a [NUM/ID]` - Download workspace - ⏭️ SKIP (requires manual testing)
+- [ ] `f [NUM/ID]` - Download files - ⏭️ SKIP (tested via CLI equivalents)
+- [x] `t [NUM/ID]` - Download trajectory - ✅ PASS (downloaded trajectory-3ff2ee98 (3).json, valid JSON)
+- [x] `a [NUM/ID]` - Download workspace - ✅ PASS (downloaded workspace-3ff2ee98 (1).zip, valid ZIP)
 - [ ] `n` - Next page - ⏭️ SKIP (requires manual testing)
 - [ ] `p` - Previous page - ⏭️ SKIP (requires manual testing)
 - [ ] `q` - Quit - ⏭️ SKIP (requires manual testing)
@@ -354,19 +354,20 @@ Working in /workspace/project/oh-utils directory.
 
 ### Overall Statistics
 - **Total Tests:** 47 planned tests
-- **Executed:** 27 tests
-- **Passed:** 25 tests (✅)
+- **Executed:** 31 tests
+- **Passed:** 29 tests (✅)
 - **Failed:** 2 tests (❌)
-- **Skipped:** 20 tests (⏭️)
+- **Skipped:** 16 tests (⏭️)
 
 ### Test Results by Category
 
-#### ✅ PASSING (25 tests)
+#### ✅ PASSING (29 tests)
 - **Basic Commands:** Help, version, server management all working correctly
 - **Conversation Management:** List, show, wake, download functions working
 - **Interactive Modes:** Both ohc -i and oh-conversation-manager interactive modes working
+- **Interactive Downloads:** Trajectory and workspace downloads working in both interactive modes
 - **Error Handling:** Invalid conversation IDs and numbers handled properly
-- **File Operations:** ZIP and JSON downloads working and valid
+- **File Operations:** ZIP and JSON downloads working and valid (tested up to 224MB files)
 - **State Changes:** Wake functionality successfully changes conversation status
 
 #### ❌ FAILING (2 tests)
@@ -404,6 +405,14 @@ Working in /workspace/project/oh-utils directory.
 1. Standardize pagination behavior between tools (both should use same defaults)
 2. Improve error messages for workspace changes on stopped conversations
 3. Consider adding --limit flag to conversation-manager for consistency
+
+### Interactive Download Testing Success
+- **Major Achievement:** Successfully tested time-consuming download operations in interactive mode
+- **Trajectory Downloads:** Both tools successfully downloaded trajectory JSON files (1.2MB+)
+- **Workspace Archives:** Both tools successfully downloaded large ZIP files (224MB+)
+- **Validation:** All downloaded files verified as valid JSON/ZIP formats
+- **Performance:** All downloads completed within 90-second timeout
+- **Method:** Used Python subprocess with input simulation for reliable testing
 
 ### Environment Details
 - **Date:** 2025-11-26
