@@ -104,6 +104,48 @@ These utilities require an OpenHands API token from: https://app.all-hands.dev/s
 - Cross-platform testing (Ubuntu, Windows, macOS)
 - Multiple Python version support (3.8+, tested on 3.9-3.12)
 
+## Testing Rules
+
+When writing tests:
+
+- **Keep test methods short** -- 15 lines or less, 5-6 lines is much better
+
+- **Separate test setup from assertions with a blank line**
+
+- **Avoid repeating the same test setup in multiple test methods**, use
+  setup/teardown functions to keep test methods short
+
+- **Each test should identify one failure scenario** - limit to one assertion or
+  closely related assertions. It should be obvious from the assertion failure and
+  test name where the bug lies.
+
+- **Assertions that do not clearly show where a failure lies** (such as booleans,
+  null checks, etc) should have additional text added (if testing framework
+  allows) such that a failed assertion clearly indicates the coding error.
+
+- **Avoid using complex mocking arrangements**. Many mocks suggest bad test strategy
+  or bad code design.
+
+- **If you detect poor code design that makes testing difficult**, bring that to my
+  attention.
+
+- **Double check that a test exercises the functionality under test and not just
+  the test setup or mocks**.
+
+## Milestone-Based Development
+
+For complex, multi-phase refactoring work, this repository uses a systematic milestone-based approach:
+
+- **Use the task_tracker tool** for organizing and monitoring development work
+- **Follow the milestone completion guide** in `doc/milestone-completion-guide.md`
+- **Complete manual testing** using `doc/test-plan/manual-test-plan.md` and `doc/test-plan/test-execution-checklist-template.md`
+- **Ensure all quality gates pass** before marking milestones complete:
+  - All automated tests passing
+  - All linting and type checking clean
+  - All pre-commit checks passing
+  - Manual testing completed for impacted functionality
+  - All milestone acceptance criteria met
+
 # Design Documents
 
 When creating design documents for this repository, use the template located at:
