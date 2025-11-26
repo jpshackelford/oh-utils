@@ -78,7 +78,7 @@ class TestCommandIntegrationWithFixtures:
         mock_config_manager = Mock()
         mock_config_manager.get_server_config.return_value = {
             "api_key": "test-integration-key",
-            "url": "https://test-integration.example.com/api/"
+            "url": "https://test-integration.example.com/api/",
         }
 
         @with_server_config
@@ -86,19 +86,21 @@ class TestCommandIntegrationWithFixtures:
             return {
                 "api_base_url": api.base_url,
                 "api_key": api.api_key,
-                "server": server
+                "server": server,
             }
 
-        with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
+        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
             result = test_integration_command(server="integration-server")
 
         expected = {
             "api_base_url": "https://test-integration.example.com/api/",
             "api_key": "test-integration-key",
-            "server": "integration-server"
+            "server": "integration-server",
         }
         assert result == expected
-        mock_config_manager.get_server_config.assert_called_once_with("integration-server")
+        mock_config_manager.get_server_config.assert_called_once_with(
+            "integration-server"
+        )
 
     @responses.activate
     def test_decorator_with_api_call_using_fixtures(self, fixture_loader):
@@ -116,7 +118,7 @@ class TestCommandIntegrationWithFixtures:
         mock_config_manager = Mock()
         mock_config_manager.get_server_config.return_value = {
             "api_key": "fake-api-key",
-            "url": "https://app.all-hands.dev/api/"
+            "url": "https://app.all-hands.dev/api/",
         }
 
         @with_server_config
@@ -127,10 +129,10 @@ class TestCommandIntegrationWithFixtures:
                 "conversation_count": len(result.get("results", [])),
                 "first_conversation_id": result.get("results", [{}])[0].get(
                     "conversation_id"
-                )
+                ),
             }
 
-        with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
+        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
             result = test_api_command()
 
         assert result["conversation_count"] == 5
@@ -146,7 +148,7 @@ class TestCommandIntegrationWithFixtures:
             "results": [
                 {"conversation_id": "abc123def456", "title": "Test Conv 1"},
                 {"conversation_id": "abc456ghi789", "title": "Test Conv 2"},
-                {"conversation_id": "def789xyz123", "title": "Test Conv 3"}
+                {"conversation_id": "def789xyz123", "title": "Test Conv 3"},
             ]
         }
 

@@ -135,7 +135,9 @@ def interactive_mode() -> None:
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def wake(
-    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Wake up a conversation by ID (full or partial), or number from the list."""
     try:
@@ -165,7 +167,9 @@ def wake(
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def show(
-    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Show detailed information about a conversation."""
     # Resolve conversation ID using shared logic
@@ -266,7 +270,9 @@ def ws_dl(conversation_id_or_number: str, output: str, server: Optional[str]) ->
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def ws_changes(
-    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Show workspace file changes (git status)."""
     # Resolve conversation ID using shared logic
@@ -283,7 +289,9 @@ def ws_changes(
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def trajectory(
-    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Download conversation trajectory as JSON file."""
     try:

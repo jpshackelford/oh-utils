@@ -22,14 +22,14 @@ class TestWithServerConfigDecorator:
         mock_config_manager = Mock()
         mock_config_manager.get_server_config.return_value = {
             "api_key": "test-key",
-            "url": "https://test.example.com/api/"
+            "url": "https://test.example.com/api/",
         }
 
         @with_server_config
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return f"API base URL: {api.base_url}"
 
-        with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
+        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
             result = test_command(server="test-server")
 
         assert result == "API base URL: https://test.example.com/api/"
@@ -44,7 +44,7 @@ class TestWithServerConfigDecorator:
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
-        with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
+        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
             result = test_command(server="missing-server")
 
         assert result is None
@@ -60,7 +60,7 @@ class TestWithServerConfigDecorator:
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
-        with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
+        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
             result = test_command()
 
         assert result is None
@@ -81,7 +81,7 @@ class TestResolveConversationId:
             "results": [
                 {"conversation_id": "abc123"},
                 {"conversation_id": "def456"},
-                {"conversation_id": "ghi789"}
+                {"conversation_id": "ghi789"},
             ]
         }
 
@@ -109,7 +109,7 @@ class TestResolveConversationId:
         mock_api.search_conversations.return_value = {
             "results": [
                 {"conversation_id": "abc123def", "title": "Test Conv 1"},
-                {"conversation_id": "def456ghi", "title": "Test Conv 2"}
+                {"conversation_id": "def456ghi", "title": "Test Conv 2"},
             ]
         }
 
@@ -136,7 +136,7 @@ class TestResolveConversationId:
         mock_api.search_conversations.return_value = {
             "results": [
                 {"conversation_id": "abc123def", "title": "Test Conv 1"},
-                {"conversation_id": "abc456ghi", "title": "Test Conv 2"}
+                {"conversation_id": "abc456ghi", "title": "Test Conv 2"},
             ]
         }
 

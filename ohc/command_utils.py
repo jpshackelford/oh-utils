@@ -28,9 +28,10 @@ def with_server_config(func: F) -> F:
 
     The decorated function should accept an 'api' parameter of type OpenHandsAPI.
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        server = kwargs.get('server')
+        server = kwargs.get("server")
         config_manager = ConfigManager()
         server_config = config_manager.get_server_config(server)
 
@@ -45,7 +46,7 @@ def with_server_config(func: F) -> F:
             return None
 
         api = OpenHandsAPI(server_config["api_key"], server_config["url"])
-        kwargs['api'] = api
+        kwargs["api"] = api
         return func(*args, **kwargs)
 
     return wrapper  # type: ignore[return-value]
@@ -144,4 +145,3 @@ def handle_missing_server_config(server: Optional[str]) -> None:
             "✗ No servers configured. Use 'ohc server add' to add a server.",
             err=True,
         )
-
