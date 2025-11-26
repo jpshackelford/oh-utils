@@ -17,7 +17,6 @@ from .config import ConfigManager
 from .conversation_display import show_conversation_details, show_workspace_changes
 
 
-
 @click.group()
 def conv() -> None:
     """Manage OpenHands conversations."""
@@ -34,7 +33,7 @@ def conv() -> None:
     help="Number of conversations to list (default: all)",
 )
 @with_server_config
-def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None:
+def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None:  # noqa: ARG001
     """List conversations."""
     try:
         # If no limit specified, get all conversations by using a large limit
@@ -135,7 +134,9 @@ def interactive_mode() -> None:
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
-def wake(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]) -> None:
+def wake(
+    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+) -> None:
     """Wake up a conversation by ID (full or partial), or number from the list."""
     try:
         # Resolve conversation ID using shared logic
@@ -163,7 +164,9 @@ def wake(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
-def show(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]) -> None:
+def show(
+    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+) -> None:
     """Show detailed information about a conversation."""
     # Resolve conversation ID using shared logic
     conv_id = resolve_conversation_id(api, conversation_id_or_number)
@@ -185,7 +188,10 @@ def show(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def ws_download(
-    api: OpenHandsAPI, conversation_id_or_number: str, output: str, server: Optional[str]
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    output: str,
+    server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Download workspace files as a ZIP archive."""
     try:
@@ -259,7 +265,9 @@ def ws_dl(conversation_id_or_number: str, output: str, server: Optional[str]) ->
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
-def ws_changes(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]) -> None:
+def ws_changes(
+    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+) -> None:
     """Show workspace file changes (git status)."""
     # Resolve conversation ID using shared logic
     conv_id = resolve_conversation_id(api, conversation_id_or_number)
@@ -274,7 +282,9 @@ def ws_changes(api: OpenHandsAPI, conversation_id_or_number: str, server: Option
 @click.argument("conversation_id_or_number")
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
-def trajectory(api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]) -> None:
+def trajectory(
+    api: OpenHandsAPI, conversation_id_or_number: str, server: Optional[str]  # noqa: ARG001
+) -> None:
     """Download conversation trajectory as JSON file."""
     try:
         # Resolve conversation ID using shared logic

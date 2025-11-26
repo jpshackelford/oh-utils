@@ -5,8 +5,9 @@ Tests the shared command infrastructure with real API response fixtures
 to ensure compatibility with the existing testing approach.
 """
 
-import responses
 from unittest.mock import Mock, patch
+
+import responses
 
 from ohc.api import OpenHandsAPI
 from ohc.command_utils import resolve_conversation_id, with_server_config
@@ -28,7 +29,7 @@ class TestCommandIntegrationWithFixtures:
         )
 
         api = OpenHandsAPI("fake-api-key", "https://app.all-hands.dev/api/")
-        
+
         # Test resolving by number (should get first conversation)
         result = resolve_conversation_id(api, "1")
         assert result == "d2bfa2e22a0e4fef98882ab95258d4af"
@@ -45,7 +46,7 @@ class TestCommandIntegrationWithFixtures:
         )
 
         api = OpenHandsAPI("fake-api-key", "https://app.all-hands.dev/api/")
-        
+
         # Test resolving by partial ID (first 8 chars of first conversation)
         result = resolve_conversation_id(api, "d2bfa2e2")
         assert result == "d2bfa2e22a0e4fef98882ab95258d4af"
@@ -62,10 +63,10 @@ class TestCommandIntegrationWithFixtures:
         )
 
         api = OpenHandsAPI("fake-api-key", "https://app.all-hands.dev/api/")
-        
+
         # Test with number beyond available conversations (fixture has 5)
         result = resolve_conversation_id(api, "10")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ Conversation number 10 is out of range (1-5)" in captured.err
@@ -77,7 +78,7 @@ class TestCommandIntegrationWithFixtures:
             "api_key": "test-integration-key",
             "url": "https://test-integration.example.com/api/"
         }
-        
+
         @with_server_config
         def test_integration_command(api: OpenHandsAPI, server: str = None) -> dict:
             return {
@@ -88,7 +89,7 @@ class TestCommandIntegrationWithFixtures:
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
             result = test_integration_command(server="integration-server")
-            
+
         expected = {
             "api_base_url": "https://test-integration.example.com/api/",
             "api_key": "test-integration-key",
@@ -115,7 +116,7 @@ class TestCommandIntegrationWithFixtures:
             "api_key": "fake-api-key",
             "url": "https://app.all-hands.dev/api/"
         }
-        
+
         @with_server_config
         def test_api_command(api: OpenHandsAPI, server: str = None) -> dict:
             # Make an actual API call through the decorator-provided API instance
@@ -127,7 +128,7 @@ class TestCommandIntegrationWithFixtures:
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
             result = test_api_command()
-            
+
         assert result["conversation_count"] == 5
         assert result["first_conversation_id"] == "d2bfa2e22a0e4fef98882ab95258d4af"
 
@@ -142,7 +143,7 @@ class TestCommandIntegrationWithFixtures:
                 {"conversation_id": "def789xyz123", "title": "Test Conv 3"}
             ]
         }
-        
+
         responses.add(
             responses.GET,
             "https://app.all-hands.dev/api/conversations",
@@ -151,10 +152,10 @@ class TestCommandIntegrationWithFixtures:
         )
 
         api = OpenHandsAPI("fake-api-key", "https://app.all-hands.dev/api/")
-        
+
         # Test with partial ID that matches multiple conversations
         result = resolve_conversation_id(api, "abc")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ Multiple conversations match 'abc'" in captured.err
@@ -165,9 +166,9 @@ class TestCommandIntegrationWithFixtures:
     def test_full_conversation_id_passthrough(self):
         """Test that full conversation IDs are passed through without API calls."""
         api = OpenHandsAPI("fake-api-key", "https://app.all-hands.dev/api/")
-        
-        full_id = "d2bfa2e22a0e4fef98882ab95258d4af"
+
+        full_id = "d2bfa2e2-2a0e-4fef-9888-2ab95258d4af"  # 36 characters with hyphens
         result = resolve_conversation_id(api, full_id)
-        
+
         assert result == full_id
         # Verify no API calls were made (responses would fail if any were made)

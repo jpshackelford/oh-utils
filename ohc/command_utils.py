@@ -19,13 +19,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 def with_server_config(func: F) -> F:
     """
     Decorator to handle server configuration boilerplate for CLI commands.
-    
+
     This decorator:
     1. Gets the server configuration from ConfigManager
     2. Handles missing server configuration with appropriate error messages
     3. Creates an OpenHandsAPI instance
     4. Passes the API instance to the decorated function as 'api' parameter
-    
+
     The decorated function should accept an 'api' parameter of type OpenHandsAPI.
     """
     @wraps(func)
@@ -47,7 +47,7 @@ def with_server_config(func: F) -> F:
         api = OpenHandsAPI(server_config["api_key"], server_config["url"])
         kwargs['api'] = api
         return func(*args, **kwargs)
-    
+
     return wrapper  # type: ignore[return-value]
 
 
@@ -56,16 +56,16 @@ def resolve_conversation_id(
 ) -> Optional[str]:
     """
     Resolve conversation ID from number or partial ID.
-    
+
     This function handles three cases:
     1. Numeric input (1, 2, 3...) - resolves to conversation by list position
     2. Partial ID (8 chars or less) - finds matching conversation by ID prefix
     3. Full ID - returns as-is
-    
+
     Args:
         api: OpenHandsAPI instance for making API calls
         conversation_id_or_number: Either a number, partial ID, or full ID
-        
+
     Returns:
         Full conversation ID if found, None if not found or ambiguous
     """
@@ -93,8 +93,8 @@ def resolve_conversation_id(
         # It's a conversation ID string - could be full or partial
         conv_id = conversation_id_or_number
 
-        # If it's a short ID (8 chars or less), try to find a matching conversation
-        if len(conv_id) <= 8:
+        # If it's not a full UUID (36 chars), try to find a matching conversation
+        if len(conv_id) < 36:
             result = api.search_conversations(limit=100)
             conversations = result.get("results", [])
 
@@ -133,7 +133,7 @@ def resolve_conversation_id(
 def handle_missing_server_config(server: Optional[str]) -> None:
     """
     Handle missing server configuration with appropriate error messages.
-    
+
     Args:
         server: Server name that was requested (None for default)
     """
@@ -144,3 +144,4 @@ def handle_missing_server_config(server: Optional[str]) -> None:
             "✗ No servers configured. Use 'ohc server add' to add a server.",
             err=True,
         )
+

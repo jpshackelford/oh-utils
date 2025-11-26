@@ -6,9 +6,6 @@ Tests the shared decorators and utilities used across CLI commands.
 
 from unittest.mock import Mock, patch
 
-import click
-import pytest
-
 from ohc.api import OpenHandsAPI
 from ohc.command_utils import (
     handle_missing_server_config,
@@ -27,14 +24,14 @@ class TestWithServerConfigDecorator:
             "api_key": "test-key",
             "url": "https://test.example.com/api/"
         }
-        
+
         @with_server_config
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return f"API base URL: {api.base_url}"
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
             result = test_command(server="test-server")
-            
+
         assert result == "API base URL: https://test.example.com/api/"
         mock_config_manager.get_server_config.assert_called_once_with("test-server")
 
@@ -42,14 +39,14 @@ class TestWithServerConfigDecorator:
         """Test decorator handles missing server config gracefully."""
         mock_config_manager = Mock()
         mock_config_manager.get_server_config.return_value = None
-        
+
         @with_server_config
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
             result = test_command(server="missing-server")
-            
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ Server 'missing-server' not found." in captured.err
@@ -58,14 +55,14 @@ class TestWithServerConfigDecorator:
         """Test decorator handles missing default server config."""
         mock_config_manager = Mock()
         mock_config_manager.get_server_config.return_value = None
-        
+
         @with_server_config
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
             result = test_command()
-            
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ No servers configured. Use 'ohc server add' to add a server." in captured.err
@@ -86,7 +83,7 @@ class TestResolveConversationId:
         }
 
         result = resolve_conversation_id(mock_api, "2")
-        
+
         assert result == "def456"
         mock_api.search_conversations.assert_called_once_with(limit=100)
 
@@ -98,7 +95,7 @@ class TestResolveConversationId:
         }
 
         result = resolve_conversation_id(mock_api, "5")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ Conversation number 5 is out of range (1-1)" in captured.err
@@ -114,7 +111,7 @@ class TestResolveConversationId:
         }
 
         result = resolve_conversation_id(mock_api, "abc123")
-        
+
         assert result == "abc123def"
 
     def test_resolve_by_partial_id_no_match(self, capsys):
@@ -125,7 +122,7 @@ class TestResolveConversationId:
         }
 
         result = resolve_conversation_id(mock_api, "xyz")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ No conversation found with ID starting with 'xyz'" in captured.err
@@ -141,7 +138,7 @@ class TestResolveConversationId:
         }
 
         result = resolve_conversation_id(mock_api, "abc")
-        
+
         assert result is None
         captured = capsys.readouterr()
         assert "✗ Multiple conversations match 'abc'" in captured.err
@@ -150,10 +147,11 @@ class TestResolveConversationId:
     def test_resolve_by_full_id(self):
         """Test resolving by full conversation ID."""
         mock_api = Mock(spec=OpenHandsAPI)
-        
-        result = resolve_conversation_id(mock_api, "abc123def456ghi789")
-        
-        assert result == "abc123def456ghi789"
+        full_uuid = "12345678-1234-5678-9abc-123456789abc"  # 36 characters
+
+        result = resolve_conversation_id(mock_api, full_uuid)
+
+        assert result == full_uuid
         mock_api.search_conversations.assert_not_called()
 
 
@@ -163,13 +161,13 @@ class TestHandleMissingServerConfig:
     def test_handle_missing_named_server(self, capsys):
         """Test error message for missing named server."""
         handle_missing_server_config("production")
-        
+
         captured = capsys.readouterr()
         assert "✗ Server 'production' not found." in captured.err
 
     def test_handle_missing_default_server(self, capsys):
         """Test error message for missing default server."""
         handle_missing_server_config(None)
-        
+
         captured = capsys.readouterr()
         assert "✗ No servers configured. Use 'ohc server add' to add a server." in captured.err
