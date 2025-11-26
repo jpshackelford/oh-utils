@@ -17,6 +17,7 @@ This review confirms the suspected architectural flaws and identifies specific a
 The project contains two separate implementations for conversation management:
 
 **Legacy Interactive System (`conversation_manager/`):**
+
 - Standalone interactive terminal application
 - Self-contained `OpenHandsAPI` class
 - Hardcoded base URL (`https://app.all-hands.dev/api/`)
@@ -24,6 +25,7 @@ The project contains two separate implementations for conversation management:
 - 1,197 lines of code with 10% test coverage
 
 **Modern CLI System (`ohc/`):**
+
 - Click-based CLI with individual commands
 - Separate `OpenHandsAPI` class with configurable base URL
 - Server configuration management
@@ -32,6 +34,7 @@ The project contains two separate implementations for conversation management:
 
 **Bridge Implementation:**
 The `interactive_mode()` function in `ohc/conversation_commands.py` attempts to bridge these systems by:
+
 - Importing the legacy conversation manager
 - Monkey-patching the API class to use configured servers
 - Setting environment variables to pass configuration
@@ -42,10 +45,12 @@ This creates a fragile coupling between the two systems.
 
 **API Client Duplication:**
 Two nearly identical `OpenHandsAPI` classes exist:
+
 - `conversation_manager.conversation_manager.OpenHandsAPI` (681 statements)
 - `ohc.api.OpenHandsAPI` (146 statements)
 
 Both implement similar methods:
+
 - `test_connection()`
 - `search_conversations()`
 - `get_conversation()`
@@ -55,6 +60,7 @@ Both implement similar methods:
 
 **Conversation ID Resolution Duplication:**
 The logic to resolve conversation IDs from numbers or partial IDs is duplicated across multiple commands:
+
 - `_resolve_conversation_id()` function (lines 19-82)
 - Inline implementation in `wake()` (lines 233-291)
 - Inline implementation in `ws_download()` (lines 365-423)
@@ -62,6 +68,7 @@ The logic to resolve conversation IDs from numbers or partial IDs is duplicated 
 
 **Server Configuration Boilerplate:**
 Every command function contains identical server configuration logic:
+
 ```python
 config_manager = ConfigManager()
 server_config = config_manager.get_server_config(server)
@@ -82,6 +89,7 @@ This pattern appears in 6 different command functions.
 ### 2.3 Test Coverage Assessment
 
 **Overall Coverage: 13%**
+
 - `conversation_manager.py`: 10% (612/681 statements missed)
 - `ohc/cli.py`: 0% (29/29 statements missed)
 - `ohc/config.py`: 0% (78/78 statements missed)
@@ -90,6 +98,7 @@ This pattern appears in 6 different command functions.
 - `ohc/api.py`: 68% (47/146 statements missed)
 
 **Test Quality Issues:**
+
 - `test_conversation_manager.py` contains only placeholder tests
 - No integration tests for CLI commands
 - No tests for configuration management
@@ -101,6 +110,7 @@ This pattern appears in 6 different command functions.
 ### 3.1 Unified API Client
 
 Create a single, well-tested API client that supports:
+
 - Configurable base URLs
 - Consistent error handling
 - Proper type annotations
@@ -109,6 +119,7 @@ Create a single, well-tested API client that supports:
 ### 3.2 Shared Command Infrastructure
 
 Implement common patterns as reusable components:
+
 - Server configuration resolution
 - Conversation ID resolution
 - Error handling and user feedback
@@ -117,6 +128,7 @@ Implement common patterns as reusable components:
 ### 3.3 Modular Architecture
 
 Separate concerns into distinct layers:
+
 - **API Layer**: HTTP client and data models
 - **Business Logic Layer**: Conversation management operations
 - **Presentation Layer**: CLI commands and interactive interface
@@ -125,6 +137,7 @@ Separate concerns into distinct layers:
 ### 3.4 Improved Testing Strategy
 
 Establish comprehensive testing at multiple levels:
+
 - Unit tests for individual components
 - Integration tests for API interactions
 - CLI command tests using Click's testing utilities
@@ -139,12 +152,12 @@ Create a single `OpenHandsAPI` class in `ohc/api.py` that replaces both existing
 ```python
 class OpenHandsAPI:
     """Unified OpenHands API client supporting multiple server configurations."""
-    
+
     def __init__(self, api_key: str, base_url: str = "https://app.all-hands.dev/api/"):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/") + "/"
         self.session = self._create_session()
-    
+
     def _create_session(self) -> requests.Session:
         """Create configured requests session."""
         session = requests.Session()
@@ -173,11 +186,11 @@ def with_server_config(func: Callable[..., T]) -> Callable[..., T]:
         server = kwargs.get('server')
         config_manager = ConfigManager()
         server_config = config_manager.get_server_config(server)
-        
+
         if not server_config:
             handle_missing_server_config(server)
             return
-            
+
         api = OpenHandsAPI(server_config["api_key"], server_config["url"])
         return func(*args, api=api, **kwargs)
     return wrapper
@@ -201,7 +214,7 @@ def wake(conversation_id_or_number: str, server: Optional[str], api: OpenHandsAP
     conv_id = resolve_conversation_id(api, conversation_id_or_number)
     if not conv_id:
         return
-        
+
     result = api.start_conversation(conv_id)
     click.echo("✓ Conversation started successfully")
     if "url" in result:
@@ -217,11 +230,11 @@ def interactive_mode() -> None:
     """Start interactive conversation manager using unified API."""
     config_manager = ConfigManager()
     server_config = config_manager.get_server_config()
-    
+
     if not server_config:
         handle_missing_server_config()
         return
-    
+
     api = OpenHandsAPI(server_config["api_key"], server_config["url"])
     manager = ConversationManager(api)
     manager.run_interactive()
@@ -247,13 +260,14 @@ def test_search_conversations(self, api_client, fixture_loader):
         json=fixture["response"]["json"],
         status=fixture["response"]["status_code"],
     )
-    
+
     result = api_client.search_conversations(limit=5)
     assert isinstance(result, dict)
     assert "conversations" in result
 ```
 
 **Key Components:**
+
 - `tests/fixtures/sanitized/` - Sanitized API response fixtures
 - `tests/conftest.py` - Fixture loading and test configuration
 - `tests/vcr_config.py` - VCR.py configuration with automatic sanitization
@@ -282,16 +296,19 @@ The consolidated API client will maintain method signature compatibility to ensu
 #### 4.5.3 Test Migration Strategy
 
 **Phase 1 - Verification (M1):**
+
 - Run existing integration tests against consolidated API client
 - Verify all fixtures work with unified implementation
 - Ensure no regression in test coverage
 
 **Phase 2 - Extension (M2):**
+
 - Add integration tests for shared command infrastructure
 - Reuse existing fixtures for testing new utilities
 - Test decorator patterns and shared functions
 
 **Phase 3 - Expansion (M3):**
+
 - Create fixtures for any new API endpoints
 - Use existing sanitization scripts for new recordings
 - Expand coverage using established patterns
@@ -314,6 +331,7 @@ python scripts/update_fixtures.py
 #### 4.5.5 Testing Architecture Benefits
 
 The fixture-based approach provides:
+
 - **Fast execution** - No network calls during testing
 - **Consistent results** - Same responses across environments
 - **Offline testing** - No dependency on external services
@@ -325,6 +343,7 @@ The fixture-based approach provides:
 ### 5.1 Consolidate API Client (M1)
 
 **Acceptance Criteria:**
+
 - All linting and type checking passes
 - API client tests achieve >90% coverage
 - Both CLI and interactive modes use the same API client
@@ -332,17 +351,20 @@ The fixture-based approach provides:
 - No regression in fixture-based test coverage
 
 #### 5.1.1 Unified API Client
+
 - [ ] `ohc/api.py` - Enhance existing API client with all methods from conversation_manager
 - [ ] `tests/test_api.py` - Comprehensive unit tests for all API methods
 - [ ] `tests/fixtures/` - Add missing API response fixtures
 
 #### 5.1.2 Integration Test Preservation
+
 - [ ] `tests/test_api_integration.py` - Verify existing integration tests pass with consolidated API
 - [ ] `tests/conftest.py` - Update fixture loading if needed for consolidated API
 - [ ] `scripts/sanitize_fixtures.py` - Ensure sanitization scripts work with new API structure
 - [ ] Run full integration test suite to verify fixture compatibility
 
 #### 5.1.3 Remove Duplicate API Client
+
 - [ ] `conversation_manager/conversation_manager.py` - Remove OpenHandsAPI class, import from ohc.api
 - [ ] `tests/test_conversation_manager_api.py` - Tests for conversation manager API integration
 - [ ] Update any remaining imports to use consolidated API client
@@ -350,22 +372,26 @@ The fixture-based approach provides:
 ### 5.2 Shared Command Infrastructure (M2)
 
 **Acceptance Criteria:**
+
 - Command boilerplate reduced by >80%
 - Conversation ID resolution logic centralized
 - All commands use consistent error handling
 - New command infrastructure has comprehensive integration tests using existing fixtures
 
 #### 5.2.1 Command Utilities
+
 - [ ] `ohc/command_utils.py` - Shared decorators and utilities
 - [ ] `tests/test_command_utils.py` - Unit tests for command infrastructure
 
 #### 5.2.2 Integration Tests for Command Infrastructure
+
 - [ ] `tests/test_command_integration.py` - Integration tests for shared command utilities
 - [ ] Reuse existing fixtures (`conversations_list_success.json`, `conversation_details.json`) for testing
 - [ ] Test decorator patterns (`@with_server_config`) using fixture-based mocking
 - [ ] Verify conversation ID resolution works with sanitized conversation data
 
 #### 5.2.3 Refactor Commands
+
 - [ ] `ohc/conversation_commands.py` - Apply shared infrastructure to all commands
 - [ ] `tests/test_conversation_commands.py` - CLI command tests using Click testing
 - [ ] Ensure refactored commands work with existing fixture data
@@ -373,6 +399,7 @@ The fixture-based approach provides:
 ### 5.3 Improve Test Coverage (M3)
 
 **Acceptance Criteria:**
+
 - Overall test coverage >80%
 - All CLI commands have integration tests
 - Configuration management fully tested
@@ -380,16 +407,19 @@ The fixture-based approach provides:
 - Sanitization scripts handle any new API endpoints
 
 #### 5.3.1 CLI Command Tests
+
 - [ ] `tests/test_cli_integration.py` - End-to-end CLI command tests using fixtures
 - [ ] `tests/test_config.py` - Configuration management tests
 - [ ] Extend fixture coverage for any missing API endpoints
 
 #### 5.3.2 Interactive Mode Tests
+
 - [ ] `tests/test_interactive_mode.py` - Interactive conversation manager tests using fixtures
 - [ ] `tests/test_terminal_formatting.py` - Terminal display functionality tests
 - [ ] Mock terminal interactions using existing conversation fixtures
 
 #### 5.3.3 Fixture Management Enhancement
+
 - [ ] `scripts/record_api_responses.py` - Enhance to record any new API interactions
 - [ ] `scripts/update_fixtures.py` - Update existing fixtures if API responses change
 - [ ] `tests/fixtures/sanitized/` - Add fixtures for any new API endpoints discovered
@@ -398,16 +428,19 @@ The fixture-based approach provides:
 ### 5.4 Documentation and Cleanup (M4)
 
 **Acceptance Criteria:**
+
 - Architecture documentation updated
 - Code comments and docstrings improved
 - Deprecated code removed
 
 #### 5.4.1 Documentation Updates
+
 - [ ] `README.md` - Update with unified architecture description
 - [ ] `doc/architecture.md` - Create architecture documentation
 - [ ] Code docstrings - Improve API documentation
 
 #### 5.4.2 Code Cleanup
+
 - [ ] Remove unused imports and dead code
 - [ ] Standardize error messages and user feedback
 - [ ] Improve type annotations throughout codebase
@@ -415,12 +448,14 @@ The fixture-based approach provides:
 ## 6. Benefits and Impact
 
 ### 6.1 Maintainability Improvements
+
 - Single source of truth for API interactions
 - Reduced code duplication by ~60%
 - Consistent error handling and user experience
 - Easier to add new features and fix bugs
 
 ### 6.2 Testing and Quality
+
 - Test coverage increase from 13% to >80%
 - Comprehensive CLI command testing
 - Better confidence in releases
@@ -433,12 +468,14 @@ The fixture-based approach provides:
   - Reliable offline testing capabilities
 
 ### 6.3 User Experience
+
 - Consistent behavior between CLI and interactive modes
 - Better error messages and feedback
 - More reliable conversation management
 - Improved performance through code optimization
 
 ### 6.4 Developer Experience
+
 - Clearer separation of concerns
 - Easier to understand and modify codebase
 - Better development tooling support

@@ -105,9 +105,6 @@ class Conversation:
             return f"🟡 {self.status}"
 
 
-
-
-
 class APIKeyManager:
     """Manages OpenHands API key storage and retrieval"""
 

@@ -7,6 +7,7 @@ This document provides step-by-step instructions for manually testing all functi
 ## Prerequisites
 
 1. **Environment Setup**:
+
    ```bash
    cd oh-utils
    uv sync --all-extras --dev
@@ -28,11 +29,13 @@ This document provides step-by-step instructions for manually testing all functi
 ### 1.1 Basic Help and Version
 
 **Test**: Display main help
+
 ```bash
 uv run ohc --help
 ```
 
 **Expected Output**:
+
 ```
 Usage: ohc [OPTIONS] COMMAND [ARGS]...
 
@@ -50,6 +53,7 @@ Commands:
 ```
 
 **Test**: Display version
+
 ```bash
 uv run ohc --version
 ```
@@ -61,11 +65,13 @@ uv run ohc --version
 #### 1.2.1 List Servers (Empty State)
 
 **Test**: List servers when none configured
+
 ```bash
 uv run ohc server list
 ```
 
 **Expected Output**:
+
 ```
 No servers configured.
 Use 'ohc server add' to add a server.
@@ -74,11 +80,13 @@ Use 'ohc server add' to add a server.
 #### 1.2.2 Add Server Configuration
 
 **Test**: Add server with all parameters
+
 ```bash
 uv run ohc server add --name production --url https://app.all-hands.dev/api/ --apikey $OH_API_KEY --default
 ```
 
 **Expected Output**:
+
 ```
 Testing connection to https://app.all-hands.dev/api/...
 ✓ Connection successful
@@ -86,11 +94,13 @@ Testing connection to https://app.all-hands.dev/api/...
 ```
 
 **Test**: Add server interactively (prompts for missing info)
+
 ```bash
 uv run ohc server add
 ```
 
-**Expected Behavior**: 
+**Expected Behavior**:
+
 - Prompts for server name
 - Prompts for URL (defaults to https://app.all-hands.dev/api/)
 - Prompts for API key (hidden input)
@@ -100,11 +110,13 @@ uv run ohc server add
 #### 1.2.3 List Configured Servers
 
 **Test**: List servers after adding one
+
 ```bash
 uv run ohc server list
 ```
 
 **Expected Output**:
+
 ```
 Configured servers:
 * production      https://app.all-hands.dev/api/ (default)
@@ -113,22 +125,26 @@ Configured servers:
 #### 1.2.4 Test Server Connection
 
 **Test**: Test default server
+
 ```bash
 uv run ohc server test
 ```
 
 **Expected Output**:
+
 ```
 Testing connection to server 'production'...
 ✓ Connection successful
 ```
 
 **Test**: Test specific server
+
 ```bash
 uv run ohc server test production
 ```
 
 **Expected Output**:
+
 ```
 Testing connection to server 'production'...
 ✓ Connection successful
@@ -137,11 +153,13 @@ Testing connection to server 'production'...
 #### 1.2.5 Set Default Server
 
 **Test**: Set a server as default
+
 ```bash
 uv run ohc server set-default production
 ```
 
 **Expected Output**:
+
 ```
 ✓ Server 'production' set as default
 ```
@@ -149,6 +167,7 @@ uv run ohc server set-default production
 #### 1.2.6 Delete Server
 
 **Test**: Delete server with confirmation
+
 ```bash
 uv run ohc server delete production
 ```
@@ -156,11 +175,13 @@ uv run ohc server delete production
 **Expected Behavior**: Prompts for confirmation, then deletes
 
 **Test**: Delete server without confirmation
+
 ```bash
 uv run ohc server delete production --force
 ```
 
 **Expected Output**:
+
 ```
 ✓ Server 'production' deleted
 ```
@@ -172,11 +193,13 @@ uv run ohc server delete production --force
 #### 1.3.1 List Conversations
 
 **Test**: List all conversations
+
 ```bash
 uv run ohc conv list
 ```
 
 **Expected Output** (format, actual data will vary):
+
 ```
 Found 20 conversations:
  1. 16b21076 🟢 RUNNING  Create API Reference & Manual Test Plan Docs
@@ -188,6 +211,7 @@ Found 20 conversations:
 ```
 
 **Test**: List limited number of conversations
+
 ```bash
 uv run ohc conv list -n 5
 ```
@@ -195,6 +219,7 @@ uv run ohc conv list -n 5
 **Expected Output**: Shows only first 5 conversations
 
 **Test**: List with specific server
+
 ```bash
 uv run ohc conv list --server production
 ```
@@ -204,11 +229,13 @@ uv run ohc conv list --server production
 #### 1.3.2 Show Conversation Details
 
 **Test**: Show details by partial conversation ID
+
 ```bash
 uv run ohc conv show 16b21076
 ```
 
 **Expected Output** (format, actual data will vary):
+
 ```
 Conversation Details:
   ID: 16b2107670154699801ad663801f0534
@@ -226,6 +253,7 @@ Uncommitted Files (1):
 ```
 
 **Test**: Show details by full conversation ID
+
 ```bash
 uv run ohc conv show 16b2107670154699801ad663801f0534
 ```
@@ -233,6 +261,7 @@ uv run ohc conv show 16b2107670154699801ad663801f0534
 **Expected Output**: Same as above
 
 **Test**: Show details by conversation number (for convenience)
+
 ```bash
 uv run ohc conv show 1
 ```
@@ -242,11 +271,13 @@ uv run ohc conv show 1
 #### 1.3.3 Wake Up Conversations
 
 **Test**: Wake conversation by partial ID
+
 ```bash
 uv run ohc conv wake 77471679
 ```
 
 **Expected Output** (if conversation is stopped):
+
 ```
 Waking up conversation: Architectural Review: Interactive vs CLI Commands
 ✓ Conversation started successfully
@@ -254,6 +285,7 @@ URL: https://[runtime-id].prod-runtime.all-hands.dev/api/conversations/77471679.
 ```
 
 **Test**: Wake conversation by full ID
+
 ```bash
 uv run ohc conv wake 77471679a1b2c3d4e5f6789012345678901234
 ```
@@ -261,6 +293,7 @@ uv run ohc conv wake 77471679a1b2c3d4e5f6789012345678901234
 **Expected Output**: Similar to above
 
 **Test**: Wake conversation by number (for convenience)
+
 ```bash
 uv run ohc conv wake 3
 ```
@@ -270,15 +303,18 @@ uv run ohc conv wake 3
 #### 1.3.4 Show Workspace Changes
 
 **Important Note**: This command only shows changes for conversations that:
+
 1. Were started with a specific repository (not blank conversations)
 2. Have uncommitted and unpushed changes in their workspace
 
 **Test**: Show git changes for a conversation with repository and changes
+
 ```bash
 uv run ohc conv ws-changes 16b21076
 ```
 
 **Expected Output** (format will vary based on actual changes):
+
 ```
 Workspace Changes for 16b21076:
 Title: Create API Reference & Manual Test Plan Docs
@@ -289,11 +325,13 @@ Total files changed: 1
 ```
 
 **Test**: Show changes for conversation without repository or no changes
+
 ```bash
 uv run ohc conv ws-changes 77471679
 ```
 
 **Expected Output**:
+
 ```
 Workspace Changes for 77471679:
 Title: Architectural Review: Interactive vs CLI Commands
@@ -301,11 +339,13 @@ No uncommitted changes found.
 ```
 
 **Test**: Show changes for non-running conversation
+
 ```bash
 uv run ohc conv ws-changes [stopped-conversation-id]
 ```
 
 **Expected Output**:
+
 ```
 Error: Cannot get workspace changes for conversation [id]. Conversation must be running.
 ```
@@ -313,6 +353,7 @@ Error: Cannot get workspace changes for conversation [id]. Conversation must be 
 **Note**: This is the correct behavior - workspace changes can only be retrieved for currently running conversations.
 
 **Test**: Show changes using conversation number (for convenience)
+
 ```bash
 uv run ohc conv ws-changes 1
 ```
@@ -324,28 +365,33 @@ uv run ohc conv ws-changes 1
 **Important Note**: This command downloads the entire workspace. For conversations with repository changes, use this to get all files. For changed files only, this downloads a ZIP containing just the uncommitted changes.
 
 **Test**: Download workspace as ZIP using conversation ID
+
 ```bash
 uv run ohc conv ws-download 16b21076
 ```
 
 **Expected Output**:
+
 ```
 Downloading workspace for conversation 16b21076...
 ✓ Workspace downloaded: 16b2107670154699801ad663801f0534.zip (X.X MB)
 ```
 
 **Test**: Download with custom output filename
+
 ```bash
 uv run ohc conv ws-download 16b21076 -o my-workspace.zip
 ```
 
 **Expected Output**:
+
 ```
 Downloading workspace for conversation 16b21076...
 ✓ Workspace downloaded: my-workspace.zip (X.X MB)
 ```
 
 **Test**: Download using conversation number (for convenience)
+
 ```bash
 uv run ohc conv ws-download 1
 ```
@@ -355,28 +401,33 @@ uv run ohc conv ws-download 1
 #### 1.3.6 Download Trajectory
 
 **Test**: Download conversation trajectory using conversation ID
+
 ```bash
 uv run ohc conv trajectory 16b21076
 ```
 
 **Expected Output**:
+
 ```
 Downloading trajectory for conversation 16b21076...
 ✓ Trajectory downloaded: 16b2107670154699801ad663801f0534_trajectory.json (X.X KB)
 ```
 
 **Test**: Download with custom filename
+
 ```bash
 uv run ohc conv trajectory 16b21076 -o my-trajectory.json
 ```
 
 **Expected Output**:
+
 ```
 Downloading trajectory for conversation 16b21076...
 ✓ Trajectory downloaded: my-trajectory.json (X.X KB)
 ```
 
 **Test**: Download using conversation number (for convenience)
+
 ```bash
 uv run ohc conv trajectory 1
 ```
@@ -386,17 +437,20 @@ uv run ohc conv trajectory 1
 ### 1.4 Interactive Mode (ohc -i)
 
 **Test**: Start interactive mode
+
 ```bash
 uv run ohc -i
 ```
 
 **Expected Behavior**:
+
 1. If no servers configured, prompts to add one
 2. If servers configured, starts interactive conversation manager
 3. Shows conversation list in table format
 4. Provides command prompt
 
 **Interactive Commands to Test**:
+
 - `h` - Show help
 - `r` - Refresh conversation list
 - `w 16b21076` - Wake conversation by ID
@@ -420,6 +474,7 @@ uv run ohc -i
 #### 1.5.1 Invalid Server Configuration
 
 **Test**: Try to use commands without server configured
+
 ```bash
 # First delete any existing servers
 uv run ohc server delete production --force
@@ -427,6 +482,7 @@ uv run ohc conv list
 ```
 
 **Expected Output**:
+
 ```
 ✗ No servers configured. Use 'ohc server add' to add a server.
 ```
@@ -434,21 +490,25 @@ uv run ohc conv list
 #### 1.5.2 Invalid Conversation References
 
 **Test**: Reference non-existent conversation ID
+
 ```bash
 uv run ohc conv show nonexistent
 ```
 
 **Expected Output**:
+
 ```
 ✗ No conversation found with ID starting with 'nonexistent'
 ```
 
 **Test**: Reference non-existent conversation number
+
 ```bash
 uv run ohc conv show 999
 ```
 
 **Expected Output**:
+
 ```
 ✗ Conversation number 999 is out of range (1-X)
 ```
@@ -456,11 +516,13 @@ uv run ohc conv show 999
 #### 1.5.3 Ambiguous Conversation ID
 
 **Test**: Use partial ID that matches multiple conversations
+
 ```bash
 uv run ohc conv show a
 ```
 
 **Expected Output** (if multiple conversations start with 'a'):
+
 ```
 ✗ Multiple conversations match 'a'. Please use a longer ID:
   a7acdf5a - Fix repo.md placement and merge conflicts
@@ -472,11 +534,13 @@ uv run ohc conv show a
 ### 2.1 File Downloads
 
 **Test**: Verify downloaded files are valid
+
 1. Download workspace: `uv run ohc conv ws-download 16b21076`
 2. Verify ZIP file: `unzip -t [filename].zip`
 3. **Expected**: ZIP file should be valid and contain workspace files
 
 **Test**: Verify trajectory files are valid JSON
+
 1. Download trajectory: `uv run ohc conv trajectory 16b21076`
 2. Verify JSON: `python -m json.tool [filename]_trajectory.json`
 3. **Expected**: Valid JSON with trajectory structure
@@ -484,6 +548,7 @@ uv run ohc conv show a
 ### 2.2 State Changes
 
 **Test**: Wake conversation and verify status change
+
 1. Find a stopped conversation: `uv run ohc conv list`
 2. Wake it: `uv run ohc conv wake [conversation-id]`
 3. Check status: `uv run ohc conv show [conversation-id]`

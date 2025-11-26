@@ -46,9 +46,7 @@ class TestOpenHandsAPI:
     def test_test_connection_success(self):
         """Test successful connection test."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/options/models",
-            status=200
+            responses.GET, "https://app.all-hands.dev/api/options/models", status=200
         )
 
         api = OpenHandsAPI("test-key")
@@ -58,9 +56,7 @@ class TestOpenHandsAPI:
     def test_test_connection_failure_http_error(self):
         """Test connection failure due to HTTP error."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/options/models",
-            status=401
+            responses.GET, "https://app.all-hands.dev/api/options/models", status=401
         )
 
         api = OpenHandsAPI("test-key")
@@ -70,24 +66,22 @@ class TestOpenHandsAPI:
         """Test connection failure due to network exception."""
         api = OpenHandsAPI("test-key")
 
-        with patch.object(api.session, 'get', side_effect=requests.ConnectionError()):
+        with patch.object(api.session, "get", side_effect=requests.ConnectionError()):
             assert api.test_connection() is False
 
     @responses.activate
     def test_search_conversations_success(self):
         """Test successful conversation search."""
         mock_response = {
-            "conversations": [
-                {"conversation_id": "123", "title": "Test Conversation"}
-            ],
-            "total": 1
+            "conversations": [{"conversation_id": "123", "title": "Test Conversation"}],
+            "total": 1,
         }
 
         responses.add(
             responses.GET,
             "https://app.all-hands.dev/api/conversations",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -106,7 +100,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -122,9 +116,7 @@ class TestOpenHandsAPI:
     def test_search_conversations_unauthorized(self):
         """Test conversation search with unauthorized error."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/conversations",
-            status=401
+            responses.GET, "https://app.all-hands.dev/api/conversations", status=401
         )
 
         api = OpenHandsAPI("test-key")
@@ -139,9 +131,7 @@ class TestOpenHandsAPI:
     def test_search_conversations_other_http_error(self):
         """Test conversation search with other HTTP errors."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/conversations",
-            status=500
+            responses.GET, "https://app.all-hands.dev/api/conversations", status=500
         )
 
         api = OpenHandsAPI("test-key")
@@ -155,14 +145,14 @@ class TestOpenHandsAPI:
         mock_response = {
             "conversation_id": "123",
             "title": "Test Conversation",
-            "status": "RUNNING"
+            "status": "RUNNING",
         }
 
         responses.add(
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -178,7 +168,7 @@ class TestOpenHandsAPI:
             "https://app.all-hands.dev/api/conversations/123",
             body="null",
             status=200,
-            content_type="application/json"
+            content_type="application/json",
         )
 
         api = OpenHandsAPI("test-key")
@@ -192,9 +182,7 @@ class TestOpenHandsAPI:
     def test_get_conversation_http_error(self):
         """Test conversation retrieval with HTTP error."""
         responses.add(
-            responses.GET,
-            "https://app.all-hands.dev/api/conversations/123",
-            status=404
+            responses.GET, "https://app.all-hands.dev/api/conversations/123", status=404
         )
 
         api = OpenHandsAPI("test-key")
@@ -211,7 +199,7 @@ class TestOpenHandsAPI:
             responses.POST,
             "https://app.all-hands.dev/api/conversations/123/start",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -222,6 +210,7 @@ class TestOpenHandsAPI:
         # Check request body
         request_body = responses.calls[0].request.body
         import json
+
         assert json.loads(request_body) == {"providers_set": ["github"]}
 
     @responses.activate
@@ -233,7 +222,7 @@ class TestOpenHandsAPI:
             responses.POST,
             "https://app.all-hands.dev/api/conversations/123/start",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -244,6 +233,7 @@ class TestOpenHandsAPI:
         # Check request body
         request_body = responses.calls[0].request.body
         import json
+
         assert json.loads(request_body) == {"providers_set": ["custom", "provider"]}
 
     @responses.activate
@@ -253,7 +243,7 @@ class TestOpenHandsAPI:
             responses.POST,
             "https://app.all-hands.dev/api/conversations/123/start",
             body="Server Error",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
@@ -269,21 +259,21 @@ class TestOpenHandsAPI:
         """Test getting conversation changes with runtime URL."""
         mock_response = [
             {"file": "test.py", "status": "modified"},
-            {"file": "new.py", "status": "added"}
+            {"file": "new.py", "status": "added"},
         ]
 
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.get_conversation_changes(
             "123",
             runtime_url="https://runtime.example.com",
-            session_api_key="session-key"
+            session_api_key="session-key",
         )
 
         assert result == mock_response
@@ -301,13 +291,12 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.get_conversation_changes(
-            "123",
-            runtime_url="https://runtime.example.com"
+            "123", runtime_url="https://runtime.example.com"
         )
 
         assert result == mock_response
@@ -325,7 +314,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123/git/changes",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -339,13 +328,12 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
-            status=404
+            status=404,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.get_conversation_changes(
-            "123",
-            runtime_url="https://runtime.example.com"
+            "123", runtime_url="https://runtime.example.com"
         )
 
         assert result == []
@@ -356,15 +344,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_conversation_changes(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Git repository not available or corrupted" in str(exc_info.value)
@@ -375,13 +362,12 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
-            status=404
+            status=404,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.get_conversation_changes(
-            "123",
-            runtime_url="https://runtime.example.com"
+            "123", runtime_url="https://runtime.example.com"
         )
 
         # Should return empty list for 404
@@ -393,15 +379,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_conversation_changes(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Git repository not available or corrupted" in str(exc_info.value)
@@ -412,15 +397,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/git/changes",
-            status=403
+            status=403,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_conversation_changes(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Failed to get changes: HTTP 403" in str(exc_info.value)
@@ -430,12 +414,11 @@ class TestOpenHandsAPI:
         api = OpenHandsAPI("test-key")
 
         with patch.object(
-            api.session, 'get', side_effect=requests.ConnectionError("Network error")
+            api.session, "get", side_effect=requests.ConnectionError("Network error")
         ):
             with pytest.raises(Exception) as exc_info:
                 api.get_conversation_changes(
-                    "123",
-                    runtime_url="https://runtime.example.com"
+                    "123", runtime_url="https://runtime.example.com"
                 )
 
             assert "API call failed" in str(exc_info.value)
@@ -449,7 +432,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -457,7 +440,7 @@ class TestOpenHandsAPI:
             "123",
             "test.py",
             runtime_url="https://runtime.example.com",
-            session_api_key="session-key"
+            session_api_key="session-key",
         )
 
         assert result == "print('Hello, World!')"
@@ -475,14 +458,12 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.get_file_content(
-            "123",
-            "test.py",
-            runtime_url="https://runtime.example.com"
+            "123", "test.py", runtime_url="https://runtime.example.com"
         )
 
         assert result == "Direct content string"
@@ -493,16 +474,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
-            status=404
+            status=404,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_file_content(
-                "123",
-                "test.py",
-                runtime_url="https://runtime.example.com"
+                "123", "test.py", runtime_url="https://runtime.example.com"
             )
 
         assert "File not found: test.py" in str(exc_info.value)
@@ -513,16 +492,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
-            status=401
+            status=401,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_file_content(
-                "123",
-                "test.py",
-                runtime_url="https://runtime.example.com"
+                "123", "test.py", runtime_url="https://runtime.example.com"
             )
 
         assert "Authentication failed - invalid session API key" in str(exc_info.value)
@@ -533,16 +510,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_file_content(
-                "123",
-                "test.py",
-                runtime_url="https://runtime.example.com"
+                "123", "test.py", runtime_url="https://runtime.example.com"
             )
 
         assert "Server error - file may be inaccessible" in str(exc_info.value)
@@ -553,16 +528,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/select-file",
-            status=403
+            status=403,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.get_file_content(
-                "123",
-                "test.py",
-                runtime_url="https://runtime.example.com"
+                "123", "test.py", runtime_url="https://runtime.example.com"
             )
 
         assert "Failed to get file content: HTTP 403" in str(exc_info.value)
@@ -572,13 +545,11 @@ class TestOpenHandsAPI:
         api = OpenHandsAPI("test-key")
 
         with patch.object(
-            api.session, 'get', side_effect=requests.ConnectionError("Network error")
+            api.session, "get", side_effect=requests.ConnectionError("Network error")
         ):
             with pytest.raises(Exception) as exc_info:
                 api.get_file_content(
-                    "123",
-                    "test.py",
-                    runtime_url="https://runtime.example.com"
+                    "123", "test.py", runtime_url="https://runtime.example.com"
                 )
 
             assert "API call failed" in str(exc_info.value)
@@ -592,14 +563,14 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://runtime.example.com/api/conversations/123/zip-directory",
             body=mock_content,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
         result = api.download_workspace_archive(
             "123",
             runtime_url="https://runtime.example.com",
-            session_api_key="session-key"
+            session_api_key="session-key",
         )
 
         assert result == mock_content
@@ -610,15 +581,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/zip-directory",
-            status=404
+            status=404,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.download_workspace_archive(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Workspace not found for conversation 123" in str(exc_info.value)
@@ -629,15 +599,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/zip-directory",
-            status=401
+            status=401,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.download_workspace_archive(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Authentication failed - invalid session API key" in str(exc_info.value)
@@ -648,15 +617,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/zip-directory",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.download_workspace_archive(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Server error - workspace may be inaccessible" in str(exc_info.value)
@@ -667,15 +635,14 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/zip-directory",
-            status=403
+            status=403,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
             api.download_workspace_archive(
-                "123",
-                runtime_url="https://runtime.example.com"
+                "123", runtime_url="https://runtime.example.com"
             )
 
         assert "Failed to download workspace: HTTP 403" in str(exc_info.value)
@@ -685,12 +652,11 @@ class TestOpenHandsAPI:
         api = OpenHandsAPI("test-key")
 
         with patch.object(
-            api.session, 'get', side_effect=requests.ConnectionError("Network error")
+            api.session, "get", side_effect=requests.ConnectionError("Network error")
         ):
             with pytest.raises(Exception) as exc_info:
                 api.download_workspace_archive(
-                    "123",
-                    runtime_url="https://runtime.example.com"
+                    "123", runtime_url="https://runtime.example.com"
                 )
 
             assert "API call failed" in str(exc_info.value)
@@ -704,15 +670,11 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://runtime.example.com/api/conversations/123/trajectory",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
-        result = api.get_trajectory(
-            "123",
-            "https://runtime.example.com",
-            "session-key"
-        )
+        result = api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
         assert result == mock_response
 
@@ -722,17 +684,13 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/trajectory",
-            status=404
+            status=404,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
-            api.get_trajectory(
-                "123",
-                "https://runtime.example.com",
-                "session-key"
-            )
+            api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
         assert "Trajectory not found for conversation 123" in str(exc_info.value)
 
@@ -742,17 +700,13 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/trajectory",
-            status=401
+            status=401,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
-            api.get_trajectory(
-                "123",
-                "https://runtime.example.com",
-                "session-key"
-            )
+            api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
         assert "Authentication failed - invalid session API key" in str(exc_info.value)
 
@@ -762,17 +716,13 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/trajectory",
-            status=500
+            status=500,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
-            api.get_trajectory(
-                "123",
-                "https://runtime.example.com",
-                "session-key"
-            )
+            api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
         assert "Server error - trajectory may be inaccessible" in str(exc_info.value)
 
@@ -782,17 +732,13 @@ class TestOpenHandsAPI:
         responses.add(
             responses.GET,
             "https://runtime.example.com/api/conversations/123/trajectory",
-            status=403
+            status=403,
         )
 
         api = OpenHandsAPI("test-key")
 
         with pytest.raises(Exception) as exc_info:
-            api.get_trajectory(
-                "123",
-                "https://runtime.example.com",
-                "session-key"
-            )
+            api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
         assert "Failed to get trajectory: HTTP 403" in str(exc_info.value)
 
@@ -801,14 +747,10 @@ class TestOpenHandsAPI:
         api = OpenHandsAPI("test-key")
 
         with patch.object(
-            api.session, 'get', side_effect=requests.ConnectionError("Network error")
+            api.session, "get", side_effect=requests.ConnectionError("Network error")
         ):
             with pytest.raises(Exception) as exc_info:
-                api.get_trajectory(
-                    "123",
-                    "https://runtime.example.com",
-                    "session-key"
-                )
+                api.get_trajectory("123", "https://runtime.example.com", "session-key")
 
             assert "API call failed" in str(exc_info.value)
 
@@ -821,7 +763,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123/git/changes",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -838,7 +780,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123/select-file",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -855,7 +797,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123/zip-directory",
             body=mock_content,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")
@@ -872,7 +814,7 @@ class TestOpenHandsAPI:
             responses.GET,
             "https://app.all-hands.dev/api/conversations/123/trajectory",
             json=mock_response,
-            status=200
+            status=200,
         )
 
         api = OpenHandsAPI("test-key")

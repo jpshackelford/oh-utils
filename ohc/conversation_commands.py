@@ -190,7 +190,7 @@ def interactive_mode() -> None:
                     {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
                 )
 
-            cm.OpenHandsAPI.__init__ = patched_init  # type: ignore[method-assign]
+            cm.OpenHandsAPI.__init__ = patched_init  # type: ignore[assignment,method-assign]
 
         click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")

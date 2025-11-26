@@ -7,11 +7,12 @@ This document provides step-by-step instructions for completing each milestone i
 The refactoring project consists of 4 major milestones as defined in `doc/architectural-review.md`:
 
 - **M1**: Consolidate API Client
-- **M2**: Shared Command Infrastructure  
+- **M2**: Shared Command Infrastructure
 - **M3**: Improve Test Coverage
 - **M4**: Documentation and Cleanup
 
 Each milestone must be completed with:
+
 - ✅ All automated tests passing
 - ✅ All linting and type checking clean
 - ✅ All pre-commit checks passing
@@ -39,6 +40,7 @@ make test
 ### Phase 1: Pre-Work Verification
 
 **Step 1.1: Verify Clean Starting State**
+
 ```bash
 # Check git status
 git status
@@ -73,7 +75,7 @@ cp doc/test-plan/test-execution-checklist-template.md doc/test-plan/test-executi
 # - Date: Current date
 # - Tester: Your name
 # - Environment: OS/Python/uv versions
-# - API Key Type: Full/Limited permissions  
+# - API Key Type: Full/Limited permissions
 # - Branch: Current branch name
 ```
 
@@ -92,10 +94,11 @@ For each task in the milestone:
    - Clear assertion messages for failures
    - Avoid complex mocking
 4. **Run tests frequently** during development:
+
    ```bash
    # Run specific test file
    uv run pytest tests/test_[relevant_file].py -v
-   
+
    # Run all tests
    make test
    ```
@@ -108,7 +111,7 @@ After each significant change:
 # Check linting
 make lint
 
-# Check type checking  
+# Check type checking
 make type-check
 
 # Run full test suite
@@ -125,14 +128,15 @@ When a task is complete:
 1. **Verify the specific acceptance criteria** for that task
 2. **Update task status to "done"** using task_tracker tool
 3. **Commit the changes** with descriptive message:
+
    ```bash
    git add .
    git commit -m "feat: [description of change]
-   
+
    - Implemented [specific functionality]
    - Added tests with [X]% coverage
    - Addresses task [task_id] in milestone [milestone_name]
-   
+
    Co-authored-by: openhands <openhands@all-hands.dev>"
    ```
 
@@ -149,7 +153,7 @@ make test
 
 # Check coverage meets milestone targets
 # M1: API client tests >90% coverage
-# M2: Command infrastructure comprehensive coverage  
+# M2: Command infrastructure comprehensive coverage
 # M3: Overall coverage >80%
 # M4: Maintain coverage levels
 ```
@@ -161,7 +165,7 @@ make test
    ```bash
    # Example: If API client was changed, test:
    # - Server management commands (1.2.x)
-   # - Conversation management commands (1.3.x)  
+   # - Conversation management commands (1.3.x)
    # - Interactive mode (1.4)
    # - Error handling (1.5.x)
    ```
@@ -173,6 +177,7 @@ make test
 For each milestone, verify ALL acceptance criteria are met:
 
 **M1 - Consolidate API Client:**
+
 - [ ] All linting and type checking passes
 - [ ] API client tests achieve >90% coverage
 - [ ] Both CLI and interactive modes use the same API client
@@ -180,12 +185,14 @@ For each milestone, verify ALL acceptance criteria are met:
 - [ ] No regression in fixture-based test coverage
 
 **M2 - Shared Command Infrastructure:**
+
 - [ ] Command boilerplate reduced by >80%
 - [ ] Conversation ID resolution logic centralized
 - [ ] All commands use consistent error handling
 - [ ] New command infrastructure has comprehensive integration tests using existing fixtures
 
 **M3 - Improve Test Coverage:**
+
 - [ ] Overall test coverage >80%
 - [ ] All CLI commands have integration tests
 - [ ] Configuration management fully tested
@@ -193,6 +200,7 @@ For each milestone, verify ALL acceptance criteria are met:
 - [ ] Sanitization scripts handle any new API endpoints
 
 **M4 - Documentation and Cleanup:**
+
 - [ ] Architecture documentation updated
 - [ ] Code comments and docstrings improved
 - [ ] Deprecated code removed
@@ -248,6 +256,7 @@ Co-authored-by: openhands <openhands@all-hands.dev>"
 Each milestone must pass ALL of these gates:
 
 ### Automated Quality Gates
+
 - [ ] `make ci` passes completely
 - [ ] `make test` shows all tests passing
 - [ ] Test coverage meets milestone targets
@@ -255,13 +264,15 @@ Each milestone must pass ALL of these gates:
 - [ ] `make type-check` passes with no errors
 - [ ] Pre-commit hooks pass
 
-### Manual Quality Gates  
+### Manual Quality Gates
+
 - [ ] Manual testing completed for impacted functionality
 - [ ] Test execution document completed
 - [ ] All milestone acceptance criteria verified
 - [ ] All task tracker items marked "done"
 
 ### Documentation Gates
+
 - [ ] Code changes properly documented
 - [ ] Test execution results documented
 - [ ] Any issues or recommendations documented
@@ -272,24 +283,28 @@ Each milestone must pass ALL of these gates:
 ### Common Issues
 
 **Tests failing after changes:**
+
 1. Check if fixture compatibility is maintained
 2. Verify API method signatures haven't changed
 3. Review test setup and mocking
 4. Check for import path changes
 
 **Coverage not meeting targets:**
+
 1. Identify uncovered code in htmlcov/index.html
 2. Add focused unit tests for missed lines
 3. Ensure tests exercise actual functionality, not just setup
 4. Consider integration tests for complex workflows
 
 **Type checking failures:**
+
 1. Add proper type annotations
 2. Update imports for moved/renamed modules
 3. Check for missing py.typed markers in dependencies
 4. Consider type: ignore comments for external library issues
 
 **Manual tests failing:**
+
 1. Verify environment setup is correct
 2. Check API key permissions
 3. Ensure server configuration is valid

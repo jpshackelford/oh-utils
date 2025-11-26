@@ -4,19 +4,20 @@ This document provides a comprehensive reference for the OpenHands API endpoints
 
 ## Base Configuration
 
-**Base URL**: `https://app.all-hands.dev/api/`  
-**Authentication**: `X-Session-API-Key` header  
+**Base URL**: `https://app.all-hands.dev/api/`
+**Authentication**: `X-Session-API-Key` header
 **Content-Type**: `application/json`
 
 ## API Endpoints
 
 ### 1. Test Connection
 
-**Endpoint**: `GET /options/models`  
-**Purpose**: Test API key validity and connection  
+**Endpoint**: `GET /options/models`
+**Purpose**: Test API key validity and connection
 **Authentication**: Required
 
 #### Request
+
 ```http
 GET https://app.all-hands.dev/api/options/models
 Headers:
@@ -25,6 +26,7 @@ Headers:
 ```
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -47,11 +49,12 @@ Content-Type: application/json
 
 ### 2. List Conversations
 
-**Endpoint**: `GET /conversations`  
-**Purpose**: Retrieve paginated list of conversations  
+**Endpoint**: `GET /conversations`
+**Purpose**: Retrieve paginated list of conversations
 **Authentication**: Required
 
 #### Request
+
 ```http
 GET https://app.all-hands.dev/api/conversations?limit=5
 Headers:
@@ -60,10 +63,12 @@ Headers:
 ```
 
 #### Parameters
+
 - `limit` (optional): Number of conversations to return (default: 20)
 - `page_id` (optional): Pagination token for next page
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -93,10 +98,12 @@ Content-Type: application/json
 ```
 
 #### Response Fields
+
 - `results`: Array of conversation objects
 - `next_page_id`: Token for pagination (null if no more pages)
 
 #### Conversation Object Fields
+
 - `conversation_id`: Unique identifier for the conversation
 - `title`: Human-readable conversation title
 - `status`: Current status (`RUNNING`, `STOPPED`, etc.)
@@ -112,11 +119,12 @@ Content-Type: application/json
 
 ### 3. Get Conversation Details
 
-**Endpoint**: `GET /conversations/{conversation_id}`  
-**Purpose**: Get detailed information about a specific conversation  
+**Endpoint**: `GET /conversations/{conversation_id}`
+**Purpose**: Get detailed information about a specific conversation
 **Authentication**: Required
 
 #### Request
+
 ```http
 GET https://app.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af
 Headers:
@@ -125,6 +133,7 @@ Headers:
 ```
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -149,6 +158,7 @@ Content-Type: application/json
 ```
 
 **Error Response** (404):
+
 ```http
 Status: 404 Not Found
 Content-Type: application/json
@@ -162,11 +172,12 @@ Content-Type: application/json
 
 ### 4. Start/Wake Conversation
 
-**Endpoint**: `POST /conversations/{conversation_id}/start`  
-**Purpose**: Start or wake up a conversation  
+**Endpoint**: `POST /conversations/{conversation_id}/start`
+**Purpose**: Start or wake up a conversation
 **Authentication**: Required
 
 #### Request
+
 ```http
 POST https://app.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/start
 Headers:
@@ -179,9 +190,11 @@ Headers:
 ```
 
 #### Request Body
+
 - `providers_set`: Array of provider names (default: `["github"]`)
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -202,11 +215,12 @@ These endpoints are called on the runtime URL (extracted from conversation detai
 
 ### 5. Get Git Changes
 
-**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/git/changes`  
-**Purpose**: Get uncommitted git changes in the workspace  
+**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/git/changes`
+**Purpose**: Get uncommitted git changes in the workspace
 **Authentication**: Session API key required
 
 #### Request
+
 ```http
 GET https://fakeworkspace112.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/git/changes
 Headers:
@@ -215,6 +229,7 @@ Headers:
 ```
 
 #### Response (No Changes)
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -223,6 +238,7 @@ Content-Type: application/json
 ```
 
 #### Response (With Changes)
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -240,6 +256,7 @@ Content-Type: application/json
 ```
 
 #### Error Responses
+
 - `404`: No git repository or no changes
 - `500`: Git repository not available or corrupted
 
@@ -247,11 +264,12 @@ Content-Type: application/json
 
 ### 6. Get File Content
 
-**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/select-file`  
-**Purpose**: Retrieve content of a specific file from the workspace  
+**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/select-file`
+**Purpose**: Retrieve content of a specific file from the workspace
 **Authentication**: Session API key required
 
 #### Request
+
 ```http
 GET https://fakeworkspace114.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/select-file?file=README.md
 Headers:
@@ -260,9 +278,11 @@ Headers:
 ```
 
 #### Parameters
+
 - `file`: Path to the file to retrieve
 
 #### Response (Success)
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -273,6 +293,7 @@ Content-Type: application/json
 ```
 
 #### Error Response (File Not Found)
+
 ```http
 Status: 500 Internal Server Error
 Content-Type: application/json
@@ -286,11 +307,12 @@ Content-Type: application/json
 
 ### 7. Download Workspace Archive
 
-**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/zip-directory`  
-**Purpose**: Download the entire workspace as a ZIP file  
+**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/zip-directory`
+**Purpose**: Download the entire workspace as a ZIP file
 **Authentication**: Session API key required
 
 #### Request
+
 ```http
 GET https://fakeworkspace006.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/zip-directory
 Headers:
@@ -298,6 +320,7 @@ Headers:
 ```
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/zip
@@ -307,6 +330,7 @@ Content-Length: <size>
 ```
 
 #### Error Responses
+
 - `404`: Workspace not found for conversation
 - `401`: Authentication failed - invalid session API key
 - `500`: Server error - workspace may be inaccessible
@@ -315,11 +339,12 @@ Content-Length: <size>
 
 ### 8. Get Trajectory
 
-**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/trajectory`  
-**Purpose**: Get conversation trajectory data (action history)  
+**Endpoint**: `GET {runtime_url}/api/conversations/{conversation_id}/trajectory`
+**Purpose**: Get conversation trajectory data (action history)
 **Authentication**: Session API key required
 
 #### Request
+
 ```http
 GET https://fakeworkspace014.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af/trajectory
 Headers:
@@ -328,6 +353,7 @@ Headers:
 ```
 
 #### Response
+
 ```http
 Status: 200 OK
 Content-Type: application/json
@@ -361,6 +387,7 @@ Content-Type: application/json
 ```
 
 #### Trajectory Entry Fields
+
 - `id`: Sequential identifier for the trajectory entry
 - `timestamp`: ISO timestamp of the action
 - `source`: Source of the action (`agent`, `environment`, `user`)
@@ -375,13 +402,16 @@ Content-Type: application/json
 ## Error Handling
 
 ### Common HTTP Status Codes
+
 - `200`: Success
 - `401`: Unauthorized - Invalid or missing API key
 - `404`: Not Found - Resource doesn't exist
 - `500`: Internal Server Error - Server-side issue
 
 ### Authentication Errors
+
 When using an invalid API key:
+
 ```http
 Status: 401 Unauthorized
 
@@ -421,21 +451,21 @@ class OpenHandsAPI:
             "X-Session-API-Key": api_key,
             "Content-Type": "application/json"
         })
-    
+
     def search_conversations(self, page_id=None, limit=20):
         url = urljoin(self.base_url, "conversations")
         params = {"limit": limit}
         if page_id:
             params["page_id"] = page_id
-        
+
         response = self.session.get(url, params=params)
         response.raise_for_status()
         return response.json()
-    
+
     def start_conversation(self, conversation_id, providers_set=None):
         url = urljoin(self.base_url, f"conversations/{conversation_id}/start")
         data = {"providers_set": providers_set or ["github"]}
-        
+
         response = self.session.post(url, json=data)
         response.raise_for_status()
         return response.json()

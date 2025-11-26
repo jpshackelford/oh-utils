@@ -1,10 +1,10 @@
 # OpenHands Utilities Test Execution Checklist - 2025-11-26
 
-**Date:** 2025-11-26  
-**Tester:** OpenHands Agent  
-**Environment:** Linux/Python 3.12.12/uv 0.9.8  
-**API Key Type:** Full permissions (OH_API_KEY)  
-**Branch:** jps/dry-tested-m1  
+**Date:** 2025-11-26
+**Tester:** OpenHands Agent
+**Environment:** Linux/Python 3.12.12/uv 0.9.8
+**API Key Type:** Full permissions (OH_API_KEY)
+**Branch:** jps/dry-tested-m1
 
 ## Prerequisites
 
@@ -14,6 +14,7 @@
 - [x] Network connectivity verified
 
 **Notes:**
+
 ```
 Environment setup successful. All dependencies installed.
 OH_API_KEY environment variable is configured.
@@ -32,7 +33,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.1.2:** Display version (`uv run ohc --version`)
   - **Expected:** Version number displayed
   - **Result:** ✅ PASS
-  - **Notes:** Shows "ohc, version 0.2.0" 
+  - **Notes:** Shows "ohc, version 0.2.0"
 
 ### 1.2 Server Management Commands
 
@@ -61,7 +62,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.2.3:** List servers after adding (`uv run ohc server list`)
   - **Expected:** Shows configured server with default marker
   - **Result:** ✅ PASS
-  - **Notes:** Shows "* production https://app.all-hands.dev/api/ (default)"
+  - **Notes:** Shows "\* production https://app.all-hands.dev/api/ (default)"
 
 #### 1.2.4 Test Server Connection
 
@@ -80,19 +81,19 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.2.5:** Set server as default (`uv run ohc server set-default production`)
   - **Expected:** Default server set confirmation
   - **Result:** ✅ PASS
-  - **Notes:** Shows "✓ Server 'production' set as default" 
+  - **Notes:** Shows "✓ Server 'production' set as default"
 
 #### 1.2.6 Delete Server
 
 - [ ] **Test 1.2.6a:** Delete server with confirmation (`uv run ohc server delete production`)
   - **Expected:** Prompts for confirmation, then deletes
   - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
-  - **Notes:** 
+  - **Notes:**
 
 - [ ] **Test 1.2.6b:** Delete server without confirmation (`uv run ohc server delete production --force`)
   - **Expected:** Server deleted without prompt
   - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
+  - **Notes:**
 
 ### 1.3 Conversation Management Commands
 
@@ -113,7 +114,7 @@ Working in /workspace/project/oh-utils directory.
 - [ ] **Test 1.3.1c:** List with specific server (`uv run ohc conv list --server production`)
   - **Expected:** Same as default server
   - **Result:** ⏭️ SKIP
-  - **Notes:** Skipping since only one server configured 
+  - **Notes:** Skipping since only one server configured
 
 #### 1.3.2 Show Conversation Details
 
@@ -130,7 +131,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.3.2c:** Show by conversation number (`uv run ohc conv show 1`)
   - **Expected:** Details for conversation #1 from list
   - **Result:** ✅ PASS
-  - **Notes:** Shows same detailed format as partial ID test 
+  - **Notes:** Shows same detailed format as partial ID test
 
 #### 1.3.3 Wake Up Conversations
 
@@ -147,7 +148,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.3.3c:** Wake by number (`uv run ohc conv wake 4`)
   - **Expected:** Wakes conversation by number
   - **Result:** ✅ PASS
-  - **Notes:** Shows "Waking up conversation: [title]" and "✓ Conversation started successfully" 
+  - **Notes:** Shows "Waking up conversation: [title]" and "✓ Conversation started successfully"
 
 #### 1.3.4 Show Workspace Changes
 
@@ -169,7 +170,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.3.4d:** Show changes by number (`uv run ohc conv ws-changes 1`)
   - **Expected:** Changes for conversation #1
   - **Result:** ✅ PASS
-  - **Notes:** Same as test 1.3.4a - shows workspace changes correctly 
+  - **Notes:** Same as test 1.3.4a - shows workspace changes correctly
 
 #### 1.3.5 Download Workspace Archive
 
@@ -186,7 +187,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.3.5c:** Download by number (`uv run ohc conv ws-download 1`)
   - **Expected:** ZIP file for conversation #1
   - **Result:** ✅ PASS
-  - **Notes:** Downloaded 3ff2ee98.zip (210.6 MB) successfully 
+  - **Notes:** Downloaded 3ff2ee98.zip (210.6 MB) successfully
 
 #### 1.3.6 Download Trajectory
 
@@ -203,7 +204,7 @@ Working in /workspace/project/oh-utils directory.
 - [x] **Test 1.3.6c:** Download by number (`uv run ohc conv trajectory 1`)
   - **Expected:** JSON file for conversation #1
   - **Result:** ✅ PASS
-  - **Notes:** Created trajectory-3ff2ee98.json (672,174 bytes) successfully 
+  - **Notes:** Created trajectory-3ff2ee98.json (672,174 bytes) successfully
 
 ### 1.4 Interactive Mode
 
@@ -213,6 +214,7 @@ Working in /workspace/project/oh-utils directory.
   - **Notes:** SUCCESS: Interactive mode works perfectly! Shows conversation table with proper formatting, accepts commands. EOF handling causes graceful exit.
 
 **Interactive Commands (tested with input simulation):**
+
 - [x] `h` - Show help - ✅ PASS (displays complete command reference with examples)
 - [ ] `r` - Refresh conversation list - ⏭️ SKIP (basic functionality confirmed)
 - [ ] `w [ID/NUM]` - Wake conversation - ⏭️ SKIP (tested via CLI commands)
@@ -252,7 +254,7 @@ Working in /workspace/project/oh-utils directory.
 - [ ] **Test 1.5.3:** Partial ID matching multiple conversations (`uv run ohc conv show a`)
   - **Expected:** "Multiple conversations match" error with suggestions
   - **Result:** ⏭️ SKIP
-  - **Notes:** No ambiguous IDs found in current conversation list 
+  - **Notes:** No ambiguous IDs found in current conversation list
 
 ## Test Suite 2: Integration Tests
 
@@ -281,6 +283,7 @@ Working in /workspace/project/oh-utils directory.
 ## Test Results Summary
 
 ### Overall Statistics
+
 - **Total Tests:** 47 planned tests
 - **Executed:** 31 tests
 - **Passed:** 29 tests (✅)
@@ -290,6 +293,7 @@ Working in /workspace/project/oh-utils directory.
 ### Test Results by Category
 
 #### ✅ PASSING (29 tests)
+
 - **Basic Commands:** Help, version, server management all working correctly
 - **Conversation Management:** List, show, wake, download functions working
 - **Interactive Mode:** ohc -i interactive mode working properly
@@ -299,9 +303,11 @@ Working in /workspace/project/oh-utils directory.
 - **State Changes:** Wake functionality successfully changes conversation status
 
 #### ❌ FAILING (0 tests)
+
 All tests now passing after test plan corrections.
 
 #### ⏭️ SKIPPED (18 tests)
+
 - **Interactive Tests:** 13 tests requiring detailed manual interaction
 - **Destructive Tests:** 4 tests that would delete server configuration or API keys
 - **Redundant Tests:** 1 test covered by other similar tests
@@ -309,25 +315,30 @@ All tests now passing after test plan corrections.
 ### Key Findings and Issues
 
 #### Test Plan Accuracy Issues
+
 1. **Workspace Changes Limitation:** ✅ RESOLVED - Test plan now documents that `ws-changes` only works for running conversations
 2. **Legacy Tool References:** ✅ RESOLVED - Removed oh-conversation-manager references, marked as legacy tool superseded by `ohc -i`
 
 #### Functional Issues Found
+
 None - all functionality working as expected after test plan corrections.
 
 ### Recommendations
 
 #### For Test Plan Improvements
+
 1. ✅ COMPLETED - Added note about workspace changes requiring running conversations
 2. ✅ COMPLETED - Removed legacy tool references and cross-tool consistency tests
 3. Add setup/teardown procedures for destructive tests
 4. Consider adding automated interactive testing approach using input simulation
 
 #### For Code Improvements
+
 1. Consider improving error message consistency for workspace changes on stopped conversations
 2. All core functionality working as expected
 
 ### Interactive Download Testing Success
+
 - **Major Achievement:** Successfully tested time-consuming download operations in interactive mode
 - **Trajectory Downloads:** Interactive mode successfully downloaded trajectory JSON files (1.2MB+)
 - **Workspace Archives:** Interactive mode successfully downloaded large ZIP files (224MB+)
@@ -336,6 +347,7 @@ None - all functionality working as expected after test plan corrections.
 - **Method:** Used Python subprocess with input simulation for reliable testing
 
 ### Environment Details
+
 - **Date:** 2025-11-26
 - **Platform:** Linux
 - **Python:** 3.12.12
@@ -345,10 +357,12 @@ None - all functionality working as expected after test plan corrections.
 - **Conversations Available:** 77 total conversations for testing
 
 ## Files Created During Testing
+
 - **3ff2ee98.zip** - 210.6 MB workspace archive
 - **trajectory-3ff2ee98.json** - 672,174 bytes trajectory data
 
 ## Cleanup Commands
+
 ```bash
 # Remove downloaded test files
 rm -f *.zip *.json
