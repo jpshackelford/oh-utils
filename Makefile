@@ -74,6 +74,6 @@ release: ## Create a new release
 
 dev-setup: install-dev pre-commit-install ## Complete development setup
 
-ci: lint type-check test ## Run CI checks locally
+ci: lint type-check test pre-commit ## Run CI checks locally (matches GitHub Actions)
 
 all: clean install-dev pre-commit ci ## Run all checks
