@@ -247,102 +247,39 @@
   - **Result:** ✅ PASS / ❌ FAIL / 🔄 N/A (no ambiguous IDs)
   - **Notes:** 
 
-## Test Suite 2: oh-conversation-manager Tool
+## Test Suite 2: Integration Tests
 
-### 2.1 Basic Functionality
+### 2.1 File Downloads
 
-#### 2.1.1 Help and Version
-
-- [ ] **Test 2.1.1:** Display help (`uv run oh-conversation-manager --help`)
-  - **Expected:** Usage message with options
-  - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
-
-#### 2.1.2 Test Mode
-
-- [ ] **Test 2.1.2:** Run in test mode (`uv run oh-conversation-manager --test`)
-  - **Expected:** Lists conversations once and exits
-  - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
-
-#### 2.1.3 API Key Handling
-
-- [ ] **Test 2.1.3a:** Use API key parameter (`uv run oh-conversation-manager --api-key $OH_API_KEY --test`)
-  - **Expected:** "Using provided API key" message
-  - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
-
-- [ ] **Test 2.1.3b:** Run without API key
-  - **Setup:** `unset OH_API_KEY`
-  - **Command:** `uv run oh-conversation-manager --test`
-  - **Expected:** "No API key provided" error
-  - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
-
-### 2.2 Interactive Mode
-
-- [ ] **Test 2.2:** Start interactive mode (`uv run oh-conversation-manager`)
-  - **Expected:** Shows conversation table and command prompt
-  - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
-  - **Notes:** 
-
-**Interactive Commands (if testing):**
-- [ ] `h` - Help command
-- [ ] `r` - Refresh command
-- [ ] `w [NUM/ID]` - Wake conversation
-- [ ] `s [NUM/ID]` - Show details
-- [ ] `f [NUM/ID]` - Download files
-- [ ] `t [NUM/ID]` - Download trajectory
-- [ ] `a [NUM/ID]` - Download workspace
-- [ ] `n` - Next page
-- [ ] `p` - Previous page
-- [ ] `q` - Quit
-
-### 2.3 Error Handling
-
-- [ ] **Test 2.3.1:** Invalid commands (`invalid`)
-  - **Expected:** "Unknown command" error
-  - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
-  - **Notes:** 
-
-- [ ] **Test 2.3.2:** Invalid conversation references (`w 999`, `w nonexistent`)
-  - **Expected:** Appropriate error messages
-  - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
-  - **Notes:** 
-
-## Test Suite 3: Integration Tests
-
-### 3.1 File Downloads
-
-- [ ] **Test 3.1.1:** Verify downloaded ZIP files
+- [ ] **Test 2.1.1:** Verify downloaded ZIP files
   - **Command:** `unzip -t [filename].zip`
   - **Expected:** Valid ZIP file
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
 
-- [ ] **Test 3.1.2:** Verify trajectory JSON files
+- [ ] **Test 2.1.2:** Verify trajectory JSON files
   - **Command:** `python -m json.tool [filename]_trajectory.json`
   - **Expected:** Valid JSON structure
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
 
-### 3.2 Cross-Tool Consistency
+### 2.2 Cross-Tool Consistency
 
-- [ ] **Test 3.2.1:** Compare conversation lists
-  - **Commands:** `uv run ohc conv list -n 5` vs `uv run oh-conversation-manager --test`
+- [ ] **Test 2.2.1:** Compare CLI and interactive mode
+  - **Commands:** `uv run ohc conv list -n 5` vs `uv run ohc -i`
   - **Expected:** Same conversations shown
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
 
-- [ ] **Test 3.2.2:** Compare conversation details
+- [ ] **Test 2.2.2:** Compare conversation details
   - **Commands:** `uv run ohc conv show [ID]` vs interactive `s [ID]`
   - **Expected:** Same ID, title, status
   - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
   - **Notes:** 
 
-### 3.3 State Changes
+### 2.3 State Changes
 
-- [ ] **Test 3.3:** Wake conversation and verify status change
+- [ ] **Test 2.3:** Wake conversation and verify status change
   - **Steps:** Find stopped conversation, wake it, check status
   - **Expected:** Status changes from STOPPED to RUNNING
   - **Result:** ✅ PASS / ❌ FAIL

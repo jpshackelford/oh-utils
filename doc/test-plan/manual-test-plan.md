@@ -1,6 +1,8 @@
 # OpenHands Utilities Manual Test Plan
 
-This document provides step-by-step instructions for manually testing all functionality of the OpenHands utilities. It covers both the `ohc` CLI tool and the `oh-conversation-manager` interactive tool.
+This document provides step-by-step instructions for manually testing all functionality of the OpenHands utilities. It focuses on the `ohc` CLI tool, including its interactive mode (`ohc -i`).
+
+**Note**: The `oh-conversation-manager` tool is legacy and will be removed in future versions. All its functionality has been superseded by `ohc -i` (interactive mode).
 
 ## Prerequisites
 
@@ -453,187 +455,9 @@ uv run ohc conv show a
   [additional matches...]
 ```
 
-## Test Suite 2: oh-conversation-manager Tool
+## Test Suite 2: Integration Tests
 
-### 2.1 Basic Functionality
-
-#### 2.1.1 Help and Version
-
-**Test**: Display help
-```bash
-uv run oh-conversation-manager --help
-```
-
-**Expected Output**:
-```
-usage: oh-conversation-manager [-h] [--api-key API_KEY] [--test]
-
-OpenHands Conversation Manager
-
-options:
-  -h, --help            show this help message and exit
-  --api-key API_KEY, -k API_KEY
-                        OpenHands API key (overrides environment variables)
-  --test                Test mode - just list conversations once
-```
-
-#### 2.1.2 Test Mode
-
-**Test**: Run in test mode
-```bash
-uv run oh-conversation-manager --test
-```
-
-**Expected Output**:
-```
-✓ Using API key from OH_API_KEY environment variable
-✓ Conversation Manager initialized successfully
-
-Loaded 20 conversations:
- 1. 16b21076 🟢 RUNNING  zxkloyqesljibtda Create API Reference & Manual Test Plan Docs
- 2. ed6ba390 🟢 RUNNING  lfufcsizuztcaqot Integration Tests & Fixture Data Migration Plan
- 3. 77471679 🔴 STOPPED  ─               Architectural Review: Interactive vs CLI Commands
-...
-
-Active conversations: 2/20
-```
-
-#### 2.1.3 API Key Handling
-
-**Test**: Use API key parameter
-```bash
-uv run oh-conversation-manager --api-key $OH_API_KEY --test
-```
-
-**Expected Output**: Same as above but with "Using provided API key" message
-
-**Test**: Run without API key
-```bash
-unset OH_API_KEY
-uv run oh-conversation-manager --test
-```
-
-**Expected Output**:
-```
-✗ No API key provided. Set OH_API_KEY environment variable or use --api-key parameter.
-```
-
-### 2.2 Interactive Mode
-
-**Test**: Start interactive mode
-```bash
-export OH_API_KEY=your_api_key_here
-uv run oh-conversation-manager
-```
-
-**Expected Behavior**:
-1. Shows initialization messages
-2. Loads and displays conversation list in table format
-3. Shows pagination info and active conversation count
-4. Provides command prompt
-
-**Interactive Commands to Test**:
-
-#### 2.2.1 Help Command
-- Type: `h`
-- **Expected Output**:
-```
-Commands:
-  r, refresh    - Refresh conversation list
-  w <num>       - Wake up conversation by number
-  s <num>       - Show detailed info for conversation
-  f <num>       - Download changed files as zip
-  t <num>       - Download trajectory as JSON
-  a <num>       - Download entire workspace as zip
-  n, next       - Next page
-  p, prev       - Previous page
-  q, quit       - Quit
-  h, help       - Show this help
-
-Examples:
-  w 3           - Wake up conversation #3
-  s 1           - Show details for conversation #1
-  f 2           - Download changed files from conversation #2
-  t 2           - Download trajectory from conversation #2
-```
-
-#### 2.2.2 Refresh Command
-- Type: `r`
-- **Expected Behavior**: Reloads conversation list from API
-
-#### 2.2.3 Wake Conversation
-- Type: `w 77471679` (using conversation ID)
-- Type: `w 3` (using conversation number)
-- **Expected Output**: 
-  - If successful: "✓ Conversation started successfully"
-  - If already running: Status message
-  - If error: Error description
-
-#### 2.2.4 Show Details
-- Type: `s 16b21076` (using conversation ID)
-- Type: `s 1` (using conversation number)
-- **Expected Output**: Detailed conversation information including:
-  - Full conversation ID
-  - Title
-  - Status and runtime status
-  - Creation and update timestamps
-  - Repository and branch info
-  - Runtime URL (if active)
-  - File changes (if any)
-
-#### 2.2.5 Download Files
-- Type: `f 16b21076` (using conversation ID)
-- Type: `f 1` (using conversation number)
-- **Expected Behavior**: 
-  - Downloads changed files as ZIP (only for conversations with repository and uncommitted changes)
-  - Shows download progress/completion message
-  - Creates file named with conversation ID
-
-#### 2.2.6 Download Trajectory
-- Type: `t 16b21076` (using conversation ID)
-- Type: `t 1` (using conversation number)
-- **Expected Behavior**:
-  - Downloads trajectory as JSON file
-  - Shows download progress/completion message
-  - Creates file named with conversation ID and "_trajectory.json" suffix
-
-#### 2.2.7 Download Workspace
-- Type: `a 16b21076` (using conversation ID)
-- Type: `a 1` (using conversation number)
-- **Expected Behavior**:
-  - Downloads entire workspace as ZIP
-  - Shows download progress/completion message
-  - Creates file named with conversation ID
-
-#### 2.2.8 Pagination
-- Type: `n` (next page)
-- **Expected Behavior**: Shows next 20 conversations if available
-- Type: `p` (previous page)
-- **Expected Behavior**: Shows previous 20 conversations if available
-
-#### 2.2.9 Quit
-- Type: `q`
-- **Expected Behavior**: Exits the program cleanly
-
-### 2.3 Error Handling
-
-#### 2.3.1 Invalid Commands
-- Type: `invalid`
-- **Expected Output**: "Unknown command. Type 'h' for help."
-
-#### 2.3.2 Invalid Conversation References
-- Type: `w 999` (invalid number)
-- **Expected Output**: "Invalid conversation number" or similar error
-- Type: `w nonexistent` (invalid ID)
-- **Expected Output**: "No conversation found" or similar error
-
-#### 2.3.3 Network Errors
-- **Test**: Disconnect network and try `r`
-- **Expected Behavior**: Shows appropriate error message
-
-## Test Suite 3: Integration Tests
-
-### 3.1 File Downloads
+### 2.1 File Downloads
 
 **Test**: Verify downloaded files are valid
 1. Download workspace: `uv run ohc conv ws-download 16b21076`
@@ -645,19 +469,19 @@ Examples:
 2. Verify JSON: `python -m json.tool [filename]_trajectory.json`
 3. **Expected**: Valid JSON with trajectory structure
 
-### 3.2 Cross-Tool Consistency
+### 2.2 Cross-Tool Consistency
 
-**Test**: Compare conversation lists between tools
+**Test**: Compare CLI and interactive mode
 1. Run: `uv run ohc conv list -n 5`
-2. Run: `uv run oh-conversation-manager --test`
+2. Run: `uv run ohc -i` and compare conversation list
 3. **Expected**: Both should show same conversations (order may vary)
 
 **Test**: Compare conversation details
-1. Get details with ohc: `uv run ohc conv show 16b21076`
-2. Get details with oh-conversation-manager: `s 16b21076` in interactive mode
+1. Get details with CLI: `uv run ohc conv show 16b21076`
+2. Get details with interactive mode: `s 16b21076` in `ohc -i`
 3. **Expected**: Same conversation ID, title, and status
 
-### 3.3 State Changes
+### 2.3 State Changes
 
 **Test**: Wake conversation and verify status change
 1. Find a stopped conversation: `uv run ohc conv list`
