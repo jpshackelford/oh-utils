@@ -227,6 +227,99 @@ def interactive_mode() -> None:
     manager.run_interactive()
 ```
 
+### 4.5 Integration Testing and Fixture Preservation
+
+The existing integration testing infrastructure using recorded and sanitized API responses is well-designed and should be preserved throughout the architectural refactoring. This approach provides fast, reliable testing without requiring actual API calls.
+
+#### 4.5.1 Current Testing Infrastructure
+
+The project includes a sophisticated fixture-based testing system:
+
+```python
+# tests/test_api_integration.py - Integration tests using fixtures
+@responses.activate
+def test_search_conversations(self, api_client, fixture_loader):
+    """Test searching conversations using fixture."""
+    fixture = fixture_loader.load("conversations_list_success")
+    responses.add(
+        responses.GET,
+        "https://app.all-hands.dev/api/conversations",
+        json=fixture["response"]["json"],
+        status=fixture["response"]["status_code"],
+    )
+    
+    result = api_client.search_conversations(limit=5)
+    assert isinstance(result, dict)
+    assert "conversations" in result
+```
+
+**Key Components:**
+- `tests/fixtures/sanitized/` - Sanitized API response fixtures
+- `tests/conftest.py` - Fixture loading and test configuration
+- `tests/vcr_config.py` - VCR.py configuration with automatic sanitization
+- `scripts/sanitize_fixtures.py` - Automated fixture sanitization
+
+#### 4.5.2 Fixture Compatibility Strategy
+
+The consolidated API client will maintain method signature compatibility to ensure existing fixtures remain valid:
+
+```python
+# Existing fixture structure (preserved)
+{
+  "request": {
+    "method": "GET",
+    "url": "https://app.all-hands.dev/api/conversations",
+    "params": {"limit": 5},
+    "headers": {"X-Session-API-Key": "<secret_hidden>"}
+  },
+  "response": {
+    "status_code": 200,
+    "json": {"conversations": [...], "total": 2}
+  }
+}
+```
+
+#### 4.5.3 Test Migration Strategy
+
+**Phase 1 - Verification (M1):**
+- Run existing integration tests against consolidated API client
+- Verify all fixtures work with unified implementation
+- Ensure no regression in test coverage
+
+**Phase 2 - Extension (M2):**
+- Add integration tests for shared command infrastructure
+- Reuse existing fixtures for testing new utilities
+- Test decorator patterns and shared functions
+
+**Phase 3 - Expansion (M3):**
+- Create fixtures for any new API endpoints
+- Use existing sanitization scripts for new recordings
+- Expand coverage using established patterns
+
+#### 4.5.4 Fixture Management Tools
+
+Preserve and enhance the existing fixture management workflow:
+
+```bash
+# Record new API interactions (when needed)
+python scripts/record_api_responses.py
+
+# Sanitize recorded responses
+python scripts/sanitize_fixtures.py
+
+# Update existing fixtures (when API changes)
+python scripts/update_fixtures.py
+```
+
+#### 4.5.5 Testing Architecture Benefits
+
+The fixture-based approach provides:
+- **Fast execution** - No network calls during testing
+- **Consistent results** - Same responses across environments
+- **Offline testing** - No dependency on external services
+- **Comprehensive coverage** - Tests various API scenarios and edge cases
+- **Security** - Sensitive data automatically sanitized
+
 ## 5. Implementation Plan
 
 ### 5.1 Consolidate API Client (M1)
@@ -235,15 +328,24 @@ def interactive_mode() -> None:
 - All linting and type checking passes
 - API client tests achieve >90% coverage
 - Both CLI and interactive modes use the same API client
+- Existing integration tests pass with consolidated API client
+- No regression in fixture-based test coverage
 
 #### 5.1.1 Unified API Client
 - [ ] `ohc/api.py` - Enhance existing API client with all methods from conversation_manager
 - [ ] `tests/test_api.py` - Comprehensive unit tests for all API methods
 - [ ] `tests/fixtures/` - Add missing API response fixtures
 
-#### 5.1.2 Remove Duplicate API Client
+#### 5.1.2 Integration Test Preservation
+- [ ] `tests/test_api_integration.py` - Verify existing integration tests pass with consolidated API
+- [ ] `tests/conftest.py` - Update fixture loading if needed for consolidated API
+- [ ] `scripts/sanitize_fixtures.py` - Ensure sanitization scripts work with new API structure
+- [ ] Run full integration test suite to verify fixture compatibility
+
+#### 5.1.3 Remove Duplicate API Client
 - [ ] `conversation_manager/conversation_manager.py` - Remove OpenHandsAPI class, import from ohc.api
 - [ ] `tests/test_conversation_manager_api.py` - Tests for conversation manager API integration
+- [ ] Update any remaining imports to use consolidated API client
 
 ### 5.2 Shared Command Infrastructure (M2)
 
@@ -251,14 +353,22 @@ def interactive_mode() -> None:
 - Command boilerplate reduced by >80%
 - Conversation ID resolution logic centralized
 - All commands use consistent error handling
+- New command infrastructure has comprehensive integration tests using existing fixtures
 
 #### 5.2.1 Command Utilities
 - [ ] `ohc/command_utils.py` - Shared decorators and utilities
 - [ ] `tests/test_command_utils.py` - Unit tests for command infrastructure
 
-#### 5.2.2 Refactor Commands
+#### 5.2.2 Integration Tests for Command Infrastructure
+- [ ] `tests/test_command_integration.py` - Integration tests for shared command utilities
+- [ ] Reuse existing fixtures (`conversations_list_success.json`, `conversation_details.json`) for testing
+- [ ] Test decorator patterns (`@with_server_config`) using fixture-based mocking
+- [ ] Verify conversation ID resolution works with sanitized conversation data
+
+#### 5.2.3 Refactor Commands
 - [ ] `ohc/conversation_commands.py` - Apply shared infrastructure to all commands
 - [ ] `tests/test_conversation_commands.py` - CLI command tests using Click testing
+- [ ] Ensure refactored commands work with existing fixture data
 
 ### 5.3 Improve Test Coverage (M3)
 
@@ -266,14 +376,24 @@ def interactive_mode() -> None:
 - Overall test coverage >80%
 - All CLI commands have integration tests
 - Configuration management fully tested
+- Fixture-based testing approach extended to all new functionality
+- Sanitization scripts handle any new API endpoints
 
 #### 5.3.1 CLI Command Tests
-- [ ] `tests/test_cli_integration.py` - End-to-end CLI command tests
+- [ ] `tests/test_cli_integration.py` - End-to-end CLI command tests using fixtures
 - [ ] `tests/test_config.py` - Configuration management tests
+- [ ] Extend fixture coverage for any missing API endpoints
 
 #### 5.3.2 Interactive Mode Tests
-- [ ] `tests/test_interactive_mode.py` - Interactive conversation manager tests
+- [ ] `tests/test_interactive_mode.py` - Interactive conversation manager tests using fixtures
 - [ ] `tests/test_terminal_formatting.py` - Terminal display functionality tests
+- [ ] Mock terminal interactions using existing conversation fixtures
+
+#### 5.3.3 Fixture Management Enhancement
+- [ ] `scripts/record_api_responses.py` - Enhance to record any new API interactions
+- [ ] `scripts/update_fixtures.py` - Update existing fixtures if API responses change
+- [ ] `tests/fixtures/sanitized/` - Add fixtures for any new API endpoints discovered
+- [ ] Document fixture management workflow for future contributors
 
 ### 5.4 Documentation and Cleanup (M4)
 
@@ -305,6 +425,12 @@ def interactive_mode() -> None:
 - Comprehensive CLI command testing
 - Better confidence in releases
 - Easier debugging and troubleshooting
+- **Preserved fixture-based testing infrastructure** provides:
+  - Fast test execution without network dependencies
+  - Consistent test results across environments
+  - Comprehensive API scenario coverage
+  - Automatic sanitization of sensitive data
+  - Reliable offline testing capabilities
 
 ### 6.3 User Experience
 - Consistent behavior between CLI and interactive modes
@@ -322,4 +448,6 @@ def interactive_mode() -> None:
 
 The architectural review confirms the suspected issues with dual implementations, poor test coverage, and extensive code duplication. The proposed consolidation and refactoring will significantly improve code quality, maintainability, and user experience while establishing a solid foundation for future development.
 
-The implementation plan provides a clear path forward with incremental milestones that can be reviewed and deployed independently, minimizing risk while delivering continuous improvements to the codebase.
+A key strength of the current codebase is the sophisticated fixture-based integration testing infrastructure, which will be preserved and enhanced throughout the refactoring process. This approach ensures that the system remains testable at each milestone while providing fast, reliable testing without external dependencies.
+
+The implementation plan provides a clear path forward with incremental milestones that can be reviewed and deployed independently, minimizing risk while delivering continuous improvements to the codebase. The preservation of valuable fixture data and testing infrastructure ensures that quality and reliability are maintained throughout the architectural transformation.
