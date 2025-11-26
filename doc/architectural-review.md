@@ -380,21 +380,21 @@ The fixture-based approach provides:
 
 #### 5.2.1 Command Utilities
 
-- [ ] `ohc/command_utils.py` - Shared decorators and utilities
-- [ ] `tests/test_command_utils.py` - Unit tests for command infrastructure
+- [x] `ohc/command_utils.py` - Shared decorators and utilities
+- [x] `tests/test_command_utils.py` - Unit tests for command infrastructure
 
 #### 5.2.2 Integration Tests for Command Infrastructure
 
-- [ ] `tests/test_command_integration.py` - Integration tests for shared command utilities
-- [ ] Reuse existing fixtures (`conversations_list_success.json`, `conversation_details.json`) for testing
-- [ ] Test decorator patterns (`@with_server_config`) using fixture-based mocking
-- [ ] Verify conversation ID resolution works with sanitized conversation data
+- [x] `tests/test_command_integration.py` - Integration tests for shared command utilities
+- [x] Reuse existing fixtures (`conversations_list_success.json`, `conversation_details.json`) for testing
+- [x] Test decorator patterns (`@with_server_config`) using fixture-based mocking
+- [x] Verify conversation ID resolution works with sanitized conversation data
 
 #### 5.2.3 Refactor Commands
 
-- [ ] `ohc/conversation_commands.py` - Apply shared infrastructure to all commands
-- [ ] `tests/test_conversation_commands.py` - CLI command tests using Click testing
-- [ ] Ensure refactored commands work with existing fixture data
+- [x] `ohc/conversation_commands.py` - Apply shared infrastructure to all commands
+- [x] `tests/test_conversation_commands.py` - CLI command tests using Click testing
+- [x] Ensure refactored commands work with existing fixture data
 
 ### 5.3 Improve Test Coverage (M3)
 
