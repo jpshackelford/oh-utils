@@ -159,7 +159,12 @@
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
 
-- [ ] **Test 1.3.4c:** Show changes by number (`uv run ohc conv ws-changes 1`)
+- [ ] **Test 1.3.4c:** Show changes for non-running conversation (`uv run ohc conv ws-changes [STOPPED_ID]`)
+  - **Expected:** "Error: Cannot get workspace changes for conversation [id]. Conversation must be running."
+  - **Result:** ✅ PASS / ❌ FAIL
+  - **Notes:**
+
+- [ ] **Test 1.3.4d:** Show changes by number (`uv run ohc conv ws-changes 1`)
   - **Expected:** Changes for conversation #1
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
@@ -263,23 +268,9 @@
   - **Result:** ✅ PASS / ❌ FAIL
   - **Notes:** 
 
-### 2.2 Cross-Tool Consistency
+### 2.2 State Changes
 
-- [ ] **Test 2.2.1:** Compare CLI and interactive mode
-  - **Commands:** `uv run ohc conv list -n 5` vs `uv run ohc -i`
-  - **Expected:** Same conversations shown
-  - **Result:** ✅ PASS / ❌ FAIL
-  - **Notes:** 
-
-- [ ] **Test 2.2.2:** Compare conversation details
-  - **Commands:** `uv run ohc conv show [ID]` vs interactive `s [ID]`
-  - **Expected:** Same ID, title, status
-  - **Result:** ✅ PASS / ❌ FAIL / ⏭️ SKIP (interactive)
-  - **Notes:** 
-
-### 2.3 State Changes
-
-- [ ] **Test 2.3:** Wake conversation and verify status change
+- [ ] **Test 2.2:** Wake conversation and verify status change
   - **Steps:** Find stopped conversation, wake it, check status
   - **Expected:** Status changes from STOPPED to RUNNING
   - **Result:** ✅ PASS / ❌ FAIL

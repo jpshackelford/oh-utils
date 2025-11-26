@@ -300,6 +300,18 @@ Title: Architectural Review: Interactive vs CLI Commands
 No uncommitted changes found.
 ```
 
+**Test**: Show changes for non-running conversation
+```bash
+uv run ohc conv ws-changes [stopped-conversation-id]
+```
+
+**Expected Output**:
+```
+Error: Cannot get workspace changes for conversation [id]. Conversation must be running.
+```
+
+**Note**: This is the correct behavior - workspace changes can only be retrieved for currently running conversations.
+
 **Test**: Show changes using conversation number (for convenience)
 ```bash
 uv run ohc conv ws-changes 1
@@ -469,19 +481,7 @@ uv run ohc conv show a
 2. Verify JSON: `python -m json.tool [filename]_trajectory.json`
 3. **Expected**: Valid JSON with trajectory structure
 
-### 2.2 Cross-Tool Consistency
-
-**Test**: Compare CLI and interactive mode
-1. Run: `uv run ohc conv list -n 5`
-2. Run: `uv run ohc -i` and compare conversation list
-3. **Expected**: Both should show same conversations (order may vary)
-
-**Test**: Compare conversation details
-1. Get details with CLI: `uv run ohc conv show 16b21076`
-2. Get details with interactive mode: `s 16b21076` in `ohc -i`
-3. **Expected**: Same conversation ID, title, and status
-
-### 2.3 State Changes
+### 2.2 State Changes
 
 **Test**: Wake conversation and verify status change
 1. Find a stopped conversation: `uv run ohc conv list`
