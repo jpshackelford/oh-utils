@@ -32,7 +32,7 @@ class TestConversationCommandsCLI:
         conversations = []
         for conversation in fixture_data["conversations"]:
             conversations.append({
-                "conversation_id": conversation["id"],  # Command expects 'conversation_id' not 'id'
+                "conversation_id": conversation["id"],  # Command expects 'conversation_id'
                 "title": conversation["title"],
                 "status": "STOPPED",  # Add status field that command expects
                 "created_at": conversation["created_at"],
@@ -56,7 +56,9 @@ class TestConversationCommandsCLI:
     @responses.activate
     def test_list_command_success(self):
         """Test list command with successful API response."""
-        fixed_data = self._load_and_fix_conversations_fixture("conversations_list_success.json")
+        fixed_data = self._load_and_fix_conversations_fixture(
+            "conversations_list_success.json"
+        )
 
         responses.add(
             responses.GET,

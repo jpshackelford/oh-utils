@@ -52,7 +52,9 @@ class TestCommandIntegrationWithFixtures:
         assert result == "d2bfa2e22a0e4fef98882ab95258d4af"
 
     @responses.activate
-    def test_resolve_conversation_id_number_out_of_range_with_fixtures(self, fixture_loader, capsys):
+    def test_resolve_conversation_id_number_out_of_range_with_fixtures(
+        self, fixture_loader, capsys
+    ):
         """Test number out of range with fixture data."""
         fixture = fixture_loader.load("conversations_list")
         responses.add(
@@ -123,7 +125,9 @@ class TestCommandIntegrationWithFixtures:
             result = api.search_conversations(limit=5)
             return {
                 "conversation_count": len(result.get("results", [])),
-                "first_conversation_id": result.get("results", [{}])[0].get("conversation_id")
+                "first_conversation_id": result.get("results", [{}])[0].get(
+                    "conversation_id"
+                )
             }
 
         with patch('ohc.command_utils.ConfigManager', return_value=mock_config_manager):
@@ -133,7 +137,9 @@ class TestCommandIntegrationWithFixtures:
         assert result["first_conversation_id"] == "d2bfa2e22a0e4fef98882ab95258d4af"
 
     @responses.activate
-    def test_resolve_conversation_id_with_multiple_partial_matches(self, fixture_loader, capsys):
+    def test_resolve_conversation_id_with_multiple_partial_matches(
+        self, fixture_loader, capsys
+    ):
         """Test partial ID resolution with multiple matches using modified fixture data."""
         # Create modified fixture data with conversations that have common prefixes
         modified_response = {

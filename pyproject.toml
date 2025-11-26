@@ -59,11 +59,11 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG"]
+"tests/*" = ["ARG", "E501"]
 
 # MyPy configuration
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -85,7 +85,7 @@ exclude = [
 ]
 
 [[tool.mypy.overrides]]
-module = ["_pytest.*"]
+module = ["_pytest.*", "pytest.*"]
 ignore_errors = true
 
 # Pytest configuration

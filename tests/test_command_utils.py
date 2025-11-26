@@ -65,7 +65,10 @@ class TestWithServerConfigDecorator:
 
         assert result is None
         captured = capsys.readouterr()
-        assert "✗ No servers configured. Use 'ohc server add' to add a server." in captured.err
+        assert (
+            "✗ No servers configured. Use 'ohc server add' to add a server."
+            in captured.err
+        )
 
 
 class TestResolveConversationId:
@@ -170,4 +173,7 @@ class TestHandleMissingServerConfig:
         handle_missing_server_config(None)
 
         captured = capsys.readouterr()
-        assert "✗ No servers configured. Use 'ohc server add' to add a server." in captured.err
+        assert (
+            "✗ No servers configured. Use 'ohc server add' to add a server."
+            in captured.err
+        )
