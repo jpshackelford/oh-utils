@@ -105,7 +105,7 @@ jobs:
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
-          COVERAGE_DATA_PATH: coverage.xml
+          COVERAGE_PATH: coverage.xml
           MINIMUM_GREEN: 80
           MINIMUM_ORANGE: 60
 
