@@ -109,6 +109,84 @@ jobs:
           COVERAGE_PATH: .
           MINIMUM_GREEN: 80
           MINIMUM_ORANGE: 60
+          COVERAGE_DATA_BRANCH: python-coverage-comment-action-data
+          ANNOTATE_MISSING_LINES: true
+          ANNOTATION_TYPE: notice
+
+      - name: Generate detailed coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && github.event_name == 'pull_request'
+        run: |
+          echo "## 📊 Detailed Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "### File-by-File Coverage" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo '```' >> coverage_report.md
+          uv run coverage report --show-missing --skip-covered >> coverage_report.md
+          echo '```' >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "### Coverage Summary" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo '```' >> coverage_report.md
+          uv run coverage report >> coverage_report.md
+          echo '```' >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "### New/Modified Files Coverage" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "Coverage for files modified in this PR:" >> coverage_report.md
+          echo '```' >> coverage_report.md
+          # Get list of modified Python files
+          git fetch origin main
+          MODIFIED_FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' | grep -E '^(ohc|conversation_manager)/' || true)
+          if [ -n "$MODIFIED_FILES" ]; then
+            for file in $MODIFIED_FILES; do
+              if [ -f "$file" ]; then
+                echo "=== $file ===" >> coverage_report.md
+                uv run coverage report --include="$file" >> coverage_report.md || echo "No coverage data for $file" >> coverage_report.md
+                echo "" >> coverage_report.md
+              fi
+            done
+          else
+            echo "No Python files modified in ohc/ or conversation_manager/" >> coverage_report.md
+          fi
+          echo '```' >> coverage_report.md
+
+      - name: Post detailed coverage comment
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverageReport = fs.readFileSync('coverage_report.md', 'utf8');
+            
+            // Find existing coverage comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existingComment = comments.data.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('📊 Detailed Coverage Report')
+            );
+            
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: coverageReport
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: coverageReport
+              });
+            }
 
   test-summary:
     runs-on: ubuntu-latest
