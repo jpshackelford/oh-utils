@@ -148,7 +148,7 @@ if VCR_AVAILABLE:
 
     # Enable pytest-vcr if available
     try:
-        import pytest_vcr
+        import pytest_vcr  # type: ignore[import-untyped]
 
         pytest_vcr.default_vcr = default_vcr
     except ImportError:

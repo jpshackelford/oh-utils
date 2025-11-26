@@ -7,7 +7,7 @@ HTTP interactions for integration testing.
 
 from pathlib import Path
 
-import vcr
+import vcr  # type: ignore[import-untyped]
 
 
 def create_vcr() -> vcr.VCR:

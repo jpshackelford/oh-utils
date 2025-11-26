@@ -41,7 +41,7 @@ format-check: ## Check code formatting
 	uv run ruff format --check .
 
 type-check: ## Run type checking
-	uv run mypy .
+	uv run mypy conversation_manager ohc tests
 
 pre-commit-install: ## Install pre-commit hooks
 	uv run pre-commit install

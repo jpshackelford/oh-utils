@@ -78,6 +78,15 @@ warn_unreachable = true
 strict_equality = true
 # Disable untyped decorator warnings for click
 disable_error_code = ["misc"]
+exclude = [
+    "^.venv/",
+    "^build/",
+    "^dist/"
+]
+
+[[tool.mypy.overrides]]
+module = ["_pytest.*"]
+ignore_errors = true
 
 # Pytest configuration
 [tool.pytest.ini_options]
