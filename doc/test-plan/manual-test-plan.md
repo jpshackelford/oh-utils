@@ -16,6 +16,11 @@ This document provides step-by-step instructions for manually testing all functi
 
 3. **Live Data Note**: These tests use live production data, so conversation IDs, titles, and counts will vary. The examples show expected output format, not exact content.
 
+4. **Workspace Changes Note**: Commands that show or download workspace changes (`ws-changes`, `ws-download` for changed files) only work with conversations that:
+   - Were started with a specific repository (not blank conversations)
+   - Have uncommitted and unpushed changes in their workspace
+   - Conversations without repositories or changes will show "No uncommitted changes found"
+
 ## Test Suite 1: ohc CLI Tool
 
 ### 1.1 Basic Help and Version
@@ -196,9 +201,9 @@ uv run ohc conv list --server production
 
 #### 1.3.2 Show Conversation Details
 
-**Test**: Show details by conversation number
+**Test**: Show details by partial conversation ID
 ```bash
-uv run ohc conv show 1
+uv run ohc conv show 16b21076
 ```
 
 **Expected Output** (format, actual data will vary):
@@ -218,13 +223,6 @@ Uncommitted Files (1):
       oh-utils/doc/test-plan/openhands-api-reference.md
 ```
 
-**Test**: Show details by partial conversation ID
-```bash
-uv run ohc conv show 16b21076
-```
-
-**Expected Output**: Same as above (matches by partial ID)
-
 **Test**: Show details by full conversation ID
 ```bash
 uv run ohc conv show 16b2107670154699801ad663801f0534
@@ -232,32 +230,50 @@ uv run ohc conv show 16b2107670154699801ad663801f0534
 
 **Expected Output**: Same as above
 
-#### 1.3.3 Wake Up Conversations
-
-**Test**: Wake conversation by number
+**Test**: Show details by conversation number (for convenience)
 ```bash
-uv run ohc conv wake 3
+uv run ohc conv show 1
 ```
 
-**Expected Output** (if conversation is stopped):
-```
-Waking up conversation: Architectural Review: Interactive vs CLI Commands
-✓ Conversation started successfully
-URL: https://[runtime-id].prod-runtime.all-hands.dev/api/conversations/[conversation-id]
-```
+**Expected Output**: Same as above (matches conversation #1 from list)
+
+#### 1.3.3 Wake Up Conversations
 
 **Test**: Wake conversation by partial ID
 ```bash
 uv run ohc conv wake 77471679
 ```
 
+**Expected Output** (if conversation is stopped):
+```
+Waking up conversation: Architectural Review: Interactive vs CLI Commands
+✓ Conversation started successfully
+URL: https://[runtime-id].prod-runtime.all-hands.dev/api/conversations/77471679...
+```
+
+**Test**: Wake conversation by full ID
+```bash
+uv run ohc conv wake 77471679a1b2c3d4e5f6789012345678901234
+```
+
 **Expected Output**: Similar to above
+
+**Test**: Wake conversation by number (for convenience)
+```bash
+uv run ohc conv wake 3
+```
+
+**Expected Output**: Similar to above (wakes conversation #3 from list)
 
 #### 1.3.4 Show Workspace Changes
 
-**Test**: Show git changes for a conversation
+**Important Note**: This command only shows changes for conversations that:
+1. Were started with a specific repository (not blank conversations)
+2. Have uncommitted and unpushed changes in their workspace
+
+**Test**: Show git changes for a conversation with repository and changes
 ```bash
-uv run ohc conv ws-changes 1
+uv run ohc conv ws-changes 16b21076
 ```
 
 **Expected Output** (format will vary based on actual changes):
@@ -270,9 +286,9 @@ Total files changed: 1
   oh-utils/doc/test-plan/openhands-api-reference.md
 ```
 
-**Test**: Show changes for conversation with no changes
+**Test**: Show changes for conversation without repository or no changes
 ```bash
-uv run ohc conv ws-changes 3
+uv run ohc conv ws-changes 77471679
 ```
 
 **Expected Output**:
@@ -282,11 +298,20 @@ Title: Architectural Review: Interactive vs CLI Commands
 No uncommitted changes found.
 ```
 
+**Test**: Show changes using conversation number (for convenience)
+```bash
+uv run ohc conv ws-changes 1
+```
+
+**Expected Output**: Same as first example above
+
 #### 1.3.5 Download Workspace Archive
 
-**Test**: Download workspace as ZIP
+**Important Note**: This command downloads the entire workspace. For conversations with repository changes, use this to get all files. For changed files only, this downloads a ZIP containing just the uncommitted changes.
+
+**Test**: Download workspace as ZIP using conversation ID
 ```bash
-uv run ohc conv ws-download 1
+uv run ohc conv ws-download 16b21076
 ```
 
 **Expected Output**:
@@ -297,7 +322,7 @@ Downloading workspace for conversation 16b21076...
 
 **Test**: Download with custom output filename
 ```bash
-uv run ohc conv ws-download 1 -o my-workspace.zip
+uv run ohc conv ws-download 16b21076 -o my-workspace.zip
 ```
 
 **Expected Output**:
@@ -306,11 +331,18 @@ Downloading workspace for conversation 16b21076...
 ✓ Workspace downloaded: my-workspace.zip (X.X MB)
 ```
 
+**Test**: Download using conversation number (for convenience)
+```bash
+uv run ohc conv ws-download 1
+```
+
+**Expected Output**: Same as first example above
+
 #### 1.3.6 Download Trajectory
 
-**Test**: Download conversation trajectory
+**Test**: Download conversation trajectory using conversation ID
 ```bash
-uv run ohc conv trajectory 1
+uv run ohc conv trajectory 16b21076
 ```
 
 **Expected Output**:
@@ -321,7 +353,7 @@ Downloading trajectory for conversation 16b21076...
 
 **Test**: Download with custom filename
 ```bash
-uv run ohc conv trajectory 1 -o my-trajectory.json
+uv run ohc conv trajectory 16b21076 -o my-trajectory.json
 ```
 
 **Expected Output**:
@@ -329,6 +361,13 @@ uv run ohc conv trajectory 1 -o my-trajectory.json
 Downloading trajectory for conversation 16b21076...
 ✓ Trajectory downloaded: my-trajectory.json (X.X KB)
 ```
+
+**Test**: Download using conversation number (for convenience)
+```bash
+uv run ohc conv trajectory 1
+```
+
+**Expected Output**: Same as first example above
 
 ### 1.4 Interactive Mode (ohc -i)
 
@@ -346,11 +385,16 @@ uv run ohc -i
 **Interactive Commands to Test**:
 - `h` - Show help
 - `r` - Refresh conversation list
-- `w 1` - Wake conversation #1
-- `s 1` - Show details for conversation #1
-- `f 1` - Download files for conversation #1
-- `t 1` - Download trajectory for conversation #1
-- `a 1` - Download workspace for conversation #1
+- `w 16b21076` - Wake conversation by ID
+- `w 1` - Wake conversation #1 (by number)
+- `s 16b21076` - Show details for conversation by ID
+- `s 1` - Show details for conversation #1 (by number)
+- `f 16b21076` - Download changed files for conversation by ID
+- `f 1` - Download changed files for conversation #1 (by number)
+- `t 16b21076` - Download trajectory for conversation by ID
+- `t 1` - Download trajectory for conversation #1 (by number)
+- `a 16b21076` - Download workspace for conversation by ID
+- `a 1` - Download workspace for conversation #1 (by number)
 - `n` - Next page (if multiple pages)
 - `p` - Previous page
 - `q` - Quit
@@ -375,16 +419,6 @@ uv run ohc conv list
 
 #### 1.5.2 Invalid Conversation References
 
-**Test**: Reference non-existent conversation number
-```bash
-uv run ohc conv show 999
-```
-
-**Expected Output**:
-```
-✗ Conversation number 999 is out of range (1-X)
-```
-
 **Test**: Reference non-existent conversation ID
 ```bash
 uv run ohc conv show nonexistent
@@ -393,6 +427,16 @@ uv run ohc conv show nonexistent
 **Expected Output**:
 ```
 ✗ No conversation found with ID starting with 'nonexistent'
+```
+
+**Test**: Reference non-existent conversation number
+```bash
+uv run ohc conv show 999
+```
+
+**Expected Output**:
+```
+✗ Conversation number 999 is out of range (1-X)
 ```
 
 #### 1.5.3 Ambiguous Conversation ID
@@ -518,14 +562,16 @@ Examples:
 - **Expected Behavior**: Reloads conversation list from API
 
 #### 2.2.3 Wake Conversation
-- Type: `w 3` (for conversation #3)
+- Type: `w 77471679` (using conversation ID)
+- Type: `w 3` (using conversation number)
 - **Expected Output**: 
   - If successful: "✓ Conversation started successfully"
   - If already running: Status message
   - If error: Error description
 
 #### 2.2.4 Show Details
-- Type: `s 1` (for conversation #1)
+- Type: `s 16b21076` (using conversation ID)
+- Type: `s 1` (using conversation number)
 - **Expected Output**: Detailed conversation information including:
   - Full conversation ID
   - Title
@@ -536,21 +582,24 @@ Examples:
   - File changes (if any)
 
 #### 2.2.5 Download Files
-- Type: `f 1` (for conversation #1)
+- Type: `f 16b21076` (using conversation ID)
+- Type: `f 1` (using conversation number)
 - **Expected Behavior**: 
-  - Downloads changed files as ZIP
+  - Downloads changed files as ZIP (only for conversations with repository and uncommitted changes)
   - Shows download progress/completion message
   - Creates file named with conversation ID
 
 #### 2.2.6 Download Trajectory
-- Type: `t 1` (for conversation #1)
+- Type: `t 16b21076` (using conversation ID)
+- Type: `t 1` (using conversation number)
 - **Expected Behavior**:
   - Downloads trajectory as JSON file
   - Shows download progress/completion message
   - Creates file named with conversation ID and "_trajectory.json" suffix
 
 #### 2.2.7 Download Workspace
-- Type: `a 1` (for conversation #1)
+- Type: `a 16b21076` (using conversation ID)
+- Type: `a 1` (using conversation number)
 - **Expected Behavior**:
   - Downloads entire workspace as ZIP
   - Shows download progress/completion message
@@ -572,9 +621,11 @@ Examples:
 - Type: `invalid`
 - **Expected Output**: "Unknown command. Type 'h' for help."
 
-#### 2.3.2 Invalid Conversation Numbers
-- Type: `w 999`
+#### 2.3.2 Invalid Conversation References
+- Type: `w 999` (invalid number)
 - **Expected Output**: "Invalid conversation number" or similar error
+- Type: `w nonexistent` (invalid ID)
+- **Expected Output**: "No conversation found" or similar error
 
 #### 2.3.3 Network Errors
 - **Test**: Disconnect network and try `r`
@@ -585,12 +636,12 @@ Examples:
 ### 3.1 File Downloads
 
 **Test**: Verify downloaded files are valid
-1. Download workspace: `uv run ohc conv ws-download 1`
+1. Download workspace: `uv run ohc conv ws-download 16b21076`
 2. Verify ZIP file: `unzip -t [filename].zip`
 3. **Expected**: ZIP file should be valid and contain workspace files
 
 **Test**: Verify trajectory files are valid JSON
-1. Download trajectory: `uv run ohc conv trajectory 1`
+1. Download trajectory: `uv run ohc conv trajectory 16b21076`
 2. Verify JSON: `python -m json.tool [filename]_trajectory.json`
 3. **Expected**: Valid JSON with trajectory structure
 
@@ -602,16 +653,16 @@ Examples:
 3. **Expected**: Both should show same conversations (order may vary)
 
 **Test**: Compare conversation details
-1. Get details with ohc: `uv run ohc conv show 1`
-2. Get details with oh-conversation-manager: `s 1` in interactive mode
+1. Get details with ohc: `uv run ohc conv show 16b21076`
+2. Get details with oh-conversation-manager: `s 16b21076` in interactive mode
 3. **Expected**: Same conversation ID, title, and status
 
 ### 3.3 State Changes
 
 **Test**: Wake conversation and verify status change
 1. Find a stopped conversation: `uv run ohc conv list`
-2. Wake it: `uv run ohc conv wake [number]`
-3. Check status: `uv run ohc conv show [number]`
+2. Wake it: `uv run ohc conv wake [conversation-id]`
+3. Check status: `uv run ohc conv show [conversation-id]`
 4. **Expected**: Status should change from STOPPED to RUNNING
 
 ## Test Results Documentation
