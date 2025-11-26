@@ -121,13 +121,13 @@ jobs:
           echo "### File-by-File Coverage" >> coverage_report.md
           echo "" >> coverage_report.md
           echo '```' >> coverage_report.md
-          uv run coverage report --show-missing --skip-covered >> coverage_report.md
+          uv run python -m coverage report --show-missing --skip-covered >> coverage_report.md
           echo '```' >> coverage_report.md
           echo "" >> coverage_report.md
           echo "### Coverage Summary" >> coverage_report.md
           echo "" >> coverage_report.md
           echo '```' >> coverage_report.md
-          uv run coverage report >> coverage_report.md
+          uv run python -m coverage report >> coverage_report.md
           echo '```' >> coverage_report.md
           echo "" >> coverage_report.md
           echo "### New/Modified Files Coverage" >> coverage_report.md
@@ -141,7 +141,7 @@ jobs:
             for file in $MODIFIED_FILES; do
               if [ -f "$file" ]; then
                 echo "=== $file ===" >> coverage_report.md
-                uv run coverage report --include="$file" >> coverage_report.md || echo "No coverage data for $file" >> coverage_report.md
+                uv run python -m coverage report --include="$file" >> coverage_report.md || echo "No coverage data for $file" >> coverage_report.md
                 echo "" >> coverage_report.md
               fi
             done
@@ -157,19 +157,19 @@ jobs:
           script: |
             const fs = require('fs');
             const coverageReport = fs.readFileSync('coverage_report.md', 'utf8');
-            
+
             // Find existing coverage comment
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
-            const existingComment = comments.data.find(comment => 
-              comment.user.login === 'github-actions[bot]' && 
+
+            const existingComment = comments.data.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
               comment.body.includes('📊 Detailed Coverage Report')
             );
-            
+
             if (existingComment) {
               // Update existing comment
               await github.rest.issues.updateComment({
