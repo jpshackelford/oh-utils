@@ -11,6 +11,7 @@ Tests the ConfigManager class including:
 
 import json
 import os
+import platform
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -111,6 +112,10 @@ class TestConfigManager:
 
             assert saved_config == test_config
 
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="Unix file permissions not supported on Windows",
+    )
     def test_save_config_sets_permissions(self):
         """Test saving config sets restrictive file permissions."""
         with tempfile.TemporaryDirectory() as temp_dir:

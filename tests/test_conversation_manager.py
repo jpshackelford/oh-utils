@@ -10,9 +10,12 @@ Tests the conversation manager module including:
 
 import json
 import os
+import platform
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from conversation_manager.conversation_manager import (
     APIKeyManager,
@@ -156,6 +159,10 @@ class TestAPIKeyManager:
 
             assert key is None
 
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="Unix file permissions not supported on Windows",
+    )
     def test_store_key(self):
         """Test storing API key."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -198,9 +205,14 @@ class TestAPIKeyManager:
 
     def test_get_valid_key_from_openhands_env(self):
         """Test getting valid key from OPENHANDS_API_KEY environment variable."""
-        with patch.dict(
-            os.environ, {"OPENHANDS_API_KEY": "openhands-env-key"}, clear=True
-        ), patch(
+        # Keep HOME/USERPROFILE for Path.home() to work
+        env_to_keep = {}
+        for var in ["HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"]:
+            if var in os.environ:
+                env_to_keep[var] = os.environ[var]
+        env_to_keep["OPENHANDS_API_KEY"] = "openhands-env-key"
+
+        with patch.dict(os.environ, env_to_keep, clear=True), patch(
             "conversation_manager.conversation_manager.OpenHandsAPI"
         ) as mock_api_class:
             mock_api = MagicMock()
