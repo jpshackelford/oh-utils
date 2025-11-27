@@ -105,7 +105,9 @@ def interactive_mode() -> None:
 
             original_init = cm.OpenHandsAPI.__init__
 
-            def patched_init(self: object, api_key: str) -> None:
+            def patched_init(self: object, api_key: str, **_kwargs: object) -> None:
+                # Accept **kwargs to be compatible with both old and new signatures
+                # Ignore base_url if provided since we're setting BASE_URL directly
                 original_init(self, api_key)  # type: ignore[arg-type]
                 self.BASE_URL = server_config["url"]  # type: ignore[attr-defined]
                 self.session.headers.update(  # type: ignore[attr-defined]

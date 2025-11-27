@@ -61,10 +61,10 @@ class TestOpenHandsAPIIntegration:
         result = api_client.search_conversations(limit=5)
 
         assert isinstance(result, dict)
-        assert "conversations" in result
-        assert isinstance(result["conversations"], list)
-        assert len(result["conversations"]) == 2
-        assert result["conversations"][0]["title"] == "Example Conversation 1"
+        assert "results" in result
+        assert isinstance(result["results"], list)
+        assert len(result["results"]) == 2
+        assert result["results"][0]["title"] == "Example Conversation 1"
 
     @responses.activate
     def test_search_conversations_with_pagination(self, api_client, fixture_loader):

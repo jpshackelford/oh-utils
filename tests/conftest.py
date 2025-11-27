@@ -13,6 +13,8 @@ import pytest
 import responses
 from requests import Session
 
+from ohc.api import OpenHandsAPI
+
 # Try to import VCR.py components
 try:
     from .vcr_config import default_vcr
@@ -20,6 +22,17 @@ try:
     VCR_AVAILABLE = True
 except ImportError:
     VCR_AVAILABLE = False
+
+
+@pytest.fixture(autouse=True)
+def restore_api_init():
+    """Restore the original OpenHandsAPI.__init__ after each test.
+
+    This prevents monkey-patching in interactive_mode() from affecting other tests.
+    """
+    original_init = OpenHandsAPI.__init__
+    yield
+    OpenHandsAPI.__init__ = original_init
 
 
 @pytest.fixture
