@@ -59,7 +59,7 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG", "E501"]
+"tests/*" = ["ARG", "E501", "SIM117"]
 
 # MyPy configuration
 [tool.mypy]

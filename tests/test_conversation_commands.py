@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import responses
 from click.testing import CliRunner
@@ -25,27 +25,8 @@ class TestConversationCommandsCLI:
             vcr_data = json.load(f)
             fixture_data = vcr_data["response"]["json"]
 
-        # Transform fixture data to match what the command expects
-        conversations = []
-        for conversation in fixture_data["conversations"]:
-            conversations.append(
-                {
-                    "conversation_id": conversation[
-                        "id"
-                    ],  # Command expects 'conversation_id'
-                    "title": conversation["title"],
-                    "status": "STOPPED",  # Add status field that command expects
-                    "created_at": conversation["created_at"],
-                    "updated_at": conversation["updated_at"],
-                }
-            )
-
-        return {
-            "results": conversations,  # Command expects 'results' not 'conversations'
-            "total": fixture_data["total"],
-            "page_id": fixture_data["page_id"],
-            "has_more": fixture_data["has_more"],
-        }
+        # The fixture already has the correct format with "results"
+        return fixture_data
 
     def _load_conversation_detail_fixture(self, fixture_name: str):
         """Load conversation detail fixture."""
@@ -79,6 +60,56 @@ class TestConversationCommandsCLI:
             assert "Found 2 conversations:" in result.output
             assert "fake-uui" in result.output  # ID is truncated to 8 chars
             assert "Example Conversation 1" in result.output
+
+    @responses.activate
+    def test_list_command_empty_results(self):
+        """Test list command with no conversations."""
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations",
+            json={"results": []},
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["list"])
+
+            assert result.exit_code == 0
+            assert "No conversations found." in result.output
+
+    @responses.activate
+    def test_list_command_long_title(self):
+        """Test list command with conversation that has a very long title."""
+        long_title = "A" * 100  # Title longer than 50 chars
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations",
+            json={
+                "results": [
+                    {
+                        "conversation_id": "test-id-123",
+                        "title": long_title,
+                        "status": "RUNNING",
+                    }
+                ]
+            },
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["list"])
+
+            assert result.exit_code == 0
+            # Title should be truncated with "..."
+            assert "A" * 47 + "..." in result.output
 
     @responses.activate
     def test_show_command_success(self):
@@ -280,3 +311,244 @@ class TestConversationCommandsCLI:
 
                 assert result.exit_code == 0
                 assert "Failed to list conversations: API Error" in result.output
+
+    def test_interactive_mode_no_server_config(self):
+        """Test interactive mode when no server is configured."""
+        with patch(
+            "ohc.conversation_commands.ConfigManager"
+        ) as mock_config_manager_class:
+            mock_config_manager = MagicMock()
+            mock_config_manager.get_server_config.return_value = None
+            mock_config_manager_class.return_value = mock_config_manager
+
+            with patch("click.confirm", return_value=False):
+                with patch("click.echo") as mock_echo:
+                    from ohc.conversation_commands import interactive_mode
+
+                    interactive_mode()
+
+                    mock_echo.assert_any_call("No servers configured.")
+                    mock_echo.assert_any_call(
+                        "Use 'ohc server add' to add a server configuration."
+                    )
+
+    def test_interactive_mode_add_server_accepted(self):
+        """Test interactive mode when user accepts to add server."""
+        with patch(
+            "ohc.conversation_commands.ConfigManager"
+        ) as mock_config_manager_class:
+            mock_config_manager = MagicMock()
+            # First call returns None, second call returns config after adding server
+            mock_config_manager.get_server_config.side_effect = [
+                None,
+                {"name": "test", "url": "https://api.test.com", "api_key": "key"},
+            ]
+            mock_config_manager_class.return_value = mock_config_manager
+
+            with patch("click.confirm", return_value=True):
+                with patch("click.Context") as mock_context_class:
+                    mock_context = MagicMock()
+                    mock_context_class.return_value = mock_context
+
+                    with patch(
+                        "conversation_manager.conversation_manager.ConversationManager"
+                    ) as mock_manager_class:
+                        mock_manager = MagicMock()
+                        mock_manager_class.return_value = mock_manager
+
+                        from ohc.conversation_commands import interactive_mode
+
+                        interactive_mode()
+
+                        mock_manager.run_interactive.assert_called_once()
+
+    def test_interactive_mode_success(self):
+        """Test successful interactive mode launch."""
+        with patch(
+            "ohc.conversation_commands.ConfigManager"
+        ) as mock_config_manager_class:
+            mock_config_manager = MagicMock()
+            mock_config_manager.get_server_config.return_value = {
+                "name": "test-server",
+                "url": "https://api.test.com",
+                "api_key": "test-key",
+            }
+            mock_config_manager_class.return_value = mock_config_manager
+
+            with patch(
+                "conversation_manager.conversation_manager.ConversationManager"
+            ) as mock_manager_class:
+                mock_manager = MagicMock()
+                mock_manager_class.return_value = mock_manager
+
+                from ohc.conversation_commands import interactive_mode
+
+                interactive_mode()
+
+                mock_manager.run_interactive.assert_called_once()
+
+    def test_interactive_mode_exception(self):
+        """Test interactive mode with exception."""
+        with patch(
+            "ohc.conversation_commands.ConfigManager"
+        ) as mock_config_manager_class:
+            mock_config_manager_class.side_effect = Exception("Config error")
+
+            with patch("click.echo") as mock_echo:
+                with patch("sys.exit") as mock_exit:
+                    from ohc.conversation_commands import interactive_mode
+
+                    interactive_mode()
+
+                    mock_echo.assert_any_call(
+                        "✗ Failed to start interactive mode: Config error", err=True
+                    )
+                    mock_exit.assert_called_with(1)
+
+    @responses.activate
+    def test_download_command_success(self):
+        """Test successful workspace download."""
+        # Mock conversation list for ID resolution
+        list_data = self._load_and_fix_conversations_fixture(
+            "conversations_list_success.json"
+        )
+
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations",
+            json=list_data,
+            status=200,
+        )
+
+        # Mock conversation details
+        detail_data = {
+            "id": "fake-uuid-12345678",
+            "title": "Test Conversation",
+            "url": "https://runtime.test.com/conversation/fake-uuid-12345678",
+            "session_api_key": "session-key-123",
+        }
+
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations/fake-uuid-12345678",
+            json=detail_data,
+            status=200,
+        )
+
+        # Mock workspace archive download
+        archive_data = b"fake zip content"
+        responses.add(
+            responses.GET,
+            "https://runtime.test.com/api/conversations/fake-uuid-12345678/zip-directory",
+            body=archive_data,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("builtins.open", mock_open()) as mock_file:
+                result = self.runner.invoke(conv, ["ws-download", "fake-uuid-12345678"])
+
+                assert result.exit_code == 0
+                assert "Downloading workspace for: Test Conversation" in result.output
+                assert "Workspace downloaded successfully" in result.output
+                mock_file.assert_called_once_with("fake-uui.zip", "wb")
+
+    @responses.activate
+    def test_download_command_with_output_file(self):
+        """Test workspace download with custom output filename."""
+        # Mock conversation list for ID resolution
+        list_data = self._load_and_fix_conversations_fixture(
+            "conversations_list_success.json"
+        )
+
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations",
+            json=list_data,
+            status=200,
+        )
+
+        detail_data = {
+            "id": "fake-uuid-12345678",
+            "title": "Test Conversation",
+            "url": "https://runtime.test.com/conversation/fake-uuid-12345678",
+            "session_api_key": "session-key-123",
+        }
+
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations/fake-uuid-12345678",
+            json=detail_data,
+            status=200,
+        )
+
+        archive_data = b"fake zip content"
+        responses.add(
+            responses.GET,
+            "https://runtime.test.com/api/conversations/fake-uuid-12345678/zip-directory",
+            body=archive_data,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("builtins.open", mock_open()) as mock_file:
+                result = self.runner.invoke(
+                    conv, ["ws-download", "fake-uuid-12345678", "-o", "custom.zip"]
+                )
+
+                assert result.exit_code == 0
+                assert "Workspace downloaded successfully: custom.zip" in result.output
+                mock_file.assert_called_once_with("custom.zip", "wb")
+
+    @responses.activate
+    def test_download_command_error(self):
+        """Test workspace download with error."""
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.OpenHandsAPI") as mock_api_class:
+                mock_api = Mock()
+                mock_api.search_conversations.side_effect = Exception("Download error")
+                mock_api_class.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["ws-download", "fake-uuid-12345678"])
+
+                assert result.exit_code == 0
+                assert "Failed to download workspace: Download error" in result.output
+
+    @responses.activate
+    def test_changes_command_success(self):
+        """Test successful workspace changes display."""
+        list_data = self._load_and_fix_conversations_fixture(
+            "conversations_list_success.json"
+        )
+
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations",
+            json=list_data,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch(
+                "ohc.conversation_commands.show_workspace_changes"
+            ) as mock_show_changes:
+                result = self.runner.invoke(conv, ["ws-changes", "1"])
+
+                assert result.exit_code == 0
+                mock_show_changes.assert_called_once()
