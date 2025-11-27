@@ -318,7 +318,7 @@ Update package configuration and provide migration path from old CLI.
 **Acceptance criteria:**
 
 - `ohc` command is available after installation
-- Old `oh-conversation-manager` still works (deprecated)
+- Old `oh-conversation-manager`is removed
 - Clear migration instructions provided
 - Package metadata updated
 
