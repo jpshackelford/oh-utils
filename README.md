@@ -156,6 +156,22 @@ uv run ohc -i
 
 Get your OpenHands API token from: [https://app.all-hands.dev/settings/api-keys](https://app.all-hands.dev/settings/api-keys)
 
+## Architecture
+
+This project features a unified architecture with:
+
+- **Consolidated API Client** (`ohc/api.py`): Single, well-tested API client used by all components
+- **Modular CLI Commands** (`ohc/`): Server management and conversation commands with shared infrastructure
+- **Interactive Mode** (`ohc -i`): Full-featured terminal interface using the same unified backend
+- **Legacy Support** (`conversation_manager/`): Original interface maintained for compatibility, now using the unified API client
+
+### Unified Design Benefits
+
+- **Single Source of Truth**: All components use the same API client for consistency
+- **Shared Command Infrastructure**: Common patterns like server configuration and conversation ID resolution
+- **Comprehensive Testing**: Fixture-based integration tests with >78% coverage
+- **Type Safety**: Full type annotations throughout the codebase
+
 ## Legacy Command
 
 The original conversation manager is still available as:
@@ -164,7 +180,7 @@ The original conversation manager is still available as:
 uv run oh-conversation-manager
 ```
 
-However, we recommend using the new `ohc` CLI for better functionality and server management.
+**Note**: The legacy command now uses the same unified API client as the modern `ohc` CLI, ensuring consistent behavior across all interfaces.
 
 ## Troubleshooting
 

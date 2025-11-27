@@ -12,22 +12,45 @@ from typing import Any, Dict, Optional, cast
 
 
 class ConfigManager:
-    """Manages OpenHands Cloud CLI configuration."""
+    """
+    Manages OpenHands Cloud CLI configuration.
+
+    Handles server configuration storage and retrieval with secure file permissions.
+    Configuration is stored in JSON format following XDG Base Directory Specification.
+
+    Attributes:
+        config_dir: Path to configuration directory
+        config_file: Path to configuration file
+    """
 
     def __init__(self) -> None:
+        """Initialize configuration manager and ensure config directory exists."""
         self.config_dir = self._get_config_dir()
         self.config_file = self.config_dir / "config.json"
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_config_dir(self) -> Path:
-        """Get configuration directory following XDG Base Directory Specification."""
+        """
+        Get configuration directory following XDG Base Directory Specification.
+
+        Returns:
+            Path to configuration directory (~/.config/ohc or $XDG_CONFIG_HOME/ohc)
+        """
         xdg_config = os.getenv("XDG_CONFIG_HOME")
         if xdg_config:
             return Path(xdg_config) / "ohc"
         return Path.home() / ".config" / "ohc"
 
     def load_config(self) -> Dict[str, Any]:
-        """Load configuration from file."""
+        """
+        Load configuration from file.
+
+        Returns:
+            Dictionary containing configuration data with servers and default_server
+
+        Raises:
+            Exception: If configuration file cannot be read or parsed
+        """
         if not self.config_file.exists():
             return {"servers": {}, "default_server": None}
 
@@ -38,7 +61,15 @@ class ConfigManager:
             raise Exception(f"Failed to load configuration: {e}") from e
 
     def save_config(self, config: Dict[str, Any]) -> None:
-        """Save configuration to file with secure permissions."""
+        """
+        Save configuration to file with secure permissions.
+
+        Args:
+            config: Configuration dictionary to save
+
+        Raises:
+            Exception: If configuration file cannot be written
+        """
         try:
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=2)

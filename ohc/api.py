@@ -12,9 +12,27 @@ import requests
 
 
 class OpenHandsAPI:
-    """OpenHands API client for conversation management."""
+    """
+    Unified OpenHands API client for conversation management.
+
+    This client provides a single, well-tested interface for all OpenHands API
+    operations, supporting multiple server configurations and comprehensive error
+    handling.
+
+    Attributes:
+        api_key: OpenHands API key for authentication
+        base_url: Base URL for the OpenHands API endpoint
+        session: Configured requests session with authentication headers
+    """
 
     def __init__(self, api_key: str, base_url: str = "https://app.all-hands.dev/api/"):
+        """
+        Initialize the OpenHands API client.
+
+        Args:
+            api_key: OpenHands API key from https://app.all-hands.dev/settings/api-keys
+            base_url: Base URL for the API endpoint, defaults to production
+        """
         self.api_key = api_key
         self.base_url = base_url.rstrip("/") + "/"
         self.session = requests.Session()
@@ -23,7 +41,12 @@ class OpenHandsAPI:
         )
 
     def test_connection(self) -> bool:
-        """Test if the API key and URL are valid."""
+        """
+        Test if the API key and URL are valid.
+
+        Returns:
+            True if connection is successful, False otherwise
+        """
         try:
             response = self.session.get(urljoin(self.base_url, "options/models"))
             return response.status_code == 200
@@ -33,7 +56,19 @@ class OpenHandsAPI:
     def search_conversations(
         self, page_id: Optional[str] = None, limit: int = 20
     ) -> Dict[str, Any]:
-        """Search conversations with pagination."""
+        """
+        Search conversations with pagination support.
+
+        Args:
+            page_id: Optional page ID for pagination
+            limit: Maximum number of conversations to return (default: 20)
+
+        Returns:
+            Dictionary containing conversation results and pagination info
+
+        Raises:
+            Exception: If API key lacks permissions or other API errors occur
+        """
         url = urljoin(self.base_url, "conversations")
         params: Dict[str, Any] = {"limit": limit}
         if page_id:
@@ -53,7 +88,18 @@ class OpenHandsAPI:
             raise
 
     def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
-        """Get detailed information about a specific conversation."""
+        """
+        Get detailed information about a specific conversation.
+
+        Args:
+            conversation_id: Full conversation ID
+
+        Returns:
+            Dictionary containing detailed conversation information
+
+        Raises:
+            Exception: If conversation not found or API error occurs
+        """
         url = urljoin(self.base_url, f"conversations/{conversation_id}")
         response = self.session.get(url)
         response.raise_for_status()
@@ -67,7 +113,19 @@ class OpenHandsAPI:
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Start/wake up a conversation."""
+        """
+        Start/wake up a conversation.
+
+        Args:
+            conversation_id: Full conversation ID
+            providers_set: Optional list of providers to use (defaults to ["github"])
+
+        Returns:
+            Dictionary containing conversation start response with runtime info
+
+        Raises:
+            Exception: If conversation cannot be started or API error occurs
+        """
         url = urljoin(self.base_url, f"conversations/{conversation_id}/start")
 
         # Prepare the request body with providers_set
@@ -89,7 +147,20 @@ class OpenHandsAPI:
         runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> List[Dict[str, str]]:
-        """Get git changes (uncommitted files) for a conversation."""
+        """
+        Get git changes (uncommitted files) for a conversation.
+
+        Args:
+            conversation_id: Full conversation ID
+            runtime_url: Optional runtime URL for active conversations
+            session_api_key: Optional session API key for runtime requests
+
+        Returns:
+            List of dictionaries containing file change information
+
+        Raises:
+            Exception: If git repository is not available or API error occurs
+        """
         if runtime_url:
             # Use runtime URL for active conversations
             url = urljoin(

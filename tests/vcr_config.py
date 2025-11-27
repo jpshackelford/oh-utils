@@ -6,6 +6,7 @@ HTTP interactions for integration testing.
 """
 
 from pathlib import Path
+from typing import Any
 
 import vcr  # type: ignore[import-untyped]
 
@@ -36,7 +37,7 @@ def create_vcr() -> vcr.VCR:
     )
 
 
-def sanitize_request(request):
+def sanitize_request(request) -> None:
     """Sanitize sensitive data from requests before recording."""
     # Replace API keys in headers
     if "X-Session-API-Key" in request.headers:
@@ -57,7 +58,7 @@ def sanitize_request(request):
     return request
 
 
-def sanitize_response(response):
+def sanitize_response(response) -> None:
     """Sanitize sensitive data from responses before recording."""
     # Only process JSON responses
     if response["headers"].get("content-type", [""])[0].startswith("application/json"):
@@ -77,7 +78,7 @@ def sanitize_response(response):
     return response
 
 
-def _sanitize_json_data(data):
+def _sanitize_json_data(data) -> Any:
     """Recursively sanitize JSON data."""
     if isinstance(data, dict):
         sanitized = {}

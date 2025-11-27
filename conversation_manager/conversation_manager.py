@@ -147,7 +147,7 @@ class APIKeyManager:
                     print(f"✓ Using API key from {env_var} environment variable")
                     return env_key
                 except Exception as e:
-                    print(f"⚠ Environment API key error: {e}")
+                    print(f"⚠️  Environment API key error: {e}")
 
         # Check stored key
         stored_key = self.get_stored_key()
@@ -159,7 +159,7 @@ class APIKeyManager:
                     print("✓ Using stored API key")
                     return stored_key
                 except Exception as e:
-                    print(f"⚠ Stored API key error: {e}")
+                    print(f"⚠️  Stored API key error: {e}")
 
         # Prompt for new key
         print("\nPlease get your OpenHands API key from:")
