@@ -408,9 +408,9 @@ The fixture-based approach provides:
 
 #### 5.3.1 CLI Command Tests
 
-- [ ] `tests/test_cli_integration.py` - End-to-end CLI command tests using fixtures
-- [ ] `tests/test_config.py` - Configuration management tests
-- [ ] Extend fixture coverage for any missing API endpoints
+- [x] `tests/test_cli_integration.py` - End-to-end CLI command tests using fixtures
+- [x] `tests/test_config.py` - Configuration management tests
+- [x] Extend fixture coverage for any missing API endpoints
 
 #### 5.3.2 Interactive Mode Tests
 
