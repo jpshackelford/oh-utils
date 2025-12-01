@@ -74,7 +74,7 @@ interface OpenHandsEvent {
 
 ```
 ┌─ OpenHands Conversation Manager ─────────────────────────────────────────────────────────────────┐
-│ 🔄 Auto-refresh: 2m │ 📡 Connected │ 🎯 Active: 3 │ ⏸️  Waiting: 1 │ 🔍 Search │ ➕ New │ ⚙️  Settings │
+│ 🔄 Auto-refresh: 2m │ 📡 Connected │ 🎯 Active: 3 │ ⏸️  Waiting: 1 │ 🔍 Search │ ➕ New │ 📺 Monitor │ ⚙️  │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────┤
 │ #  │ Status │ ID       │ Runtime ID    │ Title                           │ Last Activity    │ Actions │
 ├────┼────────┼──────────┼───────────────┼─────────────────────────────────┼──────────────────┼─────────┤
@@ -102,27 +102,47 @@ When a conversation is selected, details panel slides down below the table:
 
 ```
 ┌─ Conversation Details: Build chat application (a1b2c3d4) ─────────────────────────────────────────┐
-│ Status: 🟢 RUNNING │ Runtime: work-1-xyz123 │ Created: Dec 1, 10:30 AM │ [Close Details] [Wake] [Stop] │
-├─────────────────────┬───────────────────────────────────────────────────────────────────────────────┤
-│ 📁 Changed Files    │ 💬 Recent Activity                                                           │
-│ ┌─────────────────┐ │ ┌───────────────────────────────────────────────────────────────────────┐ │
-│ │ ├── app.py (M)  │ │ │ 2m ago: 🔧 run: npm install express                                   │ │
-│ │ ├── config.json │ │ │ 3m ago: 💭 Agent: Installing Express framework for the server        │ │
-│ │ ├── package.json│ │ │ 4m ago: ✏️  edit: app.js (added route handlers)                       │ │
-│ │ └── routes/     │ │ │ 5m ago: 💬 User: Add authentication to the login endpoint            │ │
-│ │     └── auth.js │ │ │ 6m ago: 🔧 run: mkdir routes                                          │ │
-│ └─────────────────┘ │ │ 7m ago: ✏️  edit: app.js (created basic Express server)               │ │
-│ [📥 Download Files] │ │ 8m ago: 💭 Agent: I'll create a basic Express.js server structure    │ │
-│ [📦 Download All]   │ └───────────────────────────────────────────────────────────────────────┘ │
-│                     │ [📜 View Full History] [💬 Send Message]                                     │
-└─────────────────────┴───────────────────────────────────────────────────────────────────────────────┘
+│                                                                    [Close Details] [Wake] [Stop] │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 📋 Conversation Metadata                                                                          │
+│                                                                                                   │
+│ ID: a1b2c3d4e5f6g7h8                    Status: 🟢 RUNNING                                       │
+│ Title: Build chat application           Runtime: work-1-xyz123                                   │
+│ Created: Dec 1, 2024 10:30 AM          Last Updated: Dec 1, 2024 2:15 PM                       │
+│ Runtime Status: RUNNING                 Session API Key: sk-abc123...                           │
+│ URL: https://work-1-xyz123.prod-runtime.all-hands.dev                                           │
+│                                                                                                   │
+│ 💬 Initial User Prompt                                                                            │
+│ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ Help me build a real-time chat application using React and Socket.io. I want users to be   │ │
+│ │ able to join different chat rooms, send messages, and see who's online. Include user        │ │
+│ │ authentication and message persistence.                                                      │ │
+│ └─────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                   │
+│ 🚀 First Event (Agent Response)                                                                   │
+│ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ I'll help you build a real-time chat application! Let me start by creating the project      │ │
+│ │ structure and setting up the basic components: React frontend, Node.js backend with         │ │
+│ │ Socket.io, user authentication, and MongoDB for message persistence.                        │ │
+│ └─────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                   │
+│ 🏁 Latest Event                                                                                   │
+│ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ Successfully implemented user authentication with JWT tokens. The chat rooms are now        │ │
+│ │ working with real-time messaging. Testing the online user presence feature...               │ │
+│ └─────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                   │
+│ [📥 Download Changed Files] [📦 Download Workspace] [📜 View Full History] [💬 Send Message]     │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Features**:
-- **Collapsible details**: Slides down when conversation selected
-- **File tree**: Shows changed files with modification indicators
-- **Activity feed**: Recent actions with icons and brief descriptions
-- **Action buttons**: Download files, send messages, view full history
+- **Single column layout**: Clean, focused information display
+- **Complete metadata**: All information from current "show" command
+- **Initial prompt**: Shows the original user request that started the conversation
+- **First event**: Agent's initial response to understand the approach
+- **Latest event**: Most recent activity to see current progress
+- **Action buttons**: Download files, workspace, view history, send messages
 
 ### 3.3 Active Monitoring View
 
@@ -130,7 +150,7 @@ Special view for monitoring only running conversations:
 
 ```
 ┌─ Active Conversations Monitor ─────────────────────────────────────────────────────────────────────┐
-│ 🔄 Live Updates │ 📡 3 Active │ ⏸️  1 Waiting │ [Back to All] [Settings] │ Auto-scroll: ON │ 🔇 Quiet │
+│ 🔄 Live Updates │ 📡 3 Active │ ⏸️  1 Waiting │ [📋 Back to All Conversations] [Settings] │ Auto-scroll: ON │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │ 🟢 Build chat application (a1b2c3d4) │ work-1-xyz123                                                │
 │    💭 Agent: Now I'll add error handling to the authentication middleware...                        │
@@ -143,28 +163,19 @@ Special view for monitoring only running conversations:
 │ ⏸️  API server development (e5f6g7h8) │ work-2-abc456                                               │
 │    💬 Waiting for input: "Should I use JWT or session-based auth?"                                  │
 │    ⏰ Waiting since: 5 minutes ago                                                                   │
-│    [💬 Send Response] ────────────────────────────────────────────────────────────────────────────│
-│    │ Quick responses: [JWT] [Sessions] [Let me think...] │ Custom: [________________] [Send] │     │
-│    └──────────────────────────────────────────────────────────────────────────────────────────────│
+│    💬 Press 'r' to reply                                                                            │
 │                                                                                                     │
 │ 🟡 Web scraper (q7r8s9t0) │ work-4-ghi012                                                          │
 │    😴 Idle: No activity for 30 minutes                                                              │
 │    🔧 Last action: Successfully scraped 1,247 product listings                                      │
-├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Activity Log (last 10 events):                                                                     │
-│ 14:32:15 │ chat-app     │ 🔧 run: npm test                                                          │
-│ 14:31:45 │ data-proc    │ ✏️  edit: config.yaml (updated batch size)                               │
-│ 14:31:20 │ chat-app     │ 💭 Agent: Running tests to verify authentication works                   │
-│ 14:30:55 │ api-server   │ ❓ Waiting: Authentication method decision needed                         │
-│ 14:30:30 │ data-proc    │ 🔧 run: python validate_schema.py                                        │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Features**:
 - **Live activity feed**: Real-time updates of what agents are doing
 - **Compact conversation cards**: 2-3 lines per active conversation
-- **Waiting conversation interaction**: Quick response options for waiting conversations
-- **Activity log**: Chronological feed of recent events across all conversations
+- **Toggle back to all conversations**: Clear navigation back to main list
+- **Simple reply prompt**: Just indicate key press needed to open reply modal
 - **Visual status indicators**: Different icons for different activity types
 
 ### 3.4 New Conversation Dialog
@@ -184,9 +195,6 @@ Modal dialog for starting new conversations:
                     │ └──────────────────────────────────────────────────┘ │
                     │                                                      │
                     │ ⚙️  Advanced Options: [Show ▼]                       │
-                    │                                                      │
-                    │ 📋 Quick Templates:                                   │
-                    │ [Web App] [API] [Data Analysis] [DevOps] [Debug]     │
                     │                                                      │
                     │              [Cancel] [Start Conversation]           │
                     └──────────────────────────────────────────────────────┘
