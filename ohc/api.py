@@ -120,8 +120,7 @@ class OpenHandsAPI:
         runtime_url: Optional[str] = None,
         session_api_key: Optional[str] = None,
     ) -> Optional[str]:
-        """Get file content from conversation workspace using the selected API version.
-        """
+        """Get file content from conversation workspace."""
         if self.version == "v0":
             # v0 API has an extra session_api_key parameter
             return cast("V0API", self._client).get_file_content(
