@@ -20,7 +20,7 @@ class TestConversationCommandsCLI:
 
     def _load_and_fix_conversations_fixture(self, fixture_name: str):
         """Load VCR fixture and transform it for API mocking."""
-        fixture_path = Path(__file__).parent / "fixtures" / "sanitized" / fixture_name
+        fixture_path = Path(__file__).parent / "fixtures" / "v0" / "sanitized" / fixture_name
         with open(fixture_path) as f:
             vcr_data = json.load(f)
             fixture_data = vcr_data["response"]["json"]
@@ -30,7 +30,7 @@ class TestConversationCommandsCLI:
 
     def _load_conversation_detail_fixture(self, fixture_name: str):
         """Load conversation detail fixture."""
-        fixture_path = Path(__file__).parent / "fixtures" / "sanitized" / fixture_name
+        fixture_path = Path(__file__).parent / "fixtures" / "v0" / "sanitized" / fixture_name
         with open(fixture_path) as f:
             vcr_data = json.load(f)
             return vcr_data["response"]["json"]
@@ -244,6 +244,7 @@ class TestConversationCommandsCLI:
         list_fixture = (
             Path(__file__).parent
             / "fixtures"
+            / "v0"
             / "sanitized"
             / "conversations_list_success.json"
         )
@@ -302,10 +303,10 @@ class TestConversationCommandsCLI:
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.OpenHandsAPI") as mock_api_class:
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.side_effect = Exception("API Error")
-                mock_api_class.return_value = mock_api
+                mock_create_api.return_value = mock_api
 
                 result = self.runner.invoke(conv, ["list"])
 
@@ -508,7 +509,6 @@ class TestConversationCommandsCLI:
                 assert "Workspace downloaded successfully: custom.zip" in result.output
                 mock_file.assert_called_once_with("custom.zip", "wb")
 
-    @responses.activate
     def test_download_command_error(self):
         """Test workspace download with error."""
         with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
@@ -516,10 +516,28 @@ class TestConversationCommandsCLI:
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.OpenHandsAPI") as mock_api_class:
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
-                mock_api.search_conversations.side_effect = Exception("Download error")
-                mock_api_class.return_value = mock_api
+                
+                # Mock ID resolution - return matching conversation
+                mock_api.search_conversations.return_value = {
+                    "results": [
+                        {"conversation_id": "fake-uuid-12345678-full-id", "title": "Test Conversation"}
+                    ]
+                }
+                
+                # Mock conversation details
+                mock_api.get_conversation.return_value = {
+                    "id": "fake-uuid-12345678-full-id",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/fake-uuid-12345678-full-id",
+                    "session_api_key": "session-key"
+                }
+                
+                # Mock the download to throw an error (this is what we want to test)
+                mock_api.download_workspace_archive.side_effect = Exception("Download error")
+                
+                mock_create_api.return_value = mock_api
 
                 result = self.runner.invoke(conv, ["ws-download", "fake-uuid-12345678"])
 

@@ -10,7 +10,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 import click
 
-from .api import OpenHandsAPI
+from .api import OpenHandsAPI, create_api_client
 from .config import ConfigManager
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -45,7 +45,17 @@ def with_server_config(func: F) -> F:
                 )
             return None
 
-        api = OpenHandsAPI(server_config["api_key"], server_config["url"])
+        # Get API version from context (safely handle cases where no context exists)
+        api_version = "v0"  # default
+        try:
+            ctx = click.get_current_context()
+            if ctx.obj:
+                api_version = ctx.obj.get("api_version", "v0")
+        except RuntimeError:
+            # No active click context (e.g., in tests), use default
+            pass
+        
+        api = create_api_client(server_config["api_key"], server_config["url"], api_version)
         kwargs["api"] = api
         return func(*args, **kwargs)
 

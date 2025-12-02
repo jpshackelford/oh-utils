@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 # Import consolidated API client
-from ohc.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 # Import shared display functionality
 try:

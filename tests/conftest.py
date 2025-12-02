@@ -13,7 +13,7 @@ import pytest
 import responses
 from requests import Session
 
-from ohc.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 # Try to import VCR.py components
 try:
@@ -37,8 +37,8 @@ def restore_api_init():
 
 @pytest.fixture
 def fixtures_dir() -> Path:
-    """Return the path to the sanitized fixtures directory."""
-    return Path(__file__).parent / "fixtures" / "sanitized"
+    """Return the path to the v0 sanitized fixtures directory."""
+    return Path(__file__).parent / "fixtures" / "v0" / "sanitized"
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def load_fixture():
 
     def _load_fixture(fixture_name: str, fixtures_dir: Path = None) -> Dict[str, Any]:
         if fixtures_dir is None:
-            fixtures_dir = Path(__file__).parent / "fixtures" / "sanitized"
+            fixtures_dir = Path(__file__).parent / "fixtures" / "v0" / "sanitized"
 
         fixture_file = fixtures_dir / f"{fixture_name}.json"
         if not fixture_file.exists():

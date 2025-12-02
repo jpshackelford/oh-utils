@@ -28,8 +28,8 @@ class TestServerCommands:
         assert "Manage OpenHands server configurations" in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_with_options(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_with_options(self, mock_create_api, mock_config_class):
         """Test adding server with all options provided."""
         # Setup mocks
         mock_config = MagicMock()
@@ -39,7 +39,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -67,8 +67,8 @@ class TestServerCommands:
         )
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_with_prompts(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_with_prompts(self, mock_create_api, mock_config_class):
         """Test adding server with interactive prompts."""
         # Setup mocks
         mock_config = MagicMock()
@@ -78,7 +78,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -97,8 +97,8 @@ class TestServerCommands:
         )
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_url_normalization(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_url_normalization(self, mock_create_api, mock_config_class):
         """Test URL normalization during server addition."""
         # Setup mocks
         mock_config = MagicMock()
@@ -108,7 +108,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
 
@@ -125,8 +125,8 @@ class TestServerCommands:
         )
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_connection_failure(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_connection_failure(self, mock_create_api, mock_config_class):
         """Test adding server with connection failure."""
         # Setup mocks
         mock_config = MagicMock()
@@ -135,7 +135,7 @@ class TestServerCommands:
 
         mock_api = MagicMock()
         mock_api.test_connection.return_value = False
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -157,8 +157,8 @@ class TestServerCommands:
         mock_config.add_server.assert_called_once()
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_connection_exception(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_connection_exception(self, mock_create_api, mock_config_class):
         """Test adding server with connection exception."""
         # Setup mocks
         mock_config = MagicMock()
@@ -167,7 +167,7 @@ class TestServerCommands:
 
         mock_api = MagicMock()
         mock_api.test_connection.side_effect = Exception("Network error")
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -187,8 +187,8 @@ class TestServerCommands:
         assert "✗ Connection failed: Network error" in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_existing_overwrite(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_existing_overwrite(self, mock_create_api, mock_config_class):
         """Test adding server that already exists with overwrite."""
         # Setup mocks
         mock_config = MagicMock()
@@ -198,7 +198,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -222,8 +222,8 @@ class TestServerCommands:
         )
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_existing_cancel(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_existing_cancel(self, mock_create_api, mock_config_class):
         """Test adding server that already exists with cancel."""
         # Setup mocks
         mock_config = MagicMock()
@@ -251,8 +251,8 @@ class TestServerCommands:
         mock_config.add_server.assert_not_called()
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_add_server_limited_permissions(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_add_server_limited_permissions(self, mock_create_api, mock_config_class):
         """Test adding server with limited API permissions."""
         # Setup mocks
         mock_config = MagicMock()
@@ -262,7 +262,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.side_effect = Exception("Permission denied")
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(
@@ -465,8 +465,8 @@ class TestServerCommands:
         assert "✗ Failed to set default server: Set default error" in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_test_server_success(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_test_server_success(self, mock_create_api, mock_config_class):
         """Test server connection test success."""
         mock_config = MagicMock()
         mock_config.get_server_config.return_value = {
@@ -478,7 +478,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(test, ["test-server"])
@@ -501,8 +501,8 @@ class TestServerCommands:
         assert "✗ Server 'nonexistent' not found." in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_test_server_connection_failure(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_test_server_connection_failure(self, mock_create_api, mock_config_class):
         """Test server connection test failure."""
         mock_config = MagicMock()
         mock_config.get_server_config.return_value = {
@@ -513,7 +513,7 @@ class TestServerCommands:
 
         mock_api = MagicMock()
         mock_api.test_connection.return_value = False
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(test, ["test-server"])
@@ -522,8 +522,8 @@ class TestServerCommands:
         assert "✗ Connection test failed" in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_test_server_exception(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_test_server_exception(self, mock_create_api, mock_config_class):
         """Test server connection test with exception."""
         mock_config = MagicMock()
         mock_config.get_server_config.return_value = {
@@ -534,7 +534,7 @@ class TestServerCommands:
 
         mock_api = MagicMock()
         mock_api.test_connection.side_effect = Exception("Connection error")
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(test, ["test-server"])
@@ -556,8 +556,8 @@ class TestServerCommands:
         assert "✗ No servers configured." in result.output
 
     @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.OpenHandsAPI")
-    def test_test_default_server_success(self, mock_api_class, mock_config_class):
+    @patch("ohc.server_commands.create_api_client")
+    def test_test_default_server_success(self, mock_create_api, mock_config_class):
         """Test testing default server successfully."""
         mock_config = MagicMock()
         mock_config.get_server_config.return_value = {
@@ -572,7 +572,7 @@ class TestServerCommands:
         mock_api = MagicMock()
         mock_api.test_connection.return_value = True
         mock_api.search_conversations.return_value = {"results": []}
-        mock_api_class.return_value = mock_api
+        mock_create_api.return_value = mock_api
 
         runner = CliRunner()
         result = runner.invoke(test, [])

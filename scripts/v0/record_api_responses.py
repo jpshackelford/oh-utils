@@ -25,7 +25,7 @@ class APIResponseRecorder:
         self.session.headers.update(
             {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
         )
-        self.fixtures_dir = Path(__file__).parent.parent / "tests" / "fixtures"
+        self.fixtures_dir = Path(__file__).parent.parent / "tests" / "fixtures" / "v0"
         self.fixtures_dir.mkdir(parents=True, exist_ok=True)
 
     def record_response(

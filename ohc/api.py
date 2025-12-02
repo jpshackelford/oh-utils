@@ -1,347 +1,228 @@
 """
-OpenHands API client for the ohc CLI.
+OpenHands API client with version selection support.
 
-Refactored from the original conversation_manager module to support multiple server
-configurations.
+This module provides a unified interface for accessing both v0 and v1
+OpenHands APIs, with automatic version selection based on configuration
+or explicit version parameters.
 """
 
-from typing import Any, Dict, List, Optional, cast
-from urllib.parse import urljoin
+from typing import Any, Dict, List, Optional, Union
 
-import requests
+from .v0.api import OpenHandsAPI as V0API
+from .v1.api import OpenHandsAPI as V1API
 
 
 class OpenHandsAPI:
     """
-    Unified OpenHands API client for conversation management.
-
-    This client provides a single, well-tested interface for all OpenHands API
-    operations, supporting multiple server configurations and comprehensive error
-    handling.
-
-    Attributes:
-        api_key: OpenHands API key for authentication
-        base_url: Base URL for the OpenHands API endpoint
-        session: Configured requests session with authentication headers
+    Unified OpenHands API client with version selection.
+    
+    This wrapper class provides access to both v0 and v1 APIs,
+    automatically selecting the appropriate version based on
+    configuration or explicit parameters.
     """
 
-    def __init__(self, api_key: str, base_url: str = "https://app.all-hands.dev/api/"):
+    def __init__(
+        self, 
+        api_key: str, 
+        base_url: str = "https://app.all-hands.dev/api/",
+        version: str = "v0"
+    ):
         """
-        Initialize the OpenHands API client.
+        Initialize the OpenHands API client with version selection.
 
         Args:
             api_key: OpenHands API key from https://app.all-hands.dev/settings/api-keys
             base_url: Base URL for the API endpoint, defaults to production
+            version: API version to use ("v0" or "v1"), defaults to "v0"
         """
         self.api_key = api_key
-        self.base_url = base_url.rstrip("/") + "/"
-        self.session = requests.Session()
-        self.session.headers.update(
-            {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
-        )
+        self.base_url = base_url
+        self.version = version
+        
+        if version == "v0":
+            self._client = V0API(api_key, base_url)
+        elif version == "v1":
+            self._client = V1API(api_key, base_url)
+        else:
+            raise ValueError(f"Unsupported API version: {version}. Use 'v0' or 'v1'.")
+
+    @property
+    def client(self) -> Union[V0API, V1API]:
+        """Get the underlying API client."""
+        return self._client
 
     def test_connection(self) -> bool:
-        """
-        Test if the API key and URL are valid.
-
-        Returns:
-            True if connection is successful, False otherwise
-        """
-        try:
-            response = self.session.get(urljoin(self.base_url, "options/models"))
-            return response.status_code == 200
-        except Exception:
-            return False
+        """Test if the API key and URL are valid."""
+        return self._client.test_connection()
 
     def search_conversations(
-        self, page_id: Optional[str] = None, limit: int = 20
+        self,
+        query: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
     ) -> Dict[str, Any]:
-        """
-        Search conversations with pagination support.
+        """Search conversations using the selected API version."""
+        if self.version == "v0":
+            # v0 API uses page_id and limit, returns a dict with results
+            # For now, ignore query and offset since v0 doesn't support them
+            return self._client.search_conversations(limit=limit)
+        else:
+            # v1 API supports query, limit, and offset directly
+            # Wrap the results in a dict to match v0 format
+            results = self._client.search_conversations(query=query, limit=limit, offset=offset)
+            return {"results": results}
 
-        Args:
-            page_id: Optional page ID for pagination
-            limit: Maximum number of conversations to return (default: 20)
+    def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+        """Get conversation details using the selected API version."""
+        return self._client.get_conversation(conversation_id)
 
-        Returns:
-            Dictionary containing conversation results and pagination info
-
-        Raises:
-            Exception: If API key lacks permissions or other API errors occur
-        """
-        url = urljoin(self.base_url, "conversations")
-        params: Dict[str, Any] = {"limit": limit}
-        if page_id:
-            params["page_id"] = page_id
-
-        try:
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
-            return cast("Dict[str, Any]", response.json())
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                raise Exception(
-                    "API key does not have permission to access conversations. "
-                    "Please ensure you're using a full API key from your OpenHands "
-                    "settings."
-                ) from e
-            raise
-
-    def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
-        """
-        Get detailed information about a specific conversation.
-
-        Args:
-            conversation_id: Full conversation ID
-
-        Returns:
-            Dictionary containing detailed conversation information
-
-        Raises:
-            Exception: If conversation not found or API error occurs
-        """
-        url = urljoin(self.base_url, f"conversations/{conversation_id}")
-        response = self.session.get(url)
-        response.raise_for_status()
-
-        data = response.json()
-        if data is None:
-            raise Exception(f"Conversation '{conversation_id}' not found")
-
-        return cast("Dict[str, Any]", data)
-
-    def start_conversation(
-        self, conversation_id: str, providers_set: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """
-        Start/wake up a conversation.
-
-        Args:
-            conversation_id: Full conversation ID
-            providers_set: Optional list of providers to use (defaults to ["github"])
-
-        Returns:
-            Dictionary containing conversation start response with runtime info
-
-        Raises:
-            Exception: If conversation cannot be started or API error occurs
-        """
-        url = urljoin(self.base_url, f"conversations/{conversation_id}/start")
-
-        # Prepare the request body with providers_set
-        data = {"providers_set": providers_set or ["github"]}
-
-        try:
-            response = self.session.post(url, json=data)
-            if response.status_code != 200:
-                error_detail = f"HTTP {response.status_code}: {response.text}"
-                raise Exception(error_detail)
-            response.raise_for_status()
-            return cast("Dict[str, Any]", response.json())
-        except Exception as e:
-            raise Exception(f"API call failed - {str(e)}") from e
+    def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a new conversation using the selected API version."""
+        return self._client.start_conversation(conversation_data)
 
     def get_conversation_changes(
-        self,
-        conversation_id: str,
-        runtime_url: Optional[str] = None,
-        session_api_key: Optional[str] = None,
-    ) -> List[Dict[str, str]]:
-        """
-        Get git changes (uncommitted files) for a conversation.
-
-        Args:
-            conversation_id: Full conversation ID
-            runtime_url: Optional runtime URL for active conversations
-            session_api_key: Optional session API key for runtime requests
-
-        Returns:
-            List of dictionaries containing file change information
-
-        Raises:
-            Exception: If git repository is not available or API error occurs
-        """
-        if runtime_url:
-            # Use runtime URL for active conversations
-            url = urljoin(
-                runtime_url, f"api/conversations/{conversation_id}/git/changes"
-            )
-
-            # Use session API key for runtime requests
-            headers = {}
-            if session_api_key:
-                headers["X-Session-API-Key"] = session_api_key
-            else:
-                # Fallback to regular authorization
-                headers["Authorization"] = f"Bearer {self.api_key}"
+        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Get conversation workspace changes using the selected API version."""
+        if self.version == "v0":
+            # v0 API has an extra session_api_key parameter
+            return self._client.get_conversation_changes(conversation_id, runtime_url, session_api_key)
         else:
-            # Fallback to main app URL (though this likely won't work for git changes)
-            url = urljoin(self.base_url, f"conversations/{conversation_id}/git/changes")
-            headers = {}
-
-        try:
-            response = self.session.get(url, headers=headers)
-            if response.status_code == 404:
-                # Not a git repository or no changes
-                return []
-            elif response.status_code == 500:
-                # Server error - likely git repository issue
-                raise Exception("Git repository not available or corrupted")
-            response.raise_for_status()
-            return cast("List[Dict[str, str]]", response.json())
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                return []  # No git repository or no changes
-            elif e.response.status_code == 500:
-                raise Exception("Git repository not available or corrupted") from e
-            raise Exception(
-                f"Failed to get changes: HTTP {e.response.status_code}"
-            ) from e
-        except Exception as e:
-            raise Exception(f"API call failed - {str(e)}") from e
+            return self._client.get_conversation_changes(conversation_id, runtime_url)
 
     def get_file_content(
-        self,
-        conversation_id: str,
-        file_path: str,
-        runtime_url: Optional[str] = None,
-        session_api_key: Optional[str] = None,
-    ) -> str:
-        """Get the content of a specific file from the conversation workspace."""
-        if runtime_url:
-            # Use runtime URL for active conversations
-            url = urljoin(
-                runtime_url, f"api/conversations/{conversation_id}/select-file"
-            )
-
-            # Use session API key for runtime requests
-            headers = {}
-            if session_api_key:
-                headers["X-Session-API-Key"] = session_api_key
-            else:
-                # Fallback to regular authorization
-                headers["Authorization"] = f"Bearer {self.api_key}"
+        self, conversation_id: str, file_path: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+    ) -> Optional[str]:
+        """Get file content from conversation workspace using the selected API version."""
+        if self.version == "v0":
+            # v0 API has an extra session_api_key parameter
+            return self._client.get_file_content(conversation_id, file_path, runtime_url, session_api_key)
         else:
-            # Fallback to main app URL
-            url = urljoin(self.base_url, f"conversations/{conversation_id}/select-file")
-            headers = {}
-
-        params = {"file": file_path}
-
-        try:
-            response = self.session.get(url, headers=headers, params=params)
-            response.raise_for_status()
-
-            # API returns JSON with 'code' key containing file content
-            result = response.json()
-            if isinstance(result, dict) and "code" in result:
-                return cast("str", result["code"])
-            else:
-                # Fallback if response format is different
-                return str(result)
-
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                raise Exception(f"File not found: {file_path}") from e
-            elif e.response.status_code == 401:
-                raise Exception(
-                    "Authentication failed - invalid session API key"
-                ) from e
-            elif e.response.status_code == 500:
-                raise Exception("Server error - file may be inaccessible") from e
-            raise Exception(
-                f"Failed to get file content: HTTP {e.response.status_code}"
-            ) from e
-        except Exception as e:
-            raise Exception(f"API call failed - {str(e)}") from e
+            return self._client.get_file_content(conversation_id, file_path, runtime_url)
 
     def download_workspace_archive(
-        self,
-        conversation_id: str,
-        runtime_url: Optional[str] = None,
-        session_api_key: Optional[str] = None,
-    ) -> bytes:
-        """Download the workspace archive as a ZIP file."""
-        if runtime_url:
-            # Use runtime URL for active conversations
-            url = urljoin(
-                runtime_url, f"api/conversations/{conversation_id}/zip-directory"
-            )
-
-            # Use session API key for runtime requests
-            headers = {}
-            if session_api_key:
-                headers["X-Session-API-Key"] = session_api_key
-            else:
-                # Fallback to regular authorization
-                headers["Authorization"] = f"Bearer {self.api_key}"
+        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+    ) -> Optional[bytes]:
+        """Download workspace archive using the selected API version."""
+        if self.version == "v0":
+            # v0 API has an extra session_api_key parameter
+            return self._client.download_workspace_archive(conversation_id, runtime_url, session_api_key)
         else:
-            # Fallback to main app URL
-            url = urljoin(
-                self.base_url, f"conversations/{conversation_id}/zip-directory"
-            )
-            headers = {}
-
-        try:
-            response = self.session.get(url, headers=headers)
-            response.raise_for_status()
-            return response.content
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                raise Exception(
-                    f"Workspace not found for conversation {conversation_id}"
-                ) from e
-            elif e.response.status_code == 401:
-                raise Exception(
-                    "Authentication failed - invalid session API key"
-                ) from e
-            elif e.response.status_code == 500:
-                raise Exception("Server error - workspace may be inaccessible") from e
-            raise Exception(
-                f"Failed to download workspace: HTTP {e.response.status_code}"
-            ) from e
-        except Exception as e:
-            raise Exception(f"API call failed - {str(e)}") from e
+            return self._client.download_workspace_archive(conversation_id, runtime_url)
 
     def get_trajectory(
-        self, conversation_id: str, runtime_url: str, session_api_key: str
-    ) -> Dict[str, Any]:
-        """Get trajectory data for a conversation."""
-        if runtime_url:
-            # Use runtime URL for active conversations
-            url = urljoin(
-                runtime_url, f"api/conversations/{conversation_id}/trajectory"
-            )
-
-            # Use session API key for runtime requests
-            headers = {}
-            if session_api_key:
-                headers["X-Session-API-Key"] = session_api_key
-            else:
-                # Fallback to regular authorization
-                headers["Authorization"] = f"Bearer {self.api_key}"
+        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get conversation trajectory using the selected API version."""
+        if self.version == "v0":
+            # v0 API requires runtime_url and session_api_key as required parameters
+            if not runtime_url:
+                return None
+            return self._client.get_trajectory(conversation_id, runtime_url, session_api_key or self.api_key)
         else:
-            # Fallback to main app URL
-            url = urljoin(self.base_url, f"conversations/{conversation_id}/trajectory")
-            headers = {}
+            return self._client.get_trajectory(conversation_id, runtime_url)
 
-        try:
-            response = self.session.get(url, headers=headers)
-            response.raise_for_status()
-            return cast("Dict[str, Any]", response.json())
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                raise Exception(
-                    f"Trajectory not found for conversation {conversation_id}"
-                ) from e
-            elif e.response.status_code == 401:
-                raise Exception(
-                    "Authentication failed - invalid session API key"
-                ) from e
-            elif e.response.status_code == 500:
-                raise Exception("Server error - trajectory may be inaccessible") from e
-            raise Exception(
-                f"Failed to get trajectory: HTTP {e.response.status_code}"
-            ) from e
-        except Exception as e:
-            raise Exception(f"API call failed - {str(e)}") from e
+    # V1-specific methods (only available when using v1)
+    
+    def search_events(
+        self,
+        query: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search events using the v1 API.
+        
+        Raises:
+            AttributeError: If called with v0 API
+        """
+        if self.version != "v1":
+            raise AttributeError("search_events is only available in v1 API")
+        return self._client.search_events(
+            query=query, limit=limit, offset=offset, 
+            event_type=event_type, conversation_id=conversation_id
+        )
+
+    def get_events_count(
+        self,
+        query: Optional[str] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+    ) -> int:
+        """
+        Get count of events matching criteria using the v1 API.
+        
+        Raises:
+            AttributeError: If called with v0 API
+        """
+        if self.version != "v1":
+            raise AttributeError("get_events_count is only available in v1 API")
+        return self._client.get_events_count(
+            query=query, event_type=event_type, conversation_id=conversation_id
+        )
+
+    def create_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new event using the v1 API.
+        
+        Raises:
+            AttributeError: If called with v0 API
+        """
+        if self.version != "v1":
+            raise AttributeError("create_event is only available in v1 API")
+        return self._client.create_event(event_data)
+
+    def search_app_conversations(
+        self,
+        query: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        status: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search app conversations using the v1 API.
+        
+        Raises:
+            AttributeError: If called with v0 API
+        """
+        if self.version != "v1":
+            raise AttributeError("search_app_conversations is only available in v1 API")
+        return self._client.search_app_conversations(
+            query=query, limit=limit, offset=offset, status=status
+        )
+
+    def get_app_conversations_count(
+        self,
+        query: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> int:
+        """
+        Get count of app conversations matching criteria using the v1 API.
+        
+        Raises:
+            AttributeError: If called with v0 API
+        """
+        if self.version != "v1":
+            raise AttributeError("get_app_conversations_count is only available in v1 API")
+        return self._client.get_app_conversations_count(query=query, status=status)
+
+
+def create_api_client(
+    api_key: str, 
+    base_url: str = "https://app.all-hands.dev/api/",
+    version: str = "v0"
+) -> OpenHandsAPI:
+    """
+    Factory function to create an OpenHands API client.
+    
+    Args:
+        api_key: OpenHands API key
+        base_url: Base URL for the API endpoint
+        version: API version to use ("v0" or "v1")
+    
+    Returns:
+        Configured OpenHands API client
+    """
+    return OpenHandsAPI(api_key, base_url, version)

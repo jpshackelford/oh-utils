@@ -210,7 +210,7 @@ class FixtureSanitizer:
 
 def main():
     """Main function to run the sanitizer."""
-    fixtures_dir = Path(__file__).parent.parent / "tests" / "fixtures"
+    fixtures_dir = Path(__file__).parent.parent / "tests" / "fixtures" / "v0"
 
     if not fixtures_dir.exists():
         print(f"Error: Fixtures directory not found: {fixtures_dir}")

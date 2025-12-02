@@ -1,0 +1,14 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/events/count",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "15"
+  },
+  "params": {},
+  "json_data": null,
+  "json": {
+    "count": 42
+  }
+}

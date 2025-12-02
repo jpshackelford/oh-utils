@@ -11,7 +11,7 @@ import pytest
 import requests
 import responses
 
-from ohc.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestOpenHandsAPI:
