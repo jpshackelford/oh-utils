@@ -32,7 +32,7 @@ class TestOpenHandsV1APIIntegration:
             if not fixture_file.exists():
                 raise FileNotFoundError(f"V1 fixture file not found: {fixture_file}")
 
-            with open(fixture_file, "r") as f:
+            with open(fixture_file) as f:
                 return json.load(f)
 
         return _load_fixture
@@ -46,7 +46,7 @@ class TestOpenHandsV1APIIntegration:
     def test_test_connection_success(self, api_client, load_v1_fixture):
         """Test successful connection test using v1 events/count endpoint."""
         fixture = load_v1_fixture("events_count_basic")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -74,7 +74,7 @@ class TestOpenHandsV1APIIntegration:
     def test_search_events(self, api_client, load_v1_fixture):
         """Test searching events."""
         fixture = load_v1_fixture("events_search_basic")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -83,7 +83,7 @@ class TestOpenHandsV1APIIntegration:
         )
 
         events = api_client.search_events(limit=10, offset=0)
-        
+
         assert isinstance(events, list)
         assert len(events) == 2
         assert events[0]["type"] == "action"
@@ -93,7 +93,7 @@ class TestOpenHandsV1APIIntegration:
     def test_search_events_unauthorized(self, api_client, load_v1_fixture):
         """Test searching events with unauthorized access."""
         fixture = load_v1_fixture("events_search_unauthorized")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -103,14 +103,14 @@ class TestOpenHandsV1APIIntegration:
 
         with pytest.raises(Exception) as exc_info:
             api_client.search_events()
-        
+
         assert "Unauthorized" in str(exc_info.value)
 
     @responses.activate
     def test_get_events_count(self, api_client, load_v1_fixture):
         """Test getting events count."""
         fixture = load_v1_fixture("events_count_basic")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -125,7 +125,7 @@ class TestOpenHandsV1APIIntegration:
     def test_search_app_conversations(self, api_client, load_v1_fixture):
         """Test searching app conversations."""
         fixture = load_v1_fixture("app_conversations_search_basic")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -134,7 +134,7 @@ class TestOpenHandsV1APIIntegration:
         )
 
         conversations = api_client.search_app_conversations(limit=10, offset=0)
-        
+
         assert isinstance(conversations, list)
         assert len(conversations) == 2
         assert conversations[0]["title"] == "Test Conversation 1"
@@ -145,7 +145,7 @@ class TestOpenHandsV1APIIntegration:
     def test_search_conversations_compatibility(self, api_client, load_v1_fixture):
         """Test the compatibility method for searching conversations."""
         fixture = load_v1_fixture("app_conversations_search_basic")
-        
+
         responses.add(
             responses.GET,
             fixture["url"],
@@ -155,7 +155,7 @@ class TestOpenHandsV1APIIntegration:
 
         # This should delegate to search_app_conversations
         conversations = api_client.search_conversations(limit=10, offset=0)
-        
+
         assert isinstance(conversations, list)
         assert len(conversations) == 2
 
@@ -163,18 +163,18 @@ class TestOpenHandsV1APIIntegration:
         """Test that unimplemented compatibility methods raise NotImplementedError."""
         with pytest.raises(NotImplementedError):
             api_client.get_conversation("test_id")
-        
+
         with pytest.raises(NotImplementedError):
             api_client.start_conversation({})
-        
+
         with pytest.raises(NotImplementedError):
             api_client.get_conversation_changes("test_id")
-        
+
         with pytest.raises(NotImplementedError):
             api_client.get_file_content("test_id", "test_path")
-        
+
         with pytest.raises(NotImplementedError):
             api_client.download_workspace_archive("test_id")
-        
+
         with pytest.raises(NotImplementedError):
             api_client.get_trajectory("test_id")

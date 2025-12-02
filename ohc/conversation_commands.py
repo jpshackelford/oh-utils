@@ -150,11 +150,14 @@ def wake(
 
         # Get conversation details for title
         conv_details = api.get_conversation(conv_id)
-        title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        if conv_details:
+            title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        else:
+            title = f"Conversation {conv_id[:8]}..."
 
         click.echo(f"Waking up conversation: {title}")
 
-        result = api.start_conversation(conv_id)
+        result = api.start_conversation({"conversation_id": conv_id})
         click.echo("✓ Conversation started successfully")
 
         if "url" in result:
@@ -208,6 +211,9 @@ def ws_download(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
         conversation_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
         title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
@@ -226,6 +232,10 @@ def ws_download(
         archive_data = api.download_workspace_archive(
             conv_id, runtime_url, session_api_key
         )
+
+        if archive_data is None:
+            click.echo("✗ Failed to download workspace archive", err=True)
+            return
 
         # Determine output filename
         if not output:
@@ -304,6 +314,9 @@ def trajectory(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
         full_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
         title = conv_details.get("title", f"Conversation {conv_id[:8]}...")

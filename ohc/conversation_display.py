@@ -83,6 +83,9 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
     try:
         # Get fresh data from API
         data = api.get_conversation(conversation_id)
+        if data is None:
+            print(f"Error: Conversation {conversation_id} not found")
+            return
         conv = Conversation.from_api_response(data)
 
         print("\nConversation Details:")
@@ -171,6 +174,9 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
     try:
         # Get conversation details first
         data = api.get_conversation(conversation_id)
+        if data is None:
+            print(f"Error: Conversation {conversation_id} not found")
+            return
         conv = Conversation.from_api_response(data)
 
         if not conv.is_active():

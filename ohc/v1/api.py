@@ -49,8 +49,7 @@ class OpenHandsAPI:
         """
         try:
             response = self.session.get(
-                urljoin(self.base_url, "v1/events/count"),
-                timeout=10
+                urljoin(self.base_url, "v1/events/count"), timeout=10
             )
             return response.status_code == 200
         except Exception:
@@ -80,7 +79,7 @@ class OpenHandsAPI:
         Raises:
             requests.HTTPError: If the API request fails
         """
-        params = {"limit": limit, "offset": offset}
+        params: Dict[str, Any] = {"limit": limit, "offset": offset}
         if query:
             params["query"] = query
         if event_type:
@@ -89,16 +88,14 @@ class OpenHandsAPI:
             params["conversation_id"] = conversation_id
 
         response = self.session.get(
-            urljoin(self.base_url, "v1/events/search"),
-            params=params,
-            timeout=30
+            urljoin(self.base_url, "v1/events/search"), params=params, timeout=30
         )
-        
+
         if response.status_code == 401:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
-        
+
         response.raise_for_status()
-        return cast(List[Dict[str, Any]], response.json())
+        return cast("List[Dict[str, Any]]", response.json())
 
     def get_events_count(
         self,
@@ -129,16 +126,14 @@ class OpenHandsAPI:
             params["conversation_id"] = conversation_id
 
         response = self.session.get(
-            urljoin(self.base_url, "v1/events/count"),
-            params=params,
-            timeout=30
+            urljoin(self.base_url, "v1/events/count"), params=params, timeout=30
         )
-        
+
         if response.status_code == 401:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
-        
+
         response.raise_for_status()
-        return cast(int, response.json().get("count", 0))
+        return cast("int", response.json().get("count", 0))
 
     def create_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -154,16 +149,14 @@ class OpenHandsAPI:
             requests.HTTPError: If the API request fails
         """
         response = self.session.post(
-            urljoin(self.base_url, "v1/events"),
-            json=event_data,
-            timeout=30
+            urljoin(self.base_url, "v1/events"), json=event_data, timeout=30
         )
-        
+
         if response.status_code == 401:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
-        
+
         response.raise_for_status()
-        return cast(Dict[str, Any], response.json())
+        return cast("Dict[str, Any]", response.json())
 
     def search_app_conversations(
         self,
@@ -187,7 +180,7 @@ class OpenHandsAPI:
         Raises:
             requests.HTTPError: If the API request fails
         """
-        params = {"limit": limit, "offset": offset}
+        params: Dict[str, Any] = {"limit": limit, "offset": offset}
         if query:
             params["query"] = query
         if status:
@@ -196,14 +189,14 @@ class OpenHandsAPI:
         response = self.session.get(
             urljoin(self.base_url, "v1/app-conversations/search"),
             params=params,
-            timeout=30
+            timeout=30,
         )
-        
+
         if response.status_code == 401:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
-        
+
         response.raise_for_status()
-        return cast(List[Dict[str, Any]], response.json())
+        return cast("List[Dict[str, Any]]", response.json())
 
     def get_app_conversations_count(
         self,
@@ -232,18 +225,18 @@ class OpenHandsAPI:
         response = self.session.get(
             urljoin(self.base_url, "v1/app-conversations/count"),
             params=params,
-            timeout=30
+            timeout=30,
         )
-        
+
         if response.status_code == 401:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
-        
+
         response.raise_for_status()
-        return cast(int, response.json().get("count", 0))
+        return cast("int", response.json().get("count", 0))
 
     # Legacy compatibility methods - these delegate to v0-style behavior
     # but use v1 endpoints where possible
-    
+
     def search_conversations(
         self,
         query: Optional[str] = None,
@@ -269,7 +262,7 @@ class OpenHandsAPI:
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """
         Get conversation details (compatibility method).
-        
+
         Note: This method may need to be implemented based on actual v1 API
         endpoints when they become available.
 
@@ -292,7 +285,7 @@ class OpenHandsAPI:
     def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Start a new conversation (compatibility method).
-        
+
         Note: This method may need to be implemented based on actual v1 API
         endpoints when they become available.
 
@@ -307,9 +300,7 @@ class OpenHandsAPI:
         """
         # For now, this is a placeholder - actual v1 implementation
         # would depend on available endpoints
-        raise NotImplementedError(
-            "start_conversation not yet implemented for v1 API"
-        )
+        raise NotImplementedError("start_conversation not yet implemented for v1 API")
 
     def get_conversation_changes(
         self, conversation_id: str, runtime_url: Optional[str] = None
@@ -352,9 +343,7 @@ class OpenHandsAPI:
         """
         # For now, this is a placeholder - actual v1 implementation
         # would depend on available endpoints
-        raise NotImplementedError(
-            "get_file_content not yet implemented for v1 API"
-        )
+        raise NotImplementedError("get_file_content not yet implemented for v1 API")
 
     def download_workspace_archive(
         self, conversation_id: str, runtime_url: Optional[str] = None
@@ -396,6 +385,4 @@ class OpenHandsAPI:
         """
         # For now, this is a placeholder - actual v1 implementation
         # would depend on available endpoints
-        raise NotImplementedError(
-            "get_trajectory not yet implemented for v1 API"
-        )
+        raise NotImplementedError("get_trajectory not yet implemented for v1 API")

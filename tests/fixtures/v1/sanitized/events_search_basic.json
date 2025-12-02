@@ -25,7 +25,7 @@
       }
     },
     {
-      "id": "EVENT_ID_002", 
+      "id": "EVENT_ID_002",
       "type": "observation",
       "timestamp": "TIMESTAMP_002",
       "conversation_id": "CONV_ID_001",

@@ -26,7 +26,7 @@
     },
     {
       "id": "CONV_ID_002",
-      "title": "Test Conversation 2", 
+      "title": "Test Conversation 2",
       "status": "running",
       "created_at": "TIMESTAMP_003",
       "updated_at": "TIMESTAMP_004",

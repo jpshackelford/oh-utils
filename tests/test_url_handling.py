@@ -10,8 +10,8 @@ from urllib.parse import urljoin
 import pytest
 import responses
 
-from ohc.v0.api import OpenHandsAPI
 from ohc.conversation_display import Conversation
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestURLHandling:

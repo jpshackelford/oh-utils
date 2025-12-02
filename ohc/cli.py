@@ -14,10 +14,10 @@ from . import __version__
 @click.version_option(version=__version__, prog_name="ohc")
 @click.option("-i", "--interactive", is_flag=True, help="Run in interactive mode")
 @click.option(
-    "--api-version", 
-    type=click.Choice(["v0", "v1"]), 
+    "--api-version",
+    type=click.Choice(["v0", "v1"]),
     default="v0",
-    help="OpenHands API version to use (default: v0)"
+    help="OpenHands API version to use (default: v0)",
 )
 @click.pass_context
 def cli(ctx: click.Context, interactive: bool, api_version: str) -> None:

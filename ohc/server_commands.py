@@ -50,7 +50,7 @@ def add(name: str, url: str, apikey: str, default: bool) -> None:
     # Get API version from context
     ctx = click.get_current_context()
     api_version = ctx.obj.get("api_version", "v0") if ctx.obj else "v0"
-    
+
     api = create_api_client(apikey, url, api_version)
 
     try:
@@ -193,7 +193,7 @@ def test(name: str) -> None:
     # Get API version from context
     ctx = click.get_current_context()
     api_version = ctx.obj.get("api_version", "v0") if ctx.obj else "v0"
-    
+
     api = create_api_client(server_config["api_key"], server_config["url"], api_version)
 
     try:

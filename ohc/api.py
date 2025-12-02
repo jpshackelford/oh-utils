@@ -6,7 +6,7 @@ OpenHands APIs, with automatic version selection based on configuration
 or explicit version parameters.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from .v0.api import OpenHandsAPI as V0API
 from .v1.api import OpenHandsAPI as V1API
@@ -15,17 +15,17 @@ from .v1.api import OpenHandsAPI as V1API
 class OpenHandsAPI:
     """
     Unified OpenHands API client with version selection.
-    
+
     This wrapper class provides access to both v0 and v1 APIs,
     automatically selecting the appropriate version based on
     configuration or explicit parameters.
     """
 
     def __init__(
-        self, 
-        api_key: str, 
+        self,
+        api_key: str,
         base_url: str = "https://app.all-hands.dev/api/",
-        version: str = "v0"
+        version: str = "v0",
     ):
         """
         Initialize the OpenHands API client with version selection.
@@ -38,7 +38,8 @@ class OpenHandsAPI:
         self.api_key = api_key
         self.base_url = base_url
         self.version = version
-        
+
+        self._client: Union[V0API, V1API]
         if version == "v0":
             self._client = V0API(api_key, base_url)
         elif version == "v1":
@@ -65,11 +66,13 @@ class OpenHandsAPI:
         if self.version == "v0":
             # v0 API uses page_id and limit, returns a dict with results
             # For now, ignore query and offset since v0 doesn't support them
-            return self._client.search_conversations(limit=limit)
+            return cast("V0API", self._client).search_conversations(limit=limit)
         else:
             # v1 API supports query, limit, and offset directly
             # Wrap the results in a dict to match v0 format
-            results = self._client.search_conversations(query=query, limit=limit, offset=offset)
+            results = cast("V1API", self._client).search_conversations(
+                query=query, limit=limit, offset=offset
+            )
             return {"results": results}
 
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
@@ -78,52 +81,99 @@ class OpenHandsAPI:
 
     def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Start a new conversation using the selected API version."""
-        return self._client.start_conversation(conversation_data)
+        if self.version == "v0":
+            # v0 API expects conversation_id as string
+            conversation_id = conversation_data.get("conversation_id", "")
+            if not conversation_id:
+                raise ValueError("conversation_id is required for v0 API")
+            return cast("V0API", self._client).start_conversation(conversation_id)
+        else:
+            # v1 API expects conversation_data as dict
+            return cast("V1API", self._client).start_conversation(conversation_data)
 
     def get_conversation_changes(
-        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        conversation_id: str,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
+    ) -> Optional[List[Dict[str, str]]]:
         """Get conversation workspace changes using the selected API version."""
         if self.version == "v0":
             # v0 API has an extra session_api_key parameter
-            return self._client.get_conversation_changes(conversation_id, runtime_url, session_api_key)
+            # and returns List[Dict[str, str]]
+            return cast("V0API", self._client).get_conversation_changes(
+                conversation_id, runtime_url, session_api_key
+            )
         else:
-            return self._client.get_conversation_changes(conversation_id, runtime_url)
+            # v1 API returns Optional[Dict[str, Any]], need to convert to List format
+            result = cast("V1API", self._client).get_conversation_changes(
+                conversation_id, runtime_url
+            )
+            if result and "changes" in result:
+                return cast("List[Dict[str, str]]", result["changes"])
+            return None
 
     def get_file_content(
-        self, conversation_id: str, file_path: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+        self,
+        conversation_id: str,
+        file_path: str,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> Optional[str]:
-        """Get file content from conversation workspace using the selected API version."""
+        """Get file content from conversation workspace using the selected API version.
+        """
         if self.version == "v0":
             # v0 API has an extra session_api_key parameter
-            return self._client.get_file_content(conversation_id, file_path, runtime_url, session_api_key)
+            return cast("V0API", self._client).get_file_content(
+                conversation_id, file_path, runtime_url, session_api_key
+            )
         else:
-            return self._client.get_file_content(conversation_id, file_path, runtime_url)
+            return cast("V1API", self._client).get_file_content(
+                conversation_id, file_path, runtime_url
+            )
 
     def download_workspace_archive(
-        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+        self,
+        conversation_id: str,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> Optional[bytes]:
         """Download workspace archive using the selected API version."""
         if self.version == "v0":
             # v0 API has an extra session_api_key parameter
-            return self._client.download_workspace_archive(conversation_id, runtime_url, session_api_key)
+            return cast("V0API", self._client).download_workspace_archive(
+                conversation_id, runtime_url, session_api_key
+            )
         else:
-            return self._client.download_workspace_archive(conversation_id, runtime_url)
+            return cast("V1API", self._client).download_workspace_archive(
+                conversation_id, runtime_url
+            )
 
     def get_trajectory(
-        self, conversation_id: str, runtime_url: Optional[str] = None, session_api_key: Optional[str] = None
+        self,
+        conversation_id: str,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         """Get conversation trajectory using the selected API version."""
         if self.version == "v0":
             # v0 API requires runtime_url and session_api_key as required parameters
             if not runtime_url:
                 return None
-            return self._client.get_trajectory(conversation_id, runtime_url, session_api_key or self.api_key)
+            result = cast("V0API", self._client).get_trajectory(
+                conversation_id, runtime_url, session_api_key or self.api_key
+            )
+            # v0 returns Dict[str, Any], convert to List format for consistency
+            if isinstance(result, dict) and "trajectory" in result:
+                return cast("List[Dict[str, Any]]", result["trajectory"])
+            return None
         else:
-            return self._client.get_trajectory(conversation_id, runtime_url)
+            return cast("V1API", self._client).get_trajectory(
+                conversation_id, runtime_url
+            )
 
     # V1-specific methods (only available when using v1)
-    
+
     def search_events(
         self,
         query: Optional[str] = None,
@@ -134,15 +184,18 @@ class OpenHandsAPI:
     ) -> List[Dict[str, Any]]:
         """
         Search events using the v1 API.
-        
+
         Raises:
             AttributeError: If called with v0 API
         """
         if self.version != "v1":
             raise AttributeError("search_events is only available in v1 API")
-        return self._client.search_events(
-            query=query, limit=limit, offset=offset, 
-            event_type=event_type, conversation_id=conversation_id
+        return cast("V1API", self._client).search_events(
+            query=query,
+            limit=limit,
+            offset=offset,
+            event_type=event_type,
+            conversation_id=conversation_id,
         )
 
     def get_events_count(
@@ -153,26 +206,26 @@ class OpenHandsAPI:
     ) -> int:
         """
         Get count of events matching criteria using the v1 API.
-        
+
         Raises:
             AttributeError: If called with v0 API
         """
         if self.version != "v1":
             raise AttributeError("get_events_count is only available in v1 API")
-        return self._client.get_events_count(
+        return cast("V1API", self._client).get_events_count(
             query=query, event_type=event_type, conversation_id=conversation_id
         )
 
     def create_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a new event using the v1 API.
-        
+
         Raises:
             AttributeError: If called with v0 API
         """
         if self.version != "v1":
             raise AttributeError("create_event is only available in v1 API")
-        return self._client.create_event(event_data)
+        return cast("V1API", self._client).create_event(event_data)
 
     def search_app_conversations(
         self,
@@ -183,13 +236,13 @@ class OpenHandsAPI:
     ) -> List[Dict[str, Any]]:
         """
         Search app conversations using the v1 API.
-        
+
         Raises:
             AttributeError: If called with v0 API
         """
         if self.version != "v1":
             raise AttributeError("search_app_conversations is only available in v1 API")
-        return self._client.search_app_conversations(
+        return cast("V1API", self._client).search_app_conversations(
             query=query, limit=limit, offset=offset, status=status
         )
 
@@ -200,28 +253,30 @@ class OpenHandsAPI:
     ) -> int:
         """
         Get count of app conversations matching criteria using the v1 API.
-        
+
         Raises:
             AttributeError: If called with v0 API
         """
         if self.version != "v1":
-            raise AttributeError("get_app_conversations_count is only available in v1 API")
-        return self._client.get_app_conversations_count(query=query, status=status)
+            raise AttributeError(
+                "get_app_conversations_count is only available in v1 API"
+            )
+        return cast("V1API", self._client).get_app_conversations_count(
+            query=query, status=status
+        )
 
 
 def create_api_client(
-    api_key: str, 
-    base_url: str = "https://app.all-hands.dev/api/",
-    version: str = "v0"
+    api_key: str, base_url: str = "https://app.all-hands.dev/api/", version: str = "v0"
 ) -> OpenHandsAPI:
     """
     Factory function to create an OpenHands API client.
-    
+
     Args:
         api_key: OpenHands API key
         base_url: Base URL for the API endpoint
         version: API version to use ("v0" or "v1")
-    
+
     Returns:
         Configured OpenHands API client
     """

@@ -54,8 +54,10 @@ def with_server_config(func: F) -> F:
         except RuntimeError:
             # No active click context (e.g., in tests), use default
             pass
-        
-        api = create_api_client(server_config["api_key"], server_config["url"], api_version)
+
+        api = create_api_client(
+            server_config["api_key"], server_config["url"], api_version
+        )
         kwargs["api"] = api
         return func(*args, **kwargs)
 
