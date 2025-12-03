@@ -100,8 +100,8 @@ class V1APIResponseRecorder:
         # Test connection endpoint
         self.record_response("GET", "v1/events/count", "events_count_basic")
 
-        # Create a new conversation (using v0 endpoint since v1 doesn't have it yet)
-        self.record_response("POST", "conversations", "conversation_create", json_data={})
+        # Create a new conversation using v1 endpoint
+        self.record_response("POST", "v1/app-conversations", "conversation_create", json_data={"request": {}})
 
         # Events endpoints
         self.record_response(

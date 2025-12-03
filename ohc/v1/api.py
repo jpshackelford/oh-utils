@@ -288,10 +288,7 @@ class OpenHandsAPI:
 
     def create_conversation(self) -> Dict[str, Any]:
         """
-        Create a new conversation (compatibility method).
-
-        Note: v1 API may not have direct conversation creation endpoint yet,
-        so this falls back to v0 behavior.
+        Create a new conversation using v1 API.
 
         Returns:
             Dictionary containing the new conversation details
@@ -299,13 +296,20 @@ class OpenHandsAPI:
         Raises:
             requests.HTTPError: If the API request fails
         """
-        # For now, use the v0 endpoint since v1 doesn't have conversation creation
-        url = urljoin(self.base_url, "conversations")  # Note: no v1 prefix
+        url = urljoin(self.base_url, "v1/app-conversations")
 
         try:
-            response = self.session.post(url, json={})
+            response = self.session.post(url, json={"request": {}})
             response.raise_for_status()
-            return cast("Dict[str, Any]", response.json())
+            data = response.json()
+            
+            # Convert v1 response format to match v0 format for compatibility
+            return {
+                "status": "ok",
+                "conversation_id": data.get("id"),
+                "message": None,
+                "conversation_status": data.get("status", "WORKING")
+            }
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to create conversation - {str(e)}") from e
 

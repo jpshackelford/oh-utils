@@ -159,6 +159,24 @@ class TestOpenHandsV1APIIntegration:
         assert isinstance(conversations, list)
         assert len(conversations) == 2
 
+    @responses.activate
+    def test_create_conversation(self, api_client, load_v1_fixture):
+        """Test conversation creation with v1 API."""
+        fixture = load_v1_fixture("conversation_create")
+
+        responses.add(
+            responses.POST,
+            fixture["url"],
+            json=fixture["json"],
+            status=fixture["status_code"],
+        )
+
+        result = api_client.create_conversation()
+        
+        assert result["status"] == "ok"
+        assert "conversation_id" in result
+        assert result["conversation_id"] == "a1b2c3d4e5f6789012345678901234ab"
+
     def test_unimplemented_methods(self, api_client):
         """Test that unimplemented compatibility methods raise NotImplementedError."""
         with pytest.raises(NotImplementedError):
