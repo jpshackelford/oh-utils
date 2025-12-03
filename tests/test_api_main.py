@@ -190,7 +190,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_create.return_value = {
             "status": "ok",
             "conversation_id": "conv123",
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
@@ -206,7 +206,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_create.return_value = {
             "status": "ok",
             "conversation_id": "conv123",
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
@@ -259,15 +259,21 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_changes.return_value = [{"file": "test.py", "status": "modified"}]
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
-        result = api.get_conversation_changes("conv123", "http://runtime", "session_key")
+        result = api.get_conversation_changes(
+            "conv123", "http://runtime", "session_key"
+        )
 
-        mock_get_changes.assert_called_once_with("conv123", "http://runtime", "session_key")
+        mock_get_changes.assert_called_once_with(
+            "conv123", "http://runtime", "session_key"
+        )
         assert result == [{"file": "test.py", "status": "modified"}]
 
     @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_with_changes(self, mock_get_changes):
         """Test get_conversation_changes with v1 API - extracts changes from result."""
-        mock_get_changes.return_value = {"changes": [{"file": "test.py", "status": "modified"}]}
+        mock_get_changes.return_value = {
+            "changes": [{"file": "test.py", "status": "modified"}]
+        }
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
         result = api.get_conversation_changes("conv123", "http://runtime")
@@ -303,9 +309,13 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_file.return_value = "file content"
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
-        result = api.get_file_content("conv123", "test.py", "http://runtime", "session_key")
+        result = api.get_file_content(
+            "conv123", "test.py", "http://runtime", "session_key"
+        )
 
-        mock_get_file.assert_called_once_with("conv123", "test.py", "http://runtime", "session_key")
+        mock_get_file.assert_called_once_with(
+            "conv123", "test.py", "http://runtime", "session_key"
+        )
         assert result == "file content"
 
     @patch("ohc.v1.api.OpenHandsAPI.get_file_content")
@@ -325,9 +335,13 @@ class TestOpenHandsAPIMethodDelegation:
         mock_download.return_value = b"archive content"
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
-        result = api.download_workspace_archive("conv123", "http://runtime", "session_key")
+        result = api.download_workspace_archive(
+            "conv123", "http://runtime", "session_key"
+        )
 
-        mock_download.assert_called_once_with("conv123", "http://runtime", "session_key")
+        mock_download.assert_called_once_with(
+            "conv123", "http://runtime", "session_key"
+        )
         assert result == b"archive content"
 
     @patch("ohc.v1.api.OpenHandsAPI.download_workspace_archive")
@@ -349,7 +363,9 @@ class TestOpenHandsAPIMethodDelegation:
 
         result = api.get_trajectory("conv123", "http://runtime", "session_key")
 
-        mock_get_trajectory.assert_called_once_with("conv123", "http://runtime", "session_key")
+        mock_get_trajectory.assert_called_once_with(
+            "conv123", "http://runtime", "session_key"
+        )
         assert result == [{"step": 1}, {"step": 2}]
 
     @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
@@ -370,18 +386,24 @@ class TestOpenHandsAPIMethodDelegation:
 
         result = api.get_trajectory("conv123", "http://runtime", "session_key")
 
-        mock_get_trajectory.assert_called_once_with("conv123", "http://runtime", "session_key")
+        mock_get_trajectory.assert_called_once_with(
+            "conv123", "http://runtime", "session_key"
+        )
         assert result is None
 
     @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
-    def test_get_trajectory_v0_uses_api_key_as_default_session_key(self, mock_get_trajectory):
+    def test_get_trajectory_v0_uses_api_key_as_default_session_key(
+        self, mock_get_trajectory
+    ):
         """Test get_trajectory with v0 API - uses api_key when session_api_key is None."""
         mock_get_trajectory.return_value = {"trajectory": [{"step": 1}]}
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
         result = api.get_trajectory("conv123", "http://runtime", None)
 
-        mock_get_trajectory.assert_called_once_with("conv123", "http://runtime", "test_key")
+        mock_get_trajectory.assert_called_once_with(
+            "conv123", "http://runtime", "test_key"
+        )
         assert result == [{"step": 1}]
 
     @patch("ohc.v1.api.OpenHandsAPI.get_trajectory")
@@ -406,11 +428,19 @@ class TestOpenHandsAPIV1SpecificMethods:
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
         result = api.search_events(
-            query="test", limit=5, offset=10, event_type="action", conversation_id="conv123"
+            query="test",
+            limit=5,
+            offset=10,
+            event_type="action",
+            conversation_id="conv123",
         )
 
         mock_search_events.assert_called_once_with(
-            query="test", limit=5, offset=10, event_type="action", conversation_id="conv123"
+            query="test",
+            limit=5,
+            offset=10,
+            event_type="action",
+            conversation_id="conv123",
         )
         assert result == [{"event": "test"}]
 

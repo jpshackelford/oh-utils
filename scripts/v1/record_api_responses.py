@@ -101,7 +101,12 @@ class V1APIResponseRecorder:
         self.record_response("GET", "v1/events/count", "events_count_basic")
 
         # Create a new conversation using v1 endpoint
-        self.record_response("POST", "v1/app-conversations", "conversation_create", json_data={"request": {}})
+        self.record_response(
+            "POST",
+            "v1/app-conversations",
+            "conversation_create",
+            json_data={"request": {}},
+        )
 
         # Events endpoints
         self.record_response(

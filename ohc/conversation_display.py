@@ -45,13 +45,13 @@ class Conversation:
 
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")
-        
+
         # v1 API uses different status fields
         status = data.get("status")
         if not status:
             # v1 API uses sandbox_status and execution_status
             sandbox_status = data.get("sandbox_status", "UNKNOWN")
-            execution_status = data.get("execution_status", "unknown")
+            # execution_status = data.get("execution_status", "unknown")
             # Map v1 statuses to v0-like format
             if sandbox_status == "RUNNING":
                 status = "RUNNING"
@@ -59,10 +59,12 @@ class Conversation:
                 status = "STOPPED"
             else:
                 status = sandbox_status
-        
+
         # v1 API uses conversation_url instead of url
-        url = data.get("url") or data.get("conversation_url")
-        
+        url = data.get("url")
+        if url is None:
+            url = data.get("conversation_url")
+
         # Extract version information if available
         version = data.get("conversation_version")
 

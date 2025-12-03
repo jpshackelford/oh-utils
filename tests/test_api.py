@@ -261,7 +261,7 @@ class TestOpenHandsAPI:
             "status": "ok",
             "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
             "message": None,
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
 
         responses.add(
@@ -281,6 +281,7 @@ class TestOpenHandsAPI:
         # Check request body
         request_body = responses.calls[0].request.body
         import json
+
         assert json.loads(request_body) == {}
 
     @responses.activate

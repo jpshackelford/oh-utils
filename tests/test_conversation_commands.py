@@ -597,7 +597,7 @@ class TestNewConversationCommand:
             "status": "ok",
             "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
             "message": None,
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
         responses.add(
             responses.POST,
@@ -618,7 +618,7 @@ class TestNewConversationCommand:
         # Mock conversation details
         detail_response = {
             "id": "a1b2c3d4e5f6789012345678901234ab",
-            "url": "https://runtime.test.com/conversation/a1b2c3d4e5f6789012345678901234ab"
+            "url": "https://runtime.test.com/conversation/a1b2c3d4e5f6789012345678901234ab",
         }
         responses.add(
             responses.GET,
@@ -648,7 +648,7 @@ class TestNewConversationCommand:
             "status": "ok",
             "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
             "message": None,
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
         responses.add(
             responses.POST,
@@ -697,7 +697,7 @@ class TestNewConversationCommand:
             "status": "ok",
             "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
             "message": None,
-            "conversation_status": "STOPPED"
+            "conversation_status": "STOPPED",
         }
 
         with patch("ohc.command_utils.ConfigManager") as mock_config_manager:

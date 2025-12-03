@@ -7,7 +7,7 @@
     "content-length": "400"
   },
   "params": null,
-  "json_data": {"request": {}},
+  "json_data": { "request": {} },
   "json": {
     "id": "a1b2c3d4e5f6789012345678901234ab",
     "created_by_user_id": "user123",

@@ -103,7 +103,9 @@ class APIResponseRecorder:
         self.record_response("GET", "options/models", "options_models")
 
         # Create a new conversation
-        self.record_response("POST", "conversations", "conversation_create", json_data={})
+        self.record_response(
+            "POST", "conversations", "conversation_create", json_data={}
+        )
 
         # Get conversations list
         self.record_response(

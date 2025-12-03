@@ -172,7 +172,7 @@ class TestOpenHandsV1APIIntegration:
         )
 
         result = api_client.create_conversation()
-        
+
         assert result["status"] == "ok"
         assert "conversation_id" in result
         assert result["conversation_id"] == "a1b2c3d4e5f6789012345678901234ab"

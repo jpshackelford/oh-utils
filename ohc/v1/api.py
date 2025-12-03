@@ -302,13 +302,13 @@ class OpenHandsAPI:
             response = self.session.post(url, json={"request": {}})
             response.raise_for_status()
             data = response.json()
-            
+
             # Convert v1 response format to match v0 format for compatibility
             return {
                 "status": "ok",
                 "conversation_id": data.get("id"),
                 "message": None,
-                "conversation_status": data.get("status", "WORKING")
+                "conversation_status": data.get("status", "WORKING"),
             }
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to create conversation - {str(e)}") from e
