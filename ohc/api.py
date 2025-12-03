@@ -79,6 +79,10 @@ class OpenHandsAPI:
         """Get conversation details using the selected API version."""
         return self._client.get_conversation(conversation_id)
 
+    def create_conversation(self) -> Dict[str, Any]:
+        """Create a new conversation using the selected API version."""
+        return self._client.create_conversation()
+
     def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Start a new conversation using the selected API version."""
         if self.version == "v0":

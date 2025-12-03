@@ -102,6 +102,9 @@ class APIResponseRecorder:
         # Test connection endpoint
         self.record_response("GET", "options/models", "options_models")
 
+        # Create a new conversation
+        self.record_response("POST", "conversations", "conversation_create", json_data={})
+
         # Get conversations list
         self.record_response(
             "GET", "conversations", "conversations_list", params={"limit": 5}

@@ -386,3 +386,131 @@ def traj(conversation_id_or_number: str, server: Optional[str]) -> None:
         conversation_id_or_number=conversation_id_or_number,
         server=server,
     )
+
+
+@conv.command()
+@click.option("--server", help="Server name to use (defaults to configured default)")
+@click.option(
+    "--start/--no-start",
+    default=True,
+    help="Start the conversation immediately (default: True)",
+)
+@click.option(
+    "--providers",
+    default="github",
+    help="Comma-separated list of providers to use (default: github)",
+)
+@click.argument("prompt", required=False)
+@with_server_config
+def new(
+    api: OpenHandsAPI,
+    server: Optional[str],  # noqa: ARG001
+    start: bool,
+    providers: str,
+    prompt: Optional[str],
+) -> None:
+    """Create a new conversation with an optional prompt.
+    
+    PROMPT can be provided as an argument, piped from stdin, or entered interactively.
+    
+    Examples:
+        ohc conv new "Help me write a Python script"
+        echo "Create a web app" | ohc conv new
+        ohc conv new  # Interactive prompt entry
+    """
+    try:
+        # Get the prompt from various sources
+        final_prompt = _get_prompt_from_sources(prompt)
+        
+        # Create the conversation
+        click.echo("Creating new conversation...")
+        result = api.create_conversation()
+        
+        if result.get("status") != "ok":
+            click.echo(f"✗ Failed to create conversation: {result}", err=True)
+            return
+            
+        conversation_id = result.get("conversation_id")
+        if not conversation_id:
+            click.echo("✗ No conversation ID returned from API", err=True)
+            return
+            
+        click.echo(f"✓ Created conversation: {conversation_id[:8]}...")
+        
+        # Start the conversation if requested
+        if start:
+            click.echo("Starting conversation...")
+            providers_list = [p.strip() for p in providers.split(",")]
+            start_result = api.start_conversation({"conversation_id": conversation_id})
+            
+            if start_result.get("status") == "ok":
+                click.echo("✓ Conversation started successfully")
+                
+                # Get the conversation details to show the URL
+                conv_details = api.get_conversation(conversation_id)
+                if conv_details and conv_details.get("url"):
+                    click.echo(f"🌐 Conversation URL: {conv_details['url']}")
+                    
+                    # If we have a prompt, show instructions for using it
+                    if final_prompt:
+                        click.echo()
+                        click.echo("📝 Your prompt:")
+                        click.echo(f"   {final_prompt}")
+                        click.echo()
+                        click.echo("💡 Copy and paste this prompt into the conversation to get started!")
+                else:
+                    click.echo("⚠️  Conversation started but no URL available yet")
+            else:
+                click.echo(f"✗ Failed to start conversation: {start_result}", err=True)
+        else:
+            click.echo(f"💤 Conversation created but not started (use --start to start immediately)")
+            click.echo(f"   Use 'ohc conv wake {conversation_id[:8]}' to start it later")
+            
+        # Show the prompt if we have one but didn't start
+        if final_prompt and not start:
+            click.echo()
+            click.echo("📝 Your prompt (saved for when you start the conversation):")
+            click.echo(f"   {final_prompt}")
+            
+    except Exception as e:
+        click.echo(f"✗ Failed to create conversation: {e}", err=True)
+
+
+def _get_prompt_from_sources(prompt_arg: Optional[str]) -> Optional[str]:
+    """Get prompt from argument, stdin, or interactive input."""
+    # 1. Use argument if provided
+    if prompt_arg:
+        return prompt_arg.strip()
+    
+    # 2. Check if there's piped input
+    if not sys.stdin.isatty():
+        piped_input = sys.stdin.read().strip()
+        if piped_input:
+            return piped_input
+    
+    # 3. Interactive input
+    try:
+        click.echo("Enter your prompt (press Enter twice to finish, Ctrl+C to skip):")
+        lines = []
+        empty_line_count = 0
+        
+        while True:
+            try:
+                line = input()
+                if line.strip() == "":
+                    empty_line_count += 1
+                    if empty_line_count >= 2:
+                        break
+                    lines.append(line)
+                else:
+                    empty_line_count = 0
+                    lines.append(line)
+            except EOFError:
+                break
+                
+        prompt = "\n".join(lines).strip()
+        return prompt if prompt else None
+        
+    except KeyboardInterrupt:
+        click.echo("\nSkipping prompt entry...")
+        return None

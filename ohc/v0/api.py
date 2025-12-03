@@ -110,6 +110,25 @@ class OpenHandsAPI:
 
         return cast("Dict[str, Any]", data)
 
+    def create_conversation(self) -> Dict[str, Any]:
+        """
+        Create a new conversation.
+
+        Returns:
+            Dictionary containing the new conversation details
+
+        Raises:
+            Exception: If conversation cannot be created or API error occurs
+        """
+        url = urljoin(self.base_url, "conversations")
+
+        try:
+            response = self.session.post(url, json={})
+            response.raise_for_status()
+            return cast("Dict[str, Any]", response.json())
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to create conversation - {str(e)}") from e
+
     def start_conversation(
         self, conversation_id: str, providers_set: Optional[List[str]] = None
     ) -> Dict[str, Any]:

@@ -579,3 +579,156 @@ class TestConversationCommandsCLI:
 
                 assert result.exit_code == 0
                 mock_show_changes.assert_called_once()
+
+
+class TestNewConversationCommand:
+    """Test the new conversation command."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+        self.mock_config = {"api_key": "test-api-key", "url": "https://api.test.com"}
+
+    @responses.activate
+    def test_new_command_with_prompt_argument(self):
+        """Test new command with prompt provided as argument."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED"
+        }
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json=create_response,
+            status=200,
+        )
+
+        # Mock conversation start
+        start_response = {"status": "ok"}
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations/a1b2c3d4e5f6789012345678901234ab/start",
+            json=start_response,
+            status=200,
+        )
+
+        # Mock conversation details
+        detail_response = {
+            "id": "a1b2c3d4e5f6789012345678901234ab",
+            "url": "https://runtime.test.com/conversation/a1b2c3d4e5f6789012345678901234ab"
+        }
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations/a1b2c3d4e5f6789012345678901234ab",
+            json=detail_response,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "Help me write a Python script"])
+
+            assert result.exit_code == 0
+            assert "Creating new conversation..." in result.output
+            assert "✓ Created conversation: a1b2c3d4..." in result.output
+            assert "✓ Conversation started successfully" in result.output
+            assert "Help me write a Python script" in result.output
+
+    @responses.activate
+    def test_new_command_no_start(self):
+        """Test new command with --no-start option."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED"
+        }
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json=create_response,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "--no-start", "Test prompt"])
+
+            assert result.exit_code == 0
+            assert "Creating new conversation..." in result.output
+            assert "✓ Created conversation: a1b2c3d4..." in result.output
+            assert "💤 Conversation created but not started" in result.output
+            assert "Test prompt" in result.output
+
+    @responses.activate
+    def test_new_command_creation_failure(self):
+        """Test new command when conversation creation fails."""
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json={"status": "error", "message": "Creation failed"},
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "Test prompt"])
+
+            assert result.exit_code == 0
+            assert "✗ Failed to create conversation" in result.output
+
+    def test_new_command_with_piped_input(self):
+        """Test new command with piped input."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED"
+        }
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.api.OpenHandsAPI.create_conversation") as mock_create:
+                mock_create.return_value = create_response
+
+                # Simulate piped input
+                result = self.runner.invoke(
+                    conv, ["new", "--no-start"], input="Piped prompt content"
+                )
+
+                assert result.exit_code == 0
+                assert "Creating new conversation..." in result.output
+                assert "✓ Created conversation: a1b2c3d4..." in result.output
+
+    def test_get_prompt_from_sources_argument(self):
+        """Test _get_prompt_from_sources with argument."""
+        from ohc.conversation_commands import _get_prompt_from_sources
+
+        result = _get_prompt_from_sources("Test prompt")
+        assert result == "Test prompt"
+
+    def test_get_prompt_from_sources_none(self):
+        """Test _get_prompt_from_sources with no input."""
+        from ohc.conversation_commands import _get_prompt_from_sources
+
+        with patch("sys.stdin.isatty", return_value=True):
+            with patch("builtins.input", side_effect=KeyboardInterrupt):
+                result = _get_prompt_from_sources(None)
+                assert result is None

@@ -87,6 +87,7 @@ class TestOpenHandsAPIMain:
             assert hasattr(api, "test_connection")
             assert hasattr(api, "search_conversations")
             assert hasattr(api, "get_conversation")
+            assert hasattr(api, "create_conversation")
             assert hasattr(api, "start_conversation")
             assert hasattr(api, "get_conversation_changes")
             assert hasattr(api, "get_file_content")
@@ -182,6 +183,38 @@ class TestOpenHandsAPIMethodDelegation:
 
         mock_get.assert_called_once_with("conv123")
         assert result == {"id": "conv123", "title": "Test"}
+
+    @patch("ohc.v0.api.OpenHandsAPI.create_conversation")
+    def test_create_conversation_v0(self, mock_create):
+        """Test create_conversation delegates to v0 API correctly."""
+        mock_create.return_value = {
+            "status": "ok",
+            "conversation_id": "conv123",
+            "conversation_status": "STOPPED"
+        }
+        api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
+
+        result = api.create_conversation()
+
+        mock_create.assert_called_once_with()
+        assert result["status"] == "ok"
+        assert result["conversation_id"] == "conv123"
+
+    @patch("ohc.v1.api.OpenHandsAPI.create_conversation")
+    def test_create_conversation_v1(self, mock_create):
+        """Test create_conversation delegates to v1 API correctly."""
+        mock_create.return_value = {
+            "status": "ok",
+            "conversation_id": "conv123",
+            "conversation_status": "STOPPED"
+        }
+        api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
+
+        result = api.create_conversation()
+
+        mock_create.assert_called_once_with()
+        assert result["status"] == "ok"
+        assert result["conversation_id"] == "conv123"
 
     @patch("ohc.v0.api.OpenHandsAPI.start_conversation")
     def test_start_conversation_v0_success(self, mock_start):
