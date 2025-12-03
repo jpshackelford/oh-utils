@@ -49,18 +49,16 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
 
         click.echo(f"Found {len(conversations)} conversations:")
         for i, conv_data in enumerate(conversations, 1):
-            conv_id = conv_data.get("conversation_id", "unknown")[:8]
-            title = conv_data.get("title", "Untitled")
-            status = conv_data.get("status", "UNKNOWN")
-
-            # Truncate title if too long
-            if len(title) > 50:
-                title = title[:47] + "..."
-
-            status_icon = (
-                "🟢" if status == "RUNNING" else "🔴" if status == "STOPPED" else "🟡"
-            )
-            click.echo(f"{i:2d}. {conv_id} {status_icon} {status:8s} {title}")
+            # Use the Conversation class to handle both v0 and v1 formats
+            from .conversation_display import Conversation
+            conv = Conversation.from_api_response(conv_data)
+            
+            # Format version indicator if available
+            version_indicator = ""
+            if conv.version:
+                version_indicator = f" [{conv.version}]"
+            
+            click.echo(f"{i:2d}. {conv.short_id()} {conv.status_display():12s} {conv.formatted_title()}{version_indicator}")
 
     except Exception as e:
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
