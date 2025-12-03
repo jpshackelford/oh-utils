@@ -70,9 +70,31 @@ $ oh-conversation-manager download-workspace 71468a85
    This feature requires V1 API enhancement
 ```
 
-## 3. Other Context
+## 3. Existing Infrastructure Analysis
 
-### 3.1 V1 Runtime Agent Server Architecture
+### 3.1 API Fixture Recording and Sanitization Infrastructure
+
+The project already has a comprehensive fixture infrastructure that follows established patterns:
+
+**✅ Existing Components:**
+- `scripts/update_fixtures.py` - Master orchestration script (needs V1 integration)
+- `scripts/v0/record_api_responses.py` - V0 API recorder (established pattern)
+- `scripts/v0/sanitize_fixtures.py` - V0 fixture sanitizer (established pattern)
+- `scripts/v1/record_api_responses.py` - V1 API recorder (exists but needs runtime endpoint support)
+- `scripts/v1/sanitize_fixtures.py` - V1 fixture sanitizer (exists but needs runtime-specific patterns)
+- `tests/vcr_config.py` - VCR configuration with sanitization (needs V1 patterns)
+
+**🔧 Required Updates:**
+1. **Master Script**: Update `scripts/update_fixtures.py` to import and orchestrate V1 modules
+2. **V1 Runtime Recording**: Enhance V1 recorder to capture runtime API interactions from active conversations
+3. **V1 Runtime Sanitization**: Add sanitization patterns for `sandbox_id`, `conversation_url`, session keys
+4. **VCR Integration**: Extend VCR configuration for V1 data structures and runtime URLs
+
+This design will **continue existing patterns** rather than creating new infrastructure, ensuring consistency with established workflows.
+
+## 4. Other Context
+
+### 4.1 V1 Runtime Agent Server Architecture
 
 V1 conversations run on a sophisticated runtime agent server that provides a comprehensive REST API. The server is built with FastAPI and includes:
 
@@ -83,22 +105,22 @@ V1 conversations run on a sophisticated runtime agent server that provides a com
 - **Git Operations**: Enhanced git change tracking and diff capabilities
 - **Tool Management**: Access to available AI tools and capabilities
 
-### 3.2 Authentication and Session Management
+### 4.2 Authentication and Session Management
 
 V1 runtime APIs use session-based authentication where active conversations provide a `session_api_key` that must be included in runtime API calls via the `X-Session-API-Key` header.
 
-### 3.3 Conversation Lifecycle
+### 4.3 Conversation Lifecycle
 
 V1 conversations have distinct states:
 - **PAUSED**: Conversation exists but runtime is not active (`conversation_url` is null)
 - **RUNNING**: Conversation is active with runtime server (`conversation_url` points to runtime)
 - **STOPPED**: Conversation is terminated
 
-## 4. Technical Design
+## 5. Technical Design
 
-### 4.1 V1 Conversation Discovery and Runtime URL Extraction
+### 6.1 V1 Conversation Discovery and Runtime URL Extraction
 
-#### 4.1.1 Conversation Data Structure
+#### 6.1.1 Conversation Data Structure
 
 V1 conversations returned by `/api/v1/app-conversations/search` have this structure:
 
@@ -113,7 +135,7 @@ V1 conversations returned by `/api/v1/app-conversations/search` have this struct
 }
 ```
 
-#### 4.1.2 Runtime URL Extraction Logic
+#### 6.1.2 Runtime URL Extraction Logic
 
 ```python
 def extract_runtime_url(conversation: Dict[str, Any]) -> Optional[str]:
@@ -127,9 +149,9 @@ def extract_runtime_url(conversation: Dict[str, Any]) -> Optional[str]:
     return f"{parsed.scheme}://{parsed.netloc}"
 ```
 
-### 4.2 V1 API Client Implementation
+### 6.2 V1 API Client Implementation
 
-#### 4.2.1 Core Methods Implementation
+#### 6.2.1 Core Methods Implementation
 
 Replace `NotImplementedError` methods with working implementations:
 
@@ -159,7 +181,7 @@ def get_file_content(
 
 
 
-### 4.3 Workspace Archive Gap
+### 6.3 Workspace Archive Gap
 
 V1 runtime API does not provide a direct workspace ZIP endpoint equivalent to V0's `/zip-directory`. The `download_workspace_archive()` method will remain as `NotImplementedError` with a clear error message directing users to use individual file downloads until this API gap is addressed.
 
@@ -175,9 +197,9 @@ def download_workspace_archive(
     )
 ```
 
-### 4.4 Enhanced Conversation Management
+### 6.4 Enhanced Conversation Management
 
-#### 4.4.1 V1 Conversation Class
+#### 6.4.1 V1 Conversation Class
 
 ```python
 @dataclass
@@ -207,7 +229,7 @@ class V1Conversation:
         return f"{parsed.scheme}://{parsed.netloc}"
 ```
 
-### 4.5 Trajectory Download Enhancement
+### 6.5 Trajectory Download Enhancement
 
 V1 provides a dedicated trajectory endpoint:
 
@@ -224,71 +246,134 @@ def get_trajectory(
     return response.json()
 ```
 
-## 5. Implementation Plan
+### 6.6 Existing API Fixture Infrastructure
+
+The project already has a comprehensive fixture recording and sanitization infrastructure that follows established patterns:
+
+#### 6.6.1 Master Fixture Update Script
+
+`scripts/update_fixtures.py` provides a unified workflow for updating API fixtures:
+- Orchestrates both recording and sanitization phases
+- Supports both V0 and V1 API versions
+- Provides command-line options for selective operations (record-only, sanitize-only)
+- Currently imports from V0 modules but needs V1 integration
+
+#### 6.6.2 Version-Specific Infrastructure
+
+**V0 Infrastructure (Established Pattern):**
+- `scripts/v0/record_api_responses.py` - `APIResponseRecorder` class for V0 endpoints
+- `scripts/v0/sanitize_fixtures.py` - `FixtureSanitizer` class for V0 data patterns
+
+**V1 Infrastructure (Existing but Incomplete):**
+- `scripts/v1/record_api_responses.py` - `V1APIResponseRecorder` class (needs runtime endpoint support)
+- `scripts/v1/sanitize_fixtures.py` - `V1FixtureSanitizer` class (needs runtime-specific patterns)
+
+#### 6.6.3 VCR Integration
+
+`tests/vcr_config.py` provides VCR configuration for HTTP interaction recording:
+- Sanitizes sensitive headers (`X-Session-API-Key`, `Authorization`)
+- Filters sensitive request/response data
+- Uses YAML serialization for readability
+- Needs V1-specific sanitization patterns for runtime URLs and session keys
+
+#### 6.6.4 Required Updates for V1 Support
+
+1. **Master Script Integration**: Update `scripts/update_fixtures.py` to import and use V1 modules
+2. **Runtime Endpoint Recording**: Enhance V1 recorder to capture runtime API interactions
+3. **V1-Specific Sanitization**: Add patterns for `sandbox_id`, `conversation_url`, runtime hostnames
+4. **VCR Configuration**: Extend sanitization for V1 data structures and runtime URLs
+
+## 6. Implementation Plan
 
 All implementations must pass existing lints and tests. New functionality requires comprehensive test coverage with both unit tests and integration tests using VCR fixtures.
 
-### 5.1 V1 API Client Core Implementation (M1)
+### 6.1 V1 API Client Core Implementation (M1)
 
 Complete the V1 API client with working implementations for all placeholder methods.
 
-#### 5.1.1 Runtime URL Discovery
+#### 6.1.1 Runtime URL Discovery
 * `ohc/v1/api.py` - Add `extract_runtime_url()` helper method
 * `tests/test_v1_api_runtime_url.py` - Test runtime URL extraction logic
 
-#### 5.1.2 File Operations
+#### 6.1.2 File Operations
 * `ohc/v1/api.py` - Implement `get_file_content()` using `/api/file/download/{path}`
 * `ohc/v1/api.py` - Implement `get_conversation_changes()` using `/api/git/changes/.`
 * `tests/test_v1_api_files.py` - Test file operations with VCR fixtures
 
-#### 5.1.3 Trajectory Operations  
+#### 6.1.3 Trajectory Operations  
 * `ohc/v1/api.py` - Implement `get_trajectory()` using `/api/file/download-trajectory/{id}`
 * `tests/test_v1_api_trajectory.py` - Test trajectory download
 
-**Demo**: Basic V1 file operations work - can download files and get git changes from active V1 conversations.
+#### 6.1.4 API Fixture Recording Infrastructure
+* `scripts/update_fixtures.py` - Update master script to support V1 alongside existing V0 support
+* `scripts/v1/record_api_responses.py` - Enhance existing V1 recorder with runtime endpoint recording
+* `scripts/v1/sanitize_fixtures.py` - Update existing V1 sanitizer with runtime-specific sanitization patterns
 
-### 5.2 V1 Conversation Management Integration (M2)
+**Demo**: Basic V1 file operations work - can download files and get git changes from active V1 conversations. API fixture infrastructure supports V1 endpoint recording and sanitization.
+
+### 6.2 V1 Conversation Management Integration (M2)
 
 Integrate V1 API client with existing conversation manager workflows.
 
-#### 5.2.1 Conversation Manager V1 Support
+#### 6.2.1 Conversation Manager V1 Support
 * `conversation_manager/conversation_manager.py` - Add V1Conversation class
 * `conversation_manager/conversation_manager.py` - Update conversation listing to handle V1 data structure
 * `tests/test_conversation_manager_v1.py` - Test V1 conversation management
 
-#### 5.2.2 Command Integration
+#### 6.2.2 Command Integration
 * `ohc/conversation_commands.py` - Update all commands to work with V1 conversations
 * `ohc/conversation_display.py` - Update display formatting for V1 conversation data
 * `tests/test_v1_command_integration.py` - Test all commands work with V1 conversations
 
-**Demo**: All existing oh-utils commands work seamlessly with V1 conversations.
+#### 6.2.3 VCR Configuration Updates
+* `tests/vcr_config.py` - Extend existing VCR configuration with V1-specific sanitization patterns
+* Update existing `sanitize_request()` and `sanitize_response()` functions for V1 data structures
 
-### 5.3 Enhanced Error Handling and User Experience (M3)
+**Demo**: All existing oh-utils commands work seamlessly with V1 conversations. VCR-based integration tests properly sanitize V1 API interactions.
+
+### 6.3 Enhanced Error Handling and User Experience (M3)
 
 Improve error handling and user experience for V1 conversations.
 
-#### 5.3.1 Inactive Conversation Handling
+#### 6.3.1 Inactive Conversation Handling
 * `ohc/v1/api.py` - Add clear error messages for inactive conversations
 * `ohc/conversation_commands.py` - Add conversation activation guidance
 * `tests/test_v1_inactive_conversations.py` - Test inactive conversation scenarios
 
-#### 5.3.2 Enhanced Status Display
+#### 6.3.2 Enhanced Status Display
 * `ohc/conversation_display.py` - Add sandbox status and runtime information to displays
 * `conversation_manager/conversation_manager.py` - Show V1-specific status information
 * `tests/test_v1_display.py` - Test enhanced display formatting
 
 **Demo**: Users receive clear feedback about conversation states and guidance for activating inactive conversations.
 
-### 5.4 Comprehensive Testing and Documentation (M4)
+### 6.4 Comprehensive Testing and Documentation (M4)
 
 Ensure robust testing coverage and complete documentation.
 
-#### 5.4.1 Integration Test Suite
-* `tests/test_v1_integration.py` - Comprehensive integration tests covering all V1 workflows
-* `tests/fixtures/v1/` - Complete VCR fixture set for all V1 API interactions
-* `scripts/v1/record_api_responses.py` - Script for recording V1 API fixtures
+#### 6.4.1 API Fixture Infrastructure Updates
+* `scripts/update_fixtures.py` - Update master script to import and orchestrate V1 modules alongside V0
+* `scripts/v1/record_api_responses.py` - Enhance existing V1 recorder with runtime endpoint support:
+  - Add runtime API discovery from active conversations
+  - Record `/api/file/download/{path}` endpoints
+  - Record `/api/git/changes/.` endpoints  
+  - Record `/api/file/download-trajectory/{id}` endpoints
+  - Handle session-based authentication with `X-Session-API-Key` headers
+* `scripts/v1/sanitize_fixtures.py` - Enhance existing V1 sanitizer with runtime-specific patterns:
+  - Add `sandbox_id` sanitization patterns
+  - Add `conversation_url` sanitization for runtime hostnames
+  - Add session API key sanitization patterns
+  - Maintain consistency with V0 sanitization approach
+* `tests/vcr_config.py` - Extend VCR configuration for V1 data structures:
+  - Add V1 conversation data sanitization
+  - Add runtime URL sanitization patterns
+  - Add session key filtering for V1 authentication
 
-#### 5.4.2 Documentation Updates
+#### 6.4.2 Integration Test Suite
+* `tests/test_v1_integration.py` - Comprehensive integration tests covering all V1 workflows
+* `tests/fixtures/v1/` - Complete VCR fixture set for all V1 API interactions using updated recording infrastructure
+
+#### 6.4.3 Documentation Updates
 * `README.md` - Update with V1 capabilities and usage examples
 * `doc/v1-api-migration-guide.md` - Migration guide for V0 to V1 workflows
 
