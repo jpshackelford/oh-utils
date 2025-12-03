@@ -54,11 +54,9 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
             conv = Conversation.from_api_response(conv_data)
             
             # Format version indicator if available
-            version_indicator = ""
-            if conv.version:
-                version_indicator = f" [{conv.version}]"
+            version_indicator = f"  [{conv.version}]  " if conv.version else "      "
             
-            click.echo(f"{i:2d}. {conv.short_id()} {conv.status_display():12s} {conv.formatted_title()}{version_indicator}")
+            click.echo(f"{i:2d}. {conv.short_id()} {conv.status_display():12s}{version_indicator}{conv.formatted_title()}")
 
     except Exception as e:
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
