@@ -101,3 +101,6 @@ tests/fixtures/*.yml
 
 # Test results
 test-results.xml
+
+# Trajectory files and other large JSON files
+trajectory*.json
