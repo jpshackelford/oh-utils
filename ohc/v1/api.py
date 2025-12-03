@@ -196,7 +196,11 @@ class OpenHandsAPI:
             raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
 
         response.raise_for_status()
-        return cast("List[Dict[str, Any]]", response.json())
+        data = response.json()
+        # Extract items from the response structure
+        if isinstance(data, dict) and "items" in data:
+            return cast("List[Dict[str, Any]]", data["items"])
+        return cast("List[Dict[str, Any]]", data)
 
     def get_app_conversations_count(
         self,
