@@ -1057,7 +1057,7 @@ class TestTailCommand:
                     assert "Stopped following conversation" in result.output
 
     def test_tail_command_includes_finish_message(self):
-        """Test that tail command includes finish messages from the agent."""
+        """Test that tail command includes detailed finish messages from the agent."""
         trajectory_data = [
             {
                 "id": 1,
@@ -1080,6 +1080,9 @@ class TestTailCommand:
                 "source": "agent",
                 "action": "finish",
                 "message": "All done! What's next on the agenda?",
+                "args": {
+                    "final_thought": "## Summary\n\nI've completed all tasks:\n1. Fixed the bug\n2. Added tests\n3. Updated documentation\n\nEverything is working correctly now!"
+                },
             },
         ]
 
@@ -1110,5 +1113,9 @@ class TestTailCommand:
                 result = self.runner.invoke(conv, ["tail", "test-conv-123", "-n", "2"])
 
                 assert result.exit_code == 0
-                assert "All done! What's next on the agenda?" in result.output
+                # Verify the detailed finish message (final_thought) is displayed
+                assert "## Summary" in result.output
+                assert "I've completed all tasks:" in result.output
+                assert "Fixed the bug" in result.output
+                # Also verify the thought is displayed
                 assert "Let me check this" in result.output

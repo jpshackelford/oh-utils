@@ -540,9 +540,18 @@ def tail(
 
     def get_message_text(event: dict) -> str:
         """Extract message text from an event."""
-        message_text: str = event.get("message", "")
-        thought_text: str = event.get("args", {}).get("thought", "")
-        return thought_text if thought_text else message_text
+        args = event.get("args", {})
+        # For finish events, use final_thought which contains the detailed message
+        final_thought: str = args.get("final_thought", "")
+        if final_thought:
+            return final_thought
+        # For other events, use thought
+        thought_text: str = args.get("thought", "")
+        if thought_text:
+            return thought_text
+        # Fallback to message
+        message: str = event.get("message", "")
+        return message
 
     try:
         # Resolve conversation ID using shared logic
