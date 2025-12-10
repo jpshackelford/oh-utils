@@ -1055,3 +1055,60 @@ class TestTailCommand:
                     assert "Initial message" in result.output
                     assert "New message" in result.output
                     assert "Stopped following conversation" in result.output
+
+    def test_tail_command_includes_finish_message(self):
+        """Test that tail command includes finish messages from the agent."""
+        trajectory_data = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "run",
+                "message": "",
+                "args": {"thought": "Let me check this"},
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": None,
+                "message": "Command executed successfully",
+            },
+            {
+                "id": 3,
+                "timestamp": "2025-01-01T10:00:02",
+                "source": "agent",
+                "action": "finish",
+                "message": "All done! What's next on the agenda?",
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [
+                        {
+                            "conversation_id": "test-conv-123",
+                            "title": "Test Conversation",
+                        }
+                    ]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123", "-n", "2"])
+
+                assert result.exit_code == 0
+                assert "All done! What's next on the agenda?" in result.output
+                assert "Let me check this" in result.output

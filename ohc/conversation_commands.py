@@ -532,8 +532,9 @@ def tail(
         for event in trajectory_data:
             is_agent = event.get("source") == "agent"
             is_message = event.get("action") == "message"
+            is_finish = event.get("action") == "finish"
             has_thought = event.get("args", {}).get("thought")
-            if is_agent and (is_message or has_thought):
+            if is_agent and (is_message or is_finish or has_thought):
                 agent_messages.append(event)
         return agent_messages
 
