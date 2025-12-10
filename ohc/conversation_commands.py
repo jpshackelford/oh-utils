@@ -7,7 +7,7 @@ structure.
 
 import os
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import click
 
@@ -493,12 +493,26 @@ def new(
     type=int,
     help="Number of recent agent messages/thoughts to display (default: 1)",
 )
+@click.option(
+    "-f",
+    "--follow",
+    is_flag=True,
+    help="Follow mode: continuously display new messages as they arrive",
+)
+@click.option(
+    "--interval",
+    default=2.0,
+    type=float,
+    help="Polling interval in seconds for follow mode (default: 2.0)",
+)
 @click.option("--server", help="Server name to use (defaults to configured default)")
 @with_server_config
 def tail(
     api: OpenHandsAPI,
     conversation_id_or_number: str,
     count: int,
+    follow: bool,
+    interval: float,
     server: Optional[str],  # noqa: ARG001
 ) -> None:
     """Display the last N agent message(s) and thought(s) from a conversation.
@@ -507,7 +521,28 @@ def tail(
     both explicit messages to the user and the agent's reasoning/thoughts when
     taking actions. Useful for checking the latest activity without viewing
     the entire trajectory.
+
+    With -f/--follow, continuously monitors the conversation and displays new
+    messages/thoughts as they appear (like 'tail -f' for log files).
     """
+
+    def filter_agent_messages(trajectory_data: List[dict]) -> List[dict]:
+        """Filter trajectory for agent messages and thoughts."""
+        agent_messages: List[dict] = []
+        for event in trajectory_data:
+            is_agent = event.get("source") == "agent"
+            is_message = event.get("action") == "message"
+            has_thought = event.get("args", {}).get("thought")
+            if is_agent and (is_message or has_thought):
+                agent_messages.append(event)
+        return agent_messages
+
+    def get_message_text(event: dict) -> str:
+        """Extract message text from an event."""
+        message_text: str = event.get("message", "")
+        thought_text: str = event.get("args", {}).get("thought", "")
+        return thought_text if thought_text else message_text
+
     try:
         # Resolve conversation ID using shared logic
         conv_id = resolve_conversation_id(api, conversation_id_or_number)
@@ -545,50 +580,75 @@ def tail(
         parsed_url = urlparse(full_url)
         runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
-        # Get trajectory data
-        trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
+        if follow:
+            # Follow mode: continuously display new messages
+            import time
 
-        if not trajectory_data:
-            click.echo("✗ Failed to retrieve trajectory data", err=True)
-            return
+            click.echo(f"Following: {title}")
+            click.echo(f"Conversation: {conv_id[:8]}...")
+            click.echo("=" * 80)
+            click.echo("(Press Ctrl+C to stop)")
+            click.echo()
 
-        # Filter for agent messages and thoughts
-        # Include both explicit messages and thoughts (from tool calls)
-        agent_messages = []
-        for event in trajectory_data:
-            is_agent = event.get("source") == "agent"
-            is_message = event.get("action") == "message"
-            has_thought = event.get("args", {}).get("thought")
-            if is_agent and (is_message or has_thought):
-                agent_messages.append(event)
+            seen_event_ids = set()
 
-        if not agent_messages:
-            click.echo("No agent messages or thoughts found in this conversation.")
-            return
+            try:
+                while True:
+                    trajectory_data = api.get_trajectory(
+                        conv_id, runtime_url, session_api_key
+                    )
 
-        # Get the last N messages
-        messages_to_show = agent_messages[-count:] if count > 0 else agent_messages
+                    if trajectory_data:
+                        agent_messages = filter_agent_messages(trajectory_data)
 
-        # Display header
-        count_text = f"Last {len(messages_to_show)} agent message(s)/thought(s)"
-        click.echo(f"{count_text} from: {title}")
-        click.echo(f"Conversation: {conv_id[:8]}...")
-        click.echo("=" * 80)
+                        # Display only new messages
+                        for event in agent_messages:
+                            event_id = event.get("id")
+                            if event_id not in seen_event_ids:
+                                seen_event_ids.add(event_id)
+                                display_text = get_message_text(event)
+                                click.echo(display_text)
+                                click.echo("...")
 
-        # Display each message
-        for i, event in enumerate(messages_to_show, 1):
-            # Get the message text - either from message field or thought field
-            message_text = event.get("message", "")
-            thought_text = event.get("args", {}).get("thought", "")
+                    time.sleep(interval)
 
-            # Prefer thought for display if it exists
-            display_text = thought_text if thought_text else message_text
+            except KeyboardInterrupt:
+                click.echo("\n✓ Stopped following conversation")
+                return
 
-            click.echo(display_text)
-            # Add separator between messages (but not after the last one)
-            if i < len(messages_to_show):
-                click.echo("...")
+        else:
+            # Regular mode: display last N messages
+            trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
 
+            if not trajectory_data:
+                click.echo("✗ Failed to retrieve trajectory data", err=True)
+                return
+
+            agent_messages = filter_agent_messages(trajectory_data)
+
+            if not agent_messages:
+                click.echo("No agent messages or thoughts found in this conversation.")
+                return
+
+            # Get the last N messages
+            messages_to_show = agent_messages[-count:] if count > 0 else agent_messages
+
+            # Display header
+            count_text = f"Last {len(messages_to_show)} agent message(s)/thought(s)"
+            click.echo(f"{count_text} from: {title}")
+            click.echo(f"Conversation: {conv_id[:8]}...")
+            click.echo("=" * 80)
+
+            # Display each message
+            for i, event in enumerate(messages_to_show, 1):
+                display_text = get_message_text(event)
+                click.echo(display_text)
+                # Add separator between messages (but not after the last one)
+                if i < len(messages_to_show):
+                    click.echo("...")
+
+    except KeyboardInterrupt:
+        click.echo("\n✓ Interrupted")
     except Exception as e:
         click.echo(f"✗ Failed to get agent messages: {e}", err=True)
 

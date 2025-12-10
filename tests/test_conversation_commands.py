@@ -987,3 +987,71 @@ class TestTailCommand:
 
                 assert result.exit_code == 0
                 assert "No conversation found" in result.output
+
+    def test_tail_command_follow_mode(self):
+        """Test tail command in follow mode."""
+        trajectory_data_initial = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "message",
+                "message": "Initial message",
+            }
+        ]
+
+        trajectory_data_updated = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "message",
+                "message": "Initial message",
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": "message",
+                "message": "New message",
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+
+                # Simulate two polls: first returns initial, second returns updated
+                mock_api.get_trajectory.side_effect = [
+                    trajectory_data_initial,
+                    trajectory_data_updated,
+                ]
+                mock_create_api.return_value = mock_api
+
+                # Use a timeout to stop the follow mode after a short time
+                with patch("time.sleep") as mock_sleep:
+                    # Make sleep raise KeyboardInterrupt after first call
+                    mock_sleep.side_effect = [None, KeyboardInterrupt()]
+
+                    result = self.runner.invoke(
+                        conv, ["tail", "test-conv-123", "-f", "--interval", "0.1"]
+                    )
+
+                    assert result.exit_code == 0
+                    assert "Following: Test Conversation" in result.output
+                    assert "Initial message" in result.output
+                    assert "New message" in result.output
+                    assert "Stopped following conversation" in result.output
