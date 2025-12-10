@@ -104,3 +104,7 @@ test-results.xml
 
 # Trajectory files and other large JSON files
 trajectory*.json
+
+# Conversation archives and example directories
+conversation-*.zip
+openhands-agent-sdk-examples/

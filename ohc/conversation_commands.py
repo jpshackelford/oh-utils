@@ -483,6 +483,116 @@ def new(
         click.echo(f"✗ Failed to create conversation: {e}", err=True)
 
 
+@conv.command()
+@click.argument("conversation_id_or_number")
+@click.option(
+    "-n",
+    "--number",
+    "count",
+    default=1,
+    type=int,
+    help="Number of recent agent messages/thoughts to display (default: 1)",
+)
+@click.option("--server", help="Server name to use (defaults to configured default)")
+@with_server_config
+def tail(
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    count: int,
+    server: Optional[str],  # noqa: ARG001
+) -> None:
+    """Display the last N agent message(s) and thought(s) from a conversation.
+
+    Shows the most recent messages and thoughts from the agent. This includes
+    both explicit messages to the user and the agent's reasoning/thoughts when
+    taking actions. Useful for checking the latest activity without viewing
+    the entire trajectory.
+    """
+    try:
+        # Resolve conversation ID using shared logic
+        conv_id = resolve_conversation_id(api, conversation_id_or_number)
+        if not conv_id:
+            return
+
+        # Get conversation details to check for runtime info
+        conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
+
+        title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        full_url = conv_details.get("url")
+        session_api_key = conv_details.get("session_api_key")
+
+        if not full_url:
+            click.echo(
+                "✗ Conversation is not running. Trajectory is only available for "
+                "active conversations.",
+                err=True,
+            )
+            return
+
+        if not session_api_key:
+            click.echo(
+                "✗ No session API key found for this conversation.",
+                err=True,
+            )
+            return
+
+        # Extract base runtime URL from the full conversation URL
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(full_url)
+        runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        # Get trajectory data
+        trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
+
+        if not trajectory_data:
+            click.echo("✗ Failed to retrieve trajectory data", err=True)
+            return
+
+        # Filter for agent messages and thoughts
+        # Include both explicit messages and thoughts (from tool calls)
+        agent_messages = []
+        for event in trajectory_data:
+            is_agent = event.get("source") == "agent"
+            is_message = event.get("action") == "message"
+            has_thought = event.get("args", {}).get("thought")
+            if is_agent and (is_message or has_thought):
+                agent_messages.append(event)
+
+        if not agent_messages:
+            click.echo("No agent messages or thoughts found in this conversation.")
+            return
+
+        # Get the last N messages
+        messages_to_show = agent_messages[-count:] if count > 0 else agent_messages
+
+        # Display header
+        count_text = f"Last {len(messages_to_show)} agent message(s)/thought(s)"
+        click.echo(f"{count_text} from: {title}")
+        click.echo(f"Conversation: {conv_id[:8]}...")
+        click.echo("=" * 80)
+
+        # Display each message
+        for i, event in enumerate(messages_to_show, 1):
+            # Get the message text - either from message field or thought field
+            message_text = event.get("message", "")
+            thought_text = event.get("args", {}).get("thought", "")
+
+            # Prefer thought for display if it exists
+            display_text = thought_text if thought_text else message_text
+
+            click.echo(display_text)
+            # Add separator between messages (but not after the last one)
+            if i < len(messages_to_show):
+                click.echo("...")
+
+    except Exception as e:
+        click.echo(f"✗ Failed to get agent messages: {e}", err=True)
+
+
 def _get_prompt_from_sources(prompt_arg: Optional[str]) -> Optional[str]:
     """Get prompt from argument, stdin, or interactive input."""
     # 1. Use argument if provided
