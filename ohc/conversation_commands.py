@@ -157,7 +157,7 @@ def wake(
 
         click.echo(f"Waking up conversation: {title}")
 
-        result = api.start_conversation({"conversation_id": conv_id})
+        result = api.start_conversation(conv_id)
         click.echo("✓ Conversation started successfully")
 
         if "url" in result:
@@ -440,7 +440,7 @@ def new(
         if start:
             click.echo("Starting conversation...")
             # providers_list = [p.strip() for p in providers.split(",")]
-            start_result = api.start_conversation({"conversation_id": conversation_id})
+            start_result = api.start_conversation(conversation_id)
 
             if start_result.get("status") == "ok":
                 click.echo("✓ Conversation started successfully")

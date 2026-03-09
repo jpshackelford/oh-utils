@@ -218,40 +218,25 @@ class TestOpenHandsAPIMethodDelegation:
 
     @patch("ohc.v0.api.OpenHandsAPI.start_conversation")
     def test_start_conversation_v0_success(self, mock_start):
-        """Test start_conversation with v0 API - extracts conversation_id."""
+        """Test start_conversation with v0 API - passes conversation_id directly."""
         mock_start.return_value = {"id": "conv123", "status": "started"}
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
 
-        result = api.start_conversation({"conversation_id": "conv123", "title": "Test"})
+        result = api.start_conversation("conv123", ["github"])
 
-        mock_start.assert_called_once_with("conv123")
+        mock_start.assert_called_once_with("conv123", ["github"])
         assert result == {"id": "conv123", "status": "started"}
-
-    def test_start_conversation_v0_missing_id(self):
-        """Test start_conversation with v0 API raises error when conversation_id missing."""
-        api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
-
-        with pytest.raises(ValueError, match="conversation_id is required for v0 API"):
-            api.start_conversation({"title": "Test"})
-
-    def test_start_conversation_v0_empty_id(self):
-        """Test start_conversation with v0 API raises error when conversation_id is empty."""
-        api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
-
-        with pytest.raises(ValueError, match="conversation_id is required for v0 API"):
-            api.start_conversation({"conversation_id": "", "title": "Test"})
 
     @patch("ohc.v1.api.OpenHandsAPI.start_conversation")
     def test_start_conversation_v1(self, mock_start):
-        """Test start_conversation with v1 API - passes full data dict."""
-        mock_start.return_value = {"id": "conv123", "status": "started"}
+        """Test start_conversation with v1 API - passes conversation_id directly."""
+        mock_start.return_value = {"status": "ok", "conversation_id": "conv123"}
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
-        conversation_data = {"title": "Test", "description": "Test conversation"}
 
-        result = api.start_conversation(conversation_data)
+        result = api.start_conversation("conv123")
 
-        mock_start.assert_called_once_with(conversation_data)
-        assert result == {"id": "conv123", "status": "started"}
+        mock_start.assert_called_once_with("conv123", None)
+        assert result == {"status": "ok", "conversation_id": "conv123"}
 
     @patch("ohc.v0.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v0(self, mock_get_changes):
@@ -270,10 +255,8 @@ class TestOpenHandsAPIMethodDelegation:
 
     @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_with_changes(self, mock_get_changes):
-        """Test get_conversation_changes with v1 API - extracts changes from result."""
-        mock_get_changes.return_value = {
-            "changes": [{"file": "test.py", "status": "modified"}]
-        }
+        """Test get_conversation_changes with v1 API - returns list directly."""
+        mock_get_changes.return_value = [{"file": "test.py", "status": "modified"}]
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
         result = api.get_conversation_changes("conv123", "http://runtime")
@@ -283,14 +266,14 @@ class TestOpenHandsAPIMethodDelegation:
 
     @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_no_changes(self, mock_get_changes):
-        """Test get_conversation_changes with v1 API - handles missing changes key."""
-        mock_get_changes.return_value = {"status": "no_changes"}
+        """Test get_conversation_changes with v1 API - handles empty list."""
+        mock_get_changes.return_value = []
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
         result = api.get_conversation_changes("conv123", "http://runtime")
 
         mock_get_changes.assert_called_once_with("conv123", "http://runtime")
-        assert result is None
+        assert result == []
 
     @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_none_result(self, mock_get_changes):

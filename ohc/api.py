@@ -83,17 +83,28 @@ class OpenHandsAPI:
         """Create a new conversation using the selected API version."""
         return self._client.create_conversation()
 
-    def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Start a new conversation using the selected API version."""
+    def start_conversation(
+        self,
+        conversation_id: str,
+        providers_set: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Start/wake up a conversation using the selected API version.
+
+        Args:
+            conversation_id: The conversation ID to start
+            providers_set: Optional list of providers (V0 only)
+
+        Returns:
+            Dictionary containing conversation start response
+        """
         if self.version == "v0":
-            # v0 API expects conversation_id as string
-            conversation_id = conversation_data.get("conversation_id", "")
-            if not conversation_id:
-                raise ValueError("conversation_id is required for v0 API")
-            return cast("V0API", self._client).start_conversation(conversation_id)
+            return cast("V0API", self._client).start_conversation(
+                conversation_id, providers_set
+            )
         else:
-            # v1 API expects conversation_data as dict
-            return cast("V1API", self._client).start_conversation(conversation_data)
+            return cast("V1API", self._client).start_conversation(
+                conversation_id, providers_set
+            )
 
     def get_conversation_changes(
         self,
@@ -104,18 +115,14 @@ class OpenHandsAPI:
         """Get conversation workspace changes using the selected API version."""
         if self.version == "v0":
             # v0 API has an extra session_api_key parameter
-            # and returns List[Dict[str, str]]
             return cast("V0API", self._client).get_conversation_changes(
                 conversation_id, runtime_url, session_api_key
             )
         else:
-            # v1 API returns Optional[Dict[str, Any]], need to convert to List format
-            result = cast("V1API", self._client).get_conversation_changes(
+            # v1 API returns Optional[List[Dict[str, str]]] directly
+            return cast("V1API", self._client).get_conversation_changes(
                 conversation_id, runtime_url
             )
-            if result and "changes" in result:
-                return cast("List[Dict[str, str]]", result["changes"])
-            return None
 
     def get_file_content(
         self,
