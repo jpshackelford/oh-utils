@@ -386,15 +386,11 @@ class OpenHandsAPI:
 
         agent_server_url = sandbox.get("exposed_urls", {}).get("AGENT_SERVER")
         if not agent_server_url:
-            raise ValueError(
-                f"Sandbox {sandbox_id} has no Agent Server URL available"
-            )
+            raise ValueError(f"Sandbox {sandbox_id} has no Agent Server URL available")
 
         session_api_key = sandbox.get("session_api_key")
         if not session_api_key:
-            raise ValueError(
-                f"Sandbox {sandbox_id} has no session API key available"
-            )
+            raise ValueError(f"Sandbox {sandbox_id} has no session API key available")
 
         return agent_server_url, session_api_key, sandbox
 

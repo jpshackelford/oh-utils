@@ -517,6 +517,7 @@ class TestV1AgentServerAPI:
     def test_download_workspace_archive(self, api_client, load_v1_fixture):
         """Test downloading workspace archive via bash zip + file download."""
         import re
+
         self._setup_conversation_and_sandbox(load_v1_fixture)
 
         # Mock the bash command to create the zip
@@ -531,11 +532,18 @@ class TestV1AgentServerAPI:
         # Mock the zip file download - use callback to match any temp zip path
         # The URL is case-insensitive in the host portion
         def download_callback(request):
-            return (200, {"content-type": "application/octet-stream"}, b"PK\x03\x04fake-zip-content")
+            return (
+                200,
+                {"content-type": "application/octet-stream"},
+                b"PK\x03\x04fake-zip-content",
+            )
 
         responses.add_callback(
             responses.GET,
-            re.compile(r".*\.runtime\.all-hands\.dev/api/file/download/tmp/workspace-.*\.zip", re.IGNORECASE),
+            re.compile(
+                r".*\.runtime\.all-hands\.dev/api/file/download/tmp/workspace-.*\.zip",
+                re.IGNORECASE,
+            ),
             callback=download_callback,
         )
 
