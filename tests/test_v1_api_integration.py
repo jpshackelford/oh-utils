@@ -177,11 +177,78 @@ class TestOpenHandsV1APIIntegration:
         assert "conversation_id" in result
         assert result["conversation_id"] == "a1b2c3d4e5f6789012345678901234ab"
 
-    def test_unimplemented_methods(self, api_client):
-        """Test that unimplemented compatibility methods raise NotImplementedError."""
-        # start_conversation still not implemented
-        with pytest.raises(NotImplementedError):
-            api_client.start_conversation({})
+    @responses.activate
+    def test_start_conversation_running(self, api_client, load_v1_fixture):
+        """Test starting a conversation when sandbox is already running."""
+        conv_fixture = load_v1_fixture("conversation_get")
+        sandbox_fixture = load_v1_fixture("sandbox_info")
+
+        responses.add(
+            responses.GET,
+            conv_fixture["url"],
+            json=conv_fixture["json"],
+            status=conv_fixture["status_code"],
+        )
+        responses.add(
+            responses.GET,
+            sandbox_fixture["url"],
+            json=sandbox_fixture["json"],
+            status=sandbox_fixture["status_code"],
+        )
+
+        result = api_client.start_conversation("CONV_ID_001")
+
+        assert result["status"] == "ok"
+        assert result["conversation_id"] == "CONV_ID_001"
+        assert result["sandbox_id"] == "SANDBOX_ID_001"
+        assert result["sandbox_status"] == "RUNNING"
+        assert "runtime_url" in result
+        assert "session_api_key" in result
+
+    @responses.activate
+    def test_start_conversation_paused(self, api_client, load_v1_fixture):
+        """Test starting a conversation when sandbox is paused (resumes it)."""
+        conv_fixture = load_v1_fixture("conversation_get")
+        paused_sandbox = load_v1_fixture("sandbox_paused")
+        running_sandbox = load_v1_fixture("sandbox_info")
+
+        # First call gets conversation
+        conv_json = conv_fixture["json"].copy()
+        conv_json["sandbox_id"] = "SANDBOX_ID_PAUSED"
+        responses.add(
+            responses.GET,
+            conv_fixture["url"],
+            json=conv_json,
+            status=conv_fixture["status_code"],
+        )
+        # Second call gets paused sandbox
+        responses.add(
+            responses.GET,
+            "https://app.all-hands.dev/api/v1/sandboxes",
+            json=paused_sandbox["json"],
+            status=200,
+        )
+        # Resume endpoint
+        responses.add(
+            responses.POST,
+            "https://app.all-hands.dev/api/v1/sandboxes/SANDBOX_ID_PAUSED/resume",
+            json={"status": "ok"},
+            status=200,
+        )
+        # Third call gets now-running sandbox
+        running_json = running_sandbox["json"].copy()
+        running_json["id"] = "SANDBOX_ID_PAUSED"
+        responses.add(
+            responses.GET,
+            "https://app.all-hands.dev/api/v1/sandboxes",
+            json=running_json,
+            status=200,
+        )
+
+        result = api_client.start_conversation("CONV_ID_001")
+
+        assert result["status"] == "ok"
+        assert result["sandbox_status"] == "RUNNING"
 
 
 class TestV1SandboxAPI:

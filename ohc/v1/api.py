@@ -478,25 +478,110 @@ class OpenHandsAPI:
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to create conversation - {str(e)}") from e
 
-    def start_conversation(self, conversation_data: Dict[str, Any]) -> Dict[str, Any]:
+    def start_conversation(
+        self,
+        conversation_id: str,
+        providers_set: Optional[List[str]] = None,  # noqa: ARG002 - V0 compat
+    ) -> Dict[str, Any]:
         """
-        Start a new conversation (compatibility method).
+        Start/wake up a conversation by resuming its sandbox.
 
-        Note: This method may need to be implemented based on actual v1 API
-        endpoints when they become available.
+        In V1, conversations and sandboxes are decoupled. This method:
+        1. Gets the conversation to find its sandbox_id
+        2. Checks the sandbox status
+        3. Resumes the sandbox if it's paused
 
         Args:
-            conversation_data: Conversation configuration
+            conversation_id: Conversation ID to start
+            providers_set: Deprecated - V1 doesn't use providers_set
 
         Returns:
-            Started conversation dictionary
+            Dictionary containing conversation and sandbox info
+
+        Raises:
+            ValueError: If conversation not found or has no sandbox
+            requests.HTTPError: If the API request fails
+        """
+        # Get conversation to find sandbox_id
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            raise ValueError(f"Conversation not found: {conversation_id}")
+
+        sandbox_id = conversation.get("sandbox_id")
+        if not sandbox_id:
+            raise ValueError(
+                f"Conversation {conversation_id} has no associated sandbox"
+            )
+
+        # Get sandbox info
+        sandbox = self.get_sandbox_info(sandbox_id)
+        status = sandbox.get("status", "UNKNOWN")
+
+        # If sandbox is paused, resume it
+        if status == "PAUSED":
+            self.resume_sandbox(sandbox_id)
+            # Refresh sandbox info after resume
+            sandbox = self.get_sandbox_info(sandbox_id)
+
+        # Return combined info similar to V0 response format
+        return {
+            "status": "ok",
+            "conversation_id": conversation_id,
+            "sandbox_id": sandbox_id,
+            "sandbox_status": sandbox.get("status"),
+            "runtime_url": sandbox.get("exposed_urls", {}).get("AGENT_SERVER"),
+            "session_api_key": sandbox.get("session_api_key"),
+        }
+
+    def resume_sandbox(self, sandbox_id: str) -> Dict[str, Any]:
+        """
+        Resume a paused sandbox.
+
+        Args:
+            sandbox_id: The sandbox identifier
+
+        Returns:
+            Response from the resume endpoint
 
         Raises:
             requests.HTTPError: If the API request fails
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
-        raise NotImplementedError("start_conversation not yet implemented for v1 API")
+        url = urljoin(self.base_url, f"v1/sandboxes/{sandbox_id}/resume")
+
+        response = self.session.post(url, timeout=60)
+
+        if response.status_code == 401:
+            raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
+        if response.status_code == 404:
+            raise ValueError(f"Sandbox not found: {sandbox_id}")
+
+        response.raise_for_status()
+        return cast("Dict[str, Any]", response.json())
+
+    def pause_sandbox(self, sandbox_id: str) -> Dict[str, Any]:
+        """
+        Pause a running sandbox.
+
+        Args:
+            sandbox_id: The sandbox identifier
+
+        Returns:
+            Response from the pause endpoint
+
+        Raises:
+            requests.HTTPError: If the API request fails
+        """
+        url = urljoin(self.base_url, f"v1/sandboxes/{sandbox_id}/pause")
+
+        response = self.session.post(url, timeout=30)
+
+        if response.status_code == 401:
+            raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
+        if response.status_code == 404:
+            raise ValueError(f"Sandbox not found: {sandbox_id}")
+
+        response.raise_for_status()
+        return cast("Dict[str, Any]", response.json())
 
     def get_conversation_changes(
         self,
