@@ -3,12 +3,29 @@ OpenHands v1 API client for the ohc CLI.
 
 This module implements the v1 API endpoints which use /v1 prefixes
 and provide enhanced functionality for events and app-conversations.
+
+V1 uses a two-tier API architecture:
+- App Server (app.all-hands.dev/api/v1): Manages conversations and sandboxes
+  - Uses `Authorization: Bearer {api_key}` header
+- Agent Server (per-sandbox URL): Runtime/workspace operations
+  - Uses `X-Session-API-Key: {session_api_key}` header
 """
 
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
 import requests
+
+
+class SandboxNotRunningError(Exception):
+    """Raised when a sandbox operation requires a running sandbox but it's not."""
+
+    def __init__(self, sandbox_id: str, status: str, message: Optional[str] = None):
+        self.sandbox_id = sandbox_id
+        self.status = status
+        default_msg = f"Sandbox {sandbox_id} is not running (status: {status})"
+        self.message = message or default_msg
+        super().__init__(self.message)
 
 
 class OpenHandsAPI:
@@ -18,6 +35,10 @@ class OpenHandsAPI:
     This client provides access to the v1 API endpoints which include
     enhanced event search, app-conversation management, and improved
     data structures.
+
+    V1 uses a two-tier architecture:
+    - App Server: Manages conversations and sandboxes (uses Authorization header)
+    - Agent Server: Runtime operations on active sandboxes (uses X-Session-API-Key)
 
     Attributes:
         api_key: OpenHands API key for authentication
@@ -36,8 +57,9 @@ class OpenHandsAPI:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/") + "/"
         self.session = requests.Session()
+        # App Server uses Authorization: Bearer header
         self.session.headers.update(
-            {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
+            {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         )
 
     def test_connection(self) -> bool:
@@ -238,6 +260,142 @@ class OpenHandsAPI:
         response.raise_for_status()
         return cast("int", response.json().get("count", 0))
 
+    def get_sandbox_info(self, sandbox_id: str) -> Dict[str, Any]:
+        """
+        Get sandbox details including Agent Server URL and session API key.
+
+        This is a core V1 API method that retrieves the information needed
+        to make Agent Server calls for runtime operations.
+
+        Args:
+            sandbox_id: The sandbox identifier
+
+        Returns:
+            Dictionary containing sandbox info:
+            - id: Sandbox ID
+            - status: STARTING, RUNNING, PAUSED, ERROR, MISSING
+            - session_api_key: Key for Agent Server authentication
+            - exposed_urls: Dict with AGENT_SERVER, VSCODE URLs
+
+        Raises:
+            requests.HTTPError: If the API request fails
+            ValueError: If sandbox not found
+        """
+        url = urljoin(self.base_url, "v1/sandboxes")
+        params = {"id": sandbox_id}
+
+        response = self.session.get(url, params=params, timeout=30)
+
+        if response.status_code == 401:
+            raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
+        if response.status_code == 404:
+            raise ValueError(f"Sandbox not found: {sandbox_id}")
+
+        response.raise_for_status()
+        return cast("Dict[str, Any]", response.json())
+
+    def _make_agent_server_request(
+        self,
+        agent_server_url: str,
+        session_api_key: str,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        timeout: int = 30,
+    ) -> requests.Response:
+        """
+        Make a request to the Agent Server with proper authentication.
+
+        The Agent Server runs on each active sandbox and provides direct access
+        to workspace operations. It uses X-Session-API-Key for authentication.
+
+        Args:
+            agent_server_url: Base URL of Agent Server (from exposed_urls.AGENT_SERVER)
+            session_api_key: Session API key (from sandbox.session_api_key)
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint path (e.g., '/api/git/changes/.')
+            params: Optional query parameters
+            json_data: Optional JSON body data
+            timeout: Request timeout in seconds
+
+        Returns:
+            requests.Response object
+
+        Raises:
+            requests.HTTPError: If the request fails
+        """
+        url = urljoin(agent_server_url.rstrip("/") + "/", endpoint.lstrip("/"))
+        headers = {"X-Session-API-Key": session_api_key}
+
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            params=params,
+            json=json_data,
+            timeout=timeout,
+        )
+
+        if response.status_code == 401:
+            raise requests.HTTPError(
+                "Agent Server authentication failed - invalid session API key",
+                response=response,
+            )
+
+        return response
+
+    def _get_agent_server_info(
+        self, conversation_id: str
+    ) -> tuple[str, str, Dict[str, Any]]:
+        """
+        Get Agent Server connection info for a conversation.
+
+        This helper retrieves the conversation to get sandbox_id, then fetches
+        sandbox info to get the Agent Server URL and session key.
+
+        Args:
+            conversation_id: Conversation ID
+
+        Returns:
+            Tuple of (agent_server_url, session_api_key, sandbox_info)
+
+        Raises:
+            SandboxNotRunningError: If sandbox is not in RUNNING status
+            ValueError: If conversation or sandbox not found
+        """
+        # Get conversation to find sandbox_id
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            raise ValueError(f"Conversation not found: {conversation_id}")
+
+        sandbox_id = conversation.get("sandbox_id")
+        if not sandbox_id:
+            raise ValueError(
+                f"Conversation {conversation_id} has no associated sandbox"
+            )
+
+        # Get sandbox info for Agent Server access
+        sandbox = self.get_sandbox_info(sandbox_id)
+        status = sandbox.get("status", "UNKNOWN")
+
+        if status != "RUNNING":
+            raise SandboxNotRunningError(sandbox_id, status)
+
+        agent_server_url = sandbox.get("exposed_urls", {}).get("AGENT_SERVER")
+        if not agent_server_url:
+            raise ValueError(
+                f"Sandbox {sandbox_id} has no Agent Server URL available"
+            )
+
+        session_api_key = sandbox.get("session_api_key")
+        if not session_api_key:
+            raise ValueError(
+                f"Sandbox {sandbox_id} has no session API key available"
+            )
+
+        return agent_server_url, session_api_key, sandbox
+
     # Legacy compatibility methods - these delegate to v0-style behavior
     # but use v1 endpoints where possible
 
@@ -265,10 +423,9 @@ class OpenHandsAPI:
 
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get conversation details (compatibility method).
+        Get conversation details by ID.
 
-        Note: This method may need to be implemented based on actual v1 API
-        endpoints when they become available.
+        Uses the V1 app-conversations endpoint with id query parameter.
 
         Args:
             conversation_id: Unique conversation identifier
@@ -279,12 +436,18 @@ class OpenHandsAPI:
         Raises:
             requests.HTTPError: If the API request fails
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
-        raise NotImplementedError(
-            "get_conversation not yet implemented for v1 API. "
-            "Use search_app_conversations to find conversations."
-        )
+        url = urljoin(self.base_url, "v1/app-conversations")
+        params = {"id": conversation_id}
+
+        response = self.session.get(url, params=params, timeout=30)
+
+        if response.status_code == 401:
+            raise requests.HTTPError("Unauthorized: Invalid API key", response=response)
+        if response.status_code == 404:
+            return None
+
+        response.raise_for_status()
+        return cast("Optional[Dict[str, Any]]", response.json())
 
     def create_conversation(self) -> Dict[str, Any]:
         """
@@ -334,86 +497,160 @@ class OpenHandsAPI:
         raise NotImplementedError("start_conversation not yet implemented for v1 API")
 
     def get_conversation_changes(
-        self, conversation_id: str, runtime_url: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        conversation_id: str,
+        runtime_url: Optional[str] = None,  # noqa: ARG002 - kept for V0 API compat
+    ) -> Optional[List[Dict[str, str]]]:
         """
-        Get conversation workspace changes (compatibility method).
+        Get git changes (uncommitted files) from the conversation workspace.
+
+        Uses the Agent Server API to retrieve git changes. Requires a running sandbox.
 
         Args:
             conversation_id: Unique conversation identifier
-            runtime_url: Optional runtime URL for the conversation
+            runtime_url: Deprecated - V1 retrieves this from sandbox info automatically
 
         Returns:
-            Changes dictionary or None if not found
+            List of file change dictionaries, or None if not a git repository
 
         Raises:
+            SandboxNotRunningError: If sandbox is not running
             requests.HTTPError: If the API request fails
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
-        raise NotImplementedError(
-            "get_conversation_changes not yet implemented for v1 API"
+        agent_server_url, session_api_key, _ = self._get_agent_server_info(
+            conversation_id
         )
 
+        # Agent Server endpoint for git changes - use '.' for workspace root
+        response = self._make_agent_server_request(
+            agent_server_url=agent_server_url,
+            session_api_key=session_api_key,
+            method="GET",
+            endpoint="/api/git/changes/.",
+        )
+
+        if response.status_code == 404:
+            # Not a git repository or no changes
+            return None
+        if response.status_code == 500:
+            # Server error - likely git repository issue
+            raise Exception("Git repository not available or corrupted")
+
+        response.raise_for_status()
+        return cast("Optional[List[Dict[str, str]]]", response.json())
+
     def get_file_content(
-        self, conversation_id: str, file_path: str, runtime_url: Optional[str] = None
+        self,
+        conversation_id: str,
+        file_path: str,
+        runtime_url: Optional[str] = None,  # noqa: ARG002 - kept for V0 API compat
     ) -> Optional[str]:
         """
-        Get file content from conversation workspace (compatibility method).
+        Get file content from conversation workspace.
+
+        Uses the Agent Server API to download file content. Requires a running sandbox.
 
         Args:
             conversation_id: Unique conversation identifier
-            file_path: Path to the file in the workspace
-            runtime_url: Optional runtime URL for the conversation
+            file_path: Path to file in workspace (e.g., 'README.md' or 'src/main.py')
+            runtime_url: Deprecated - V1 retrieves this from sandbox info automatically
 
         Returns:
             File content as string or None if not found
 
         Raises:
+            SandboxNotRunningError: If sandbox is not running
             requests.HTTPError: If the API request fails
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
-        raise NotImplementedError("get_file_content not yet implemented for v1 API")
+        agent_server_url, session_api_key, _ = self._get_agent_server_info(
+            conversation_id
+        )
+
+        # Agent Server endpoint: GET /api/file/download/{path}
+        # Path should be relative to workspace
+        clean_path = file_path.lstrip("/")
+        endpoint = f"/api/file/download/{clean_path}"
+
+        response = self._make_agent_server_request(
+            agent_server_url=agent_server_url,
+            session_api_key=session_api_key,
+            method="GET",
+            endpoint=endpoint,
+        )
+
+        if response.status_code == 404:
+            return None
+
+        response.raise_for_status()
+        return response.text
 
     def download_workspace_archive(
-        self, conversation_id: str, runtime_url: Optional[str] = None
+        self,
+        conversation_id: str,  # noqa: ARG002 - kept for V0 API compat
+        runtime_url: Optional[str] = None,  # noqa: ARG002 - kept for V0 API compat
     ) -> Optional[bytes]:
         """
-        Download workspace archive (compatibility method).
+        Download workspace archive.
+
+        Note: This functionality is not available in V1 API. The V1 Agent Server
+        does not provide a workspace ZIP download endpoint equivalent to V0's
+        zip-directory endpoint.
 
         Args:
             conversation_id: Unique conversation identifier
-            runtime_url: Optional runtime URL for the conversation
+            runtime_url: Deprecated parameter (not used in V1)
 
         Returns:
-            Archive content as bytes or None if not found
+            Never returns - always raises NotImplementedError
 
         Raises:
-            requests.HTTPError: If the API request fails
+            NotImplementedError: V1 API does not support workspace archive download
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
         raise NotImplementedError(
-            "download_workspace_archive not yet implemented for v1 API"
+            "Workspace archive download is not supported for V1 conversations. "
+            "V1 API has no equivalent to V0's zip-directory endpoint. "
+            "Use get_file_content() to download individual files instead."
         )
 
     def get_trajectory(
-        self, conversation_id: str, runtime_url: Optional[str] = None
+        self,
+        conversation_id: str,
+        runtime_url: Optional[str] = None,  # noqa: ARG002 - kept for V0 API compat
     ) -> Optional[List[Dict[str, Any]]]:
         """
-        Get conversation trajectory (compatibility method).
+        Get conversation trajectory from the Agent Server.
+
+        Uses the Agent Server API to download the trajectory file.
+        Requires a running sandbox.
 
         Args:
             conversation_id: Unique conversation identifier
-            runtime_url: Optional runtime URL for the conversation
+            runtime_url: Deprecated - V1 retrieves this from sandbox info automatically
 
         Returns:
             List of trajectory events or None if not found
 
         Raises:
+            SandboxNotRunningError: If sandbox is not running
             requests.HTTPError: If the API request fails
         """
-        # For now, this is a placeholder - actual v1 implementation
-        # would depend on available endpoints
-        raise NotImplementedError("get_trajectory not yet implemented for v1 API")
+        agent_server_url, session_api_key, _ = self._get_agent_server_info(
+            conversation_id
+        )
+
+        # Agent Server endpoint: GET /api/file/download-trajectory/{conversation_id}
+        endpoint = f"/api/file/download-trajectory/{conversation_id}"
+
+        response = self._make_agent_server_request(
+            agent_server_url=agent_server_url,
+            session_api_key=session_api_key,
+            method="GET",
+            endpoint=endpoint,
+            timeout=60,  # Trajectory can be large, allow more time
+        )
+
+        if response.status_code == 404:
+            return None
+
+        response.raise_for_status()
+        return cast("Optional[List[Dict[str, Any]]]", response.json())

@@ -1,0 +1,23 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/app-conversations",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "params": {
+    "id": "CONV_ID_001"
+  },
+  "json": {
+    "id": "CONV_ID_001",
+    "title": "Test V1 Conversation",
+    "status": "RUNNING",
+    "sandbox_id": "SANDBOX_ID_001",
+    "created_at": "TIMESTAMP_001",
+    "updated_at": "TIMESTAMP_002",
+    "user_id": "USER_ID_001",
+    "metadata": {
+      "model": "gpt-4"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "url": "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/git/changes/.",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "json": [
+    {
+      "path": "src/main.py",
+      "status": "modified"
+    },
+    {
+      "path": "README.md",
+      "status": "modified"
+    },
+    {
+      "path": "tests/test_new.py",
+      "status": "added"
+    }
+  ]
+}

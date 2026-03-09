@@ -12,7 +12,7 @@ from typing import Any, Dict
 import pytest
 import responses
 
-from ohc.v1.api import OpenHandsAPI
+from ohc.v1.api import OpenHandsAPI, SandboxNotRunningError
 
 
 class TestOpenHandsV1APIIntegration:
@@ -179,20 +179,274 @@ class TestOpenHandsV1APIIntegration:
 
     def test_unimplemented_methods(self, api_client):
         """Test that unimplemented compatibility methods raise NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            api_client.get_conversation("test_id")
-
+        # start_conversation still not implemented
         with pytest.raises(NotImplementedError):
             api_client.start_conversation({})
 
-        with pytest.raises(NotImplementedError):
-            api_client.get_conversation_changes("test_id")
-
-        with pytest.raises(NotImplementedError):
-            api_client.get_file_content("test_id", "test_path")
-
-        with pytest.raises(NotImplementedError):
+        # download_workspace_archive is intentionally not implemented (V1 API gap)
+        with pytest.raises(NotImplementedError) as exc_info:
             api_client.download_workspace_archive("test_id")
+        assert "not supported for V1 conversations" in str(exc_info.value)
 
-        with pytest.raises(NotImplementedError):
-            api_client.get_trajectory("test_id")
+
+class TestV1SandboxAPI:
+    """Tests for V1 sandbox-related API methods."""
+
+    @pytest.fixture
+    def v1_fixtures_dir(self) -> Path:
+        """Return the path to the v1 sanitized fixtures directory."""
+        return Path(__file__).parent / "fixtures" / "v1" / "sanitized"
+
+    @pytest.fixture
+    def load_v1_fixture(self, v1_fixtures_dir):
+        """Factory fixture to load a specific v1 fixture file."""
+
+        def _load_fixture(fixture_name: str) -> Dict[str, Any]:
+            fixture_file = v1_fixtures_dir / f"{fixture_name}.json"
+            if not fixture_file.exists():
+                raise FileNotFoundError(f"V1 fixture file not found: {fixture_file}")
+
+            with open(fixture_file) as f:
+                return json.load(f)
+
+        return _load_fixture
+
+    @pytest.fixture
+    def api_client(self) -> OpenHandsAPI:
+        """Create an OpenHands v1 API client for testing."""
+        return OpenHandsAPI("test_api_key", "https://app.all-hands.dev/api/")
+
+    @responses.activate
+    def test_get_sandbox_info(self, api_client, load_v1_fixture):
+        """Test getting sandbox info."""
+        fixture = load_v1_fixture("sandbox_info")
+
+        responses.add(
+            responses.GET,
+            fixture["url"],
+            json=fixture["json"],
+            status=fixture["status_code"],
+        )
+
+        sandbox = api_client.get_sandbox_info("SANDBOX_ID_001")
+
+        assert sandbox["id"] == "SANDBOX_ID_001"
+        assert sandbox["status"] == "RUNNING"
+        assert sandbox["session_api_key"] == "SESSION_API_KEY_001"
+        assert "AGENT_SERVER" in sandbox["exposed_urls"]
+        assert "VSCODE" in sandbox["exposed_urls"]
+
+    @responses.activate
+    def test_get_sandbox_info_not_found(self, api_client):
+        """Test getting sandbox info when sandbox doesn't exist."""
+        responses.add(
+            responses.GET,
+            "https://app.all-hands.dev/api/v1/sandboxes",
+            json={"error": "Not found"},
+            status=404,
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            api_client.get_sandbox_info("nonexistent")
+
+        assert "Sandbox not found" in str(exc_info.value)
+
+    @responses.activate
+    def test_get_conversation(self, api_client, load_v1_fixture):
+        """Test getting conversation by ID."""
+        fixture = load_v1_fixture("conversation_get")
+
+        responses.add(
+            responses.GET,
+            fixture["url"],
+            json=fixture["json"],
+            status=fixture["status_code"],
+        )
+
+        conv = api_client.get_conversation("CONV_ID_001")
+
+        assert conv is not None
+        assert conv["id"] == "CONV_ID_001"
+        assert conv["title"] == "Test V1 Conversation"
+        assert conv["status"] == "RUNNING"
+        assert conv["sandbox_id"] == "SANDBOX_ID_001"
+
+    @responses.activate
+    def test_get_conversation_not_found(self, api_client):
+        """Test getting conversation that doesn't exist."""
+        responses.add(
+            responses.GET,
+            "https://app.all-hands.dev/api/v1/app-conversations",
+            json={"error": "Not found"},
+            status=404,
+        )
+
+        result = api_client.get_conversation("nonexistent")
+        assert result is None
+
+
+class TestV1AgentServerAPI:
+    """Tests for V1 Agent Server API methods (file, git, trajectory)."""
+
+    @pytest.fixture
+    def v1_fixtures_dir(self) -> Path:
+        """Return the path to the v1 sanitized fixtures directory."""
+        return Path(__file__).parent / "fixtures" / "v1" / "sanitized"
+
+    @pytest.fixture
+    def load_v1_fixture(self, v1_fixtures_dir):
+        """Factory fixture to load a specific v1 fixture file."""
+
+        def _load_fixture(fixture_name: str) -> Dict[str, Any]:
+            fixture_file = v1_fixtures_dir / f"{fixture_name}.json"
+            if not fixture_file.exists():
+                raise FileNotFoundError(f"V1 fixture file not found: {fixture_file}")
+
+            with open(fixture_file) as f:
+                return json.load(f)
+
+        return _load_fixture
+
+    @pytest.fixture
+    def api_client(self) -> OpenHandsAPI:
+        """Create an OpenHands v1 API client for testing."""
+        return OpenHandsAPI("test_api_key", "https://app.all-hands.dev/api/")
+
+    def _setup_conversation_and_sandbox(self, load_v1_fixture):
+        """Helper to set up conversation and sandbox responses."""
+        conv_fixture = load_v1_fixture("conversation_get")
+        sandbox_fixture = load_v1_fixture("sandbox_info")
+
+        responses.add(
+            responses.GET,
+            conv_fixture["url"],
+            json=conv_fixture["json"],
+            status=conv_fixture["status_code"],
+        )
+        responses.add(
+            responses.GET,
+            sandbox_fixture["url"],
+            json=sandbox_fixture["json"],
+            status=sandbox_fixture["status_code"],
+        )
+
+    @responses.activate
+    def test_get_conversation_changes(self, api_client, load_v1_fixture):
+        """Test getting git changes from Agent Server."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        git_fixture = load_v1_fixture("git_changes")
+        responses.add(
+            responses.GET,
+            git_fixture["url"],
+            json=git_fixture["json"],
+            status=git_fixture["status_code"],
+        )
+
+        changes = api_client.get_conversation_changes("CONV_ID_001")
+
+        assert changes is not None
+        assert len(changes) == 3
+        assert changes[0]["path"] == "src/main.py"
+        assert changes[0]["status"] == "modified"
+        assert changes[2]["status"] == "added"
+
+    @responses.activate
+    def test_get_conversation_changes_sandbox_paused(self, api_client, load_v1_fixture):
+        """Test getting git changes when sandbox is paused."""
+        conv_fixture = load_v1_fixture("conversation_get")
+        sandbox_fixture = load_v1_fixture("sandbox_paused")
+
+        # Override the sandbox_id in the conversation fixture
+        conv_json = conv_fixture["json"].copy()
+        conv_json["sandbox_id"] = "SANDBOX_ID_PAUSED"
+
+        responses.add(
+            responses.GET,
+            conv_fixture["url"],
+            json=conv_json,
+            status=conv_fixture["status_code"],
+        )
+        responses.add(
+            responses.GET,
+            sandbox_fixture["url"],
+            json=sandbox_fixture["json"],
+            status=sandbox_fixture["status_code"],
+        )
+
+        with pytest.raises(SandboxNotRunningError) as exc_info:
+            api_client.get_conversation_changes("CONV_ID_001")
+
+        assert exc_info.value.status == "PAUSED"
+        assert "SANDBOX_ID_PAUSED" in str(exc_info.value)
+
+    @responses.activate
+    def test_get_file_content(self, api_client, load_v1_fixture):
+        """Test downloading file content from Agent Server."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        file_fixture = load_v1_fixture("file_download")
+        responses.add(
+            responses.GET,
+            file_fixture["url"],
+            body=file_fixture["text"],
+            status=file_fixture["status_code"],
+            headers=file_fixture["headers"],
+        )
+
+        content = api_client.get_file_content("CONV_ID_001", "README.md")
+
+        assert content is not None
+        assert "# Test Project" in content
+        assert "pytest" in content
+
+    @responses.activate
+    def test_get_file_content_not_found(self, api_client, load_v1_fixture):
+        """Test downloading file that doesn't exist."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        responses.add(
+            responses.GET,
+            "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/file/download/nonexistent.txt",
+            json={"error": "Not found"},
+            status=404,
+        )
+
+        content = api_client.get_file_content("CONV_ID_001", "nonexistent.txt")
+        assert content is None
+
+    @responses.activate
+    def test_get_trajectory(self, api_client, load_v1_fixture):
+        """Test downloading trajectory from Agent Server."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        traj_fixture = load_v1_fixture("trajectory_download")
+        responses.add(
+            responses.GET,
+            traj_fixture["url"],
+            json=traj_fixture["json"],
+            status=traj_fixture["status_code"],
+        )
+
+        trajectory = api_client.get_trajectory("CONV_ID_001")
+
+        assert trajectory is not None
+        assert len(trajectory) == 3
+        assert trajectory[0]["type"] == "action"
+        assert trajectory[0]["action"] == "run"
+        assert trajectory[2]["action"] == "finish"
+
+    @responses.activate
+    def test_get_trajectory_not_found(self, api_client, load_v1_fixture):
+        """Test downloading trajectory that doesn't exist."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        responses.add(
+            responses.GET,
+            "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/file/download-trajectory/CONV_ID_001",
+            json={"error": "Not found"},
+            status=404,
+        )
+
+        trajectory = api_client.get_trajectory("CONV_ID_001")
+        assert trajectory is None

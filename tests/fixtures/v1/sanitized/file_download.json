@@ -1,0 +1,9 @@
+{
+  "url": "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/file/download/README.md",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "text/plain"
+  },
+  "text": "# Test Project\n\nThis is a test README file.\n\n## Usage\n\nRun the tests with `pytest`.\n"
+}

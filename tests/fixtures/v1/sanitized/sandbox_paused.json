@@ -1,0 +1,22 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/sandboxes",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "params": {
+    "id": "SANDBOX_ID_PAUSED"
+  },
+  "json": {
+    "id": "SANDBOX_ID_PAUSED",
+    "status": "PAUSED",
+    "session_api_key": "SESSION_API_KEY_002",
+    "created_at": "TIMESTAMP_001",
+    "updated_at": "TIMESTAMP_002",
+    "exposed_urls": {
+      "AGENT_SERVER": "https://PAUSED_AGENT_HOST.runtime.all-hands.dev",
+      "VSCODE": "https://PAUSED_VSCODE_HOST.runtime.all-hands.dev"
+    }
+  }
+}
