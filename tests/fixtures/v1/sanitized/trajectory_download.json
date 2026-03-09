@@ -1,0 +1,35 @@
+{
+  "url": "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/file/download-trajectory/CONV_ID_001",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "json": [
+    {
+      "id": "evt_001",
+      "timestamp": "TIMESTAMP_001",
+      "type": "action",
+      "action": "run",
+      "args": {
+        "command": "ls -la"
+      }
+    },
+    {
+      "id": "evt_002",
+      "timestamp": "TIMESTAMP_002",
+      "type": "observation",
+      "observation": "run",
+      "content": "total 24\ndrwxr-xr-x 4 user user 4096 Jan 15 10:00 .\ndrwxr-xr-x 8 user user 4096 Jan 15 09:00 .."
+    },
+    {
+      "id": "evt_003",
+      "timestamp": "TIMESTAMP_003",
+      "type": "action",
+      "action": "finish",
+      "args": {
+        "message": "Task completed successfully"
+      }
+    }
+  ]
+}
