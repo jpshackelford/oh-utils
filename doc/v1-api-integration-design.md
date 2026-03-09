@@ -19,10 +19,10 @@ The key challenges are:
 
 V1 introduces two levels of API with different purposes and authentication:
 
-| API | Base URL | Authentication | Purpose |
-|-----|----------|----------------|---------|
-| **App Server** | `app.all-hands.dev/api/v1/...` | `Authorization: Bearer {api_key}` | Manage conversations & sandboxes |
-| **Agent Server** | `{sandbox_url}/api/...` | `X-Session-API-Key: {session_api_key}` | Runtime/workspace operations |
+| API              | Base URL                       | Authentication                         | Purpose                          |
+| ---------------- | ------------------------------ | -------------------------------------- | -------------------------------- |
+| **App Server**   | `app.all-hands.dev/api/v1/...` | `Authorization: Bearer {api_key}`      | Manage conversations & sandboxes |
+| **Agent Server** | `{sandbox_url}/api/...`        | `X-Session-API-Key: {session_api_key}` | Runtime/workspace operations     |
 
 **Key architectural changes from V0:**
 
@@ -203,20 +203,20 @@ The Agent Server runs on each sandbox and provides runtime operations. Access it
 
 ### 4.4 Authentication
 
-| API | Header | Value Source |
-|-----|--------|--------------|
-| **App Server** | `Authorization` | `Bearer {api_key}` from user settings |
+| API              | Header              | Value Source                          |
+| ---------------- | ------------------- | ------------------------------------- |
+| **App Server**   | `Authorization`     | `Bearer {api_key}` from user settings |
 | **Agent Server** | `X-Session-API-Key` | `{session_api_key}` from sandbox info |
 
 ### 4.5 Sandbox Lifecycle States
 
-| Status | Description | Agent Server Available? |
-|--------|-------------|------------------------|
-| `STARTING` | Sandbox is initializing | No |
-| `RUNNING` | Sandbox is active | Yes |
-| `PAUSED` | Sandbox is suspended (no billing) | No |
-| `ERROR` | Something went wrong | No |
-| `MISSING` | Sandbox no longer exists | No |
+| Status     | Description                       | Agent Server Available? |
+| ---------- | --------------------------------- | ----------------------- |
+| `STARTING` | Sandbox is initializing           | No                      |
+| `RUNNING`  | Sandbox is active                 | Yes                     |
+| `PAUSED`   | Sandbox is suspended (no billing) | No                      |
+| `ERROR`    | Something went wrong              | No                      |
+| `MISSING`  | Sandbox no longer exists          | No                      |
 
 ### 4.6 Critical Flow: Runtime Operations
 
