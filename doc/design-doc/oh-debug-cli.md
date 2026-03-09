@@ -22,50 +22,85 @@ Users report conversations erroring out with messages indicating resources have 
 
 ---
 
+## Integration with oh-utils
+
+This tool will be implemented as part of the existing `oh-utils` repository, which already provides:
+- `ohc` CLI for OpenHands Cloud conversation management
+- Established patterns for configuration, commands, and display formatting
+- Testing infrastructure with >78% coverage
+
+### Integration Options
+
+**Option A: Subcommand of `ohc`** (Recommended)
+```bash
+ohc debug runtime <ID>
+ohc debug health
+ohc debug configure
+```
+
+**Option B: Separate Entry Point**
+```bash
+oh-debug runtime <ID>
+```
+
+Option A is recommended to leverage existing infrastructure and provide a unified CLI experience.
+
+---
+
 ## Configuration
 
 ### File Location
 
+Following the XDG Base Directory Specification (consistent with existing `ohc` configuration):
+
 ```
-~/.oh-debug/config.yaml
+~/.config/ohc/debug.json
+```
+
+Or with `$XDG_CONFIG_HOME` set:
+```
+$XDG_CONFIG_HOME/ohc/debug.json
 ```
 
 ### Configuration Schema
 
-```yaml
-# ~/.oh-debug/config.yaml
+Using JSON format for consistency with the existing `ohc` configuration:
 
-environments:
-  production:
-    # App cluster - where OpenHands Enterprise Server runs (primary)
-    app:
-      kube_context: gke_myproject_us-central1_prod
-      namespace: openhands
-    
-    # Runtime cluster - where runtime pods run
-    # If omitted, defaults to app cluster values
-    runtime:
-      kube_context: gke_myproject_us-central1_prod   # optional, defaults to app.kube_context
-      namespace: runtime-pods
-
-  staging:
-    app:
-      kube_context: gke_myproject_us-central1_staging
-      namespace: openhands
-    runtime:
-      namespace: runtime-pods   # context defaults to app context
-
-  # Example: separate clusters for app and runtime
-  prod-isolated:
-    app:
-      kube_context: gke_myproject_us-central1_app
-      namespace: openhands
-    runtime:
-      kube_context: gke_myproject_us-west1_runtimes
-      namespace: runtime-pods
-
-# Default environment when --env not specified
-default: production
+```json
+{
+  "environments": {
+    "production": {
+      "app": {
+        "kube_context": "gke_myproject_us-central1_prod",
+        "namespace": "openhands"
+      },
+      "runtime": {
+        "kube_context": "gke_myproject_us-central1_prod",
+        "namespace": "runtime-pods"
+      }
+    },
+    "staging": {
+      "app": {
+        "kube_context": "gke_myproject_us-central1_staging",
+        "namespace": "openhands"
+      },
+      "runtime": {
+        "namespace": "runtime-pods"
+      }
+    },
+    "prod-isolated": {
+      "app": {
+        "kube_context": "gke_myproject_us-central1_app",
+        "namespace": "openhands"
+      },
+      "runtime": {
+        "kube_context": "gke_myproject_us-west1_runtimes",
+        "namespace": "runtime-pods"
+      }
+    }
+  },
+  "default_environment": "production"
+}
 ```
 
 ### Configuration Resolution
@@ -89,7 +124,8 @@ When runtime settings are not fully specified:
 ### Command
 
 ```bash
-oh-debug configure
+ohc debug configure        # If integrated as subcommand (recommended)
+oh-debug configure         # If standalone entry point
 ```
 
 ### Flow
@@ -122,13 +158,13 @@ Runtime Cluster (where runtime pods run)
 
 ? Use detected settings? [Y/n]: y
 
-✓ Configuration saved to ~/.oh-debug/config.yaml
+✓ Configuration saved to ~/.config/ohc/debug.json
 
 Set as default environment? [Y/n]: y
 ✓ 'production' set as default
 
 Quick test:
-  oh-debug health
+  ohc debug health
 ```
 
 ### Auto-Detection Logic
@@ -196,79 +232,81 @@ Available contexts:
 
 ## CLI Commands
 
+> **Note**: Commands shown below use `ohc debug` (recommended integration). If implemented as standalone, replace with `oh-debug`.
+
 ### Configuration Commands
 
 ```bash
-oh-debug configure                      # Interactive setup for new environment
-oh-debug configure --add <name>         # Add another environment
-oh-debug configure --list               # List configured environments
-oh-debug configure --default <name>     # Set default environment
-oh-debug configure --show               # Show current configuration
-oh-debug configure --show <name>        # Show specific environment config
-oh-debug configure --remove <name>      # Remove an environment
-oh-debug configure --test               # Test connectivity to configured clusters
+ohc debug configure                      # Interactive setup for new environment
+ohc debug configure --add <name>         # Add another environment
+ohc debug configure --list               # List configured environments
+ohc debug configure --default <name>     # Set default environment
+ohc debug configure --show               # Show current configuration
+ohc debug configure --show <name>        # Show specific environment config
+ohc debug configure --remove <name>      # Remove an environment
+ohc debug configure --test               # Test connectivity to configured clusters
 ```
 
 ### Runtime Investigation Commands
 
 ```bash
 # Investigate a specific runtime
-oh-debug runtime <RUNTIME_ID or SESSION_ID>
+ohc debug runtime <RUNTIME_ID or SESSION_ID>
 
 # With options
-oh-debug runtime <ID> --events          # Full event history
-oh-debug runtime <ID> --logs            # Container logs
-oh-debug runtime <ID> --logs --previous # Logs from crashed container
-oh-debug runtime <ID> --describe        # Full pod description
-oh-debug runtime <ID> --yaml            # Pod YAML
-oh-debug runtime <ID> --all             # Everything
+ohc debug runtime <ID> --events          # Full event history
+ohc debug runtime <ID> --logs            # Container logs
+ohc debug runtime <ID> --logs --previous # Logs from crashed container
+ohc debug runtime <ID> --describe        # Full pod description
+ohc debug runtime <ID> --yaml            # Pod YAML
+ohc debug runtime <ID> --all             # Everything
 ```
 
 ### Health & Discovery Commands
 
 ```bash
 # Cluster health overview
-oh-debug health
+ohc debug health
 
 # List runtimes with issues
-oh-debug list --errors                  # Error state runtimes
-oh-debug list --restarts                # Runtimes with restarts
-oh-debug list --restarts --min 3        # At least 3 restarts
-oh-debug list --oom                     # OOMKilled runtimes
-oh-debug list --recent                  # Recently created (last 1h)
+ohc debug list --errors                  # Error state runtimes
+ohc debug list --restarts                # Runtimes with restarts
+ohc debug list --restarts --min 3        # At least 3 restarts
+ohc debug list --oom                     # OOMKilled runtimes
+ohc debug list --recent                  # Recently created (last 1h)
 ```
 
 ### App Server Commands
 
 ```bash
 # App server logs
-oh-debug app logs                       # App server logs
-oh-debug app logs --follow              # Stream logs
-oh-debug app logs --since 1h            # Logs from last hour
-oh-debug app logs --component api       # Specific component
+ohc debug app logs                       # App server logs
+ohc debug app logs --follow              # Stream logs
+ohc debug app logs --since 1h            # Logs from last hour
+ohc debug app logs --component api       # Specific component
 
 # App server health
-oh-debug app status                     # Deployment status
-oh-debug app pods                       # List app pods
+ohc debug app status                     # Deployment status
+ohc debug app pods                       # List app pods
 ```
 
 ### Watch Mode
 
 ```bash
-oh-debug watch                          # Stream all runtime events
-oh-debug watch --errors                 # Only error events
-oh-debug watch <RUNTIME_ID>             # Watch specific runtime
+ohc debug watch                          # Stream all runtime events
+ohc debug watch --errors                 # Only error events
+ohc debug watch <RUNTIME_ID>             # Watch specific runtime
 ```
 
 ### Global Options
 
 ```bash
-oh-debug --env <name> <command>         # Use specific environment
-oh-debug -e staging <command>           # Short form
-oh-debug --output json <command>        # JSON output
-oh-debug --output table <command>       # Table output (default for lists)
-oh-debug --quiet <command>              # Minimal output (IDs only)
-oh-debug --verbose <command>            # Debug output
+ohc debug --env <name> <command>         # Use specific environment
+ohc debug -e staging <command>           # Short form
+ohc debug --output json <command>        # JSON output
+ohc debug --output table <command>       # Table output (default for lists)
+ohc debug --quiet <command>              # Minimal output (IDs only)
+ohc debug --verbose <command>            # Debug output
 ```
 
 ---
@@ -278,7 +316,7 @@ oh-debug --verbose <command>            # Debug output
 ### Runtime Investigation
 
 ```
-$ oh-debug runtime abc123xyz
+$ ohc debug runtime abc123xyz
 
 Runtime: abc123xyz
 Session: sess-456789
@@ -317,7 +355,7 @@ Recent Events:
 ### Health Overview
 
 ```
-$ oh-debug health
+$ ohc debug health
 
 OpenHands Environment: production
 =================================
@@ -354,7 +392,7 @@ Top Issues:
 ### List with Filters
 
 ```
-$ oh-debug list --oom --since 24h
+$ ohc debug list --oom --since 24h
 
 RUNTIME ID      SESSION         STATUS    RESTARTS  REASON      AGE    ORG
 abc123xyz       sess-456789     Error     5         OOMKilled   2h     acme-corp
@@ -367,7 +405,7 @@ ghi789def       sess-789012     Running   2         OOMKilled   12h    acme-corp
 ### JSON Output
 
 ```
-$ oh-debug runtime abc123xyz --output json
+$ ohc debug runtime abc123xyz --output json
 
 {
   "runtime_id": "abc123xyz",
@@ -398,54 +436,79 @@ $ oh-debug runtime abc123xyz --output json
 
 ### Technology Stack
 
-- **Language**: Python 3.11+ (consistent with OpenHands ecosystem)
-- **CLI Framework**: `click` or `typer` (for argument parsing, help generation)
-- **Kubernetes Client**: `kubernetes` Python client
-- **Config Parsing**: `pyyaml`
-- **Output Formatting**: `rich` (for tables, colors, progress)
-- **HTTP Client**: `httpx` (if API calls needed later)
+Building on the existing oh-utils codebase:
+
+- **Language**: Python 3.8+ (per existing `pyproject.toml`, compatible with 3.11+)
+- **CLI Framework**: `click>=8.0.0` (already used by ohc)
+- **Kubernetes Client**: `kubernetes` Python client (new dependency)
+- **Config Parsing**: `json` (built-in, consistent with existing ohc config)
+- **Output Formatting**: Terminal-aware formatting (see existing `conversation_display.py` patterns)
+- **HTTP Client**: `requests>=2.25.0` (already used by ohc)
+
+### Reusable Components from ohc
+
+The following existing patterns should be leveraged:
+
+1. **ConfigManager** (`ohc/config.py`): Extend for debug config or create `DebugConfigManager`
+2. **Command decorators** (`ohc/command_utils.py`): Pattern for `@with_env_config`
+3. **Display formatting** (`ohc/conversation_display.py`): Status icons, dataclasses
+4. **Testing infrastructure** (`tests/`): VCR-based fixtures, conftest patterns
 
 ### Package Structure
 
+Integrated into existing oh-utils structure:
+
 ```
-oh-debug/
-├── pyproject.toml
-├── README.md
-├── src/
-│   └── oh_debug/
+oh-utils/                           # Existing repository
+├── pyproject.toml                  # Add kubernetes dependency
+├── ohc/
+│   ├── __init__.py
+│   ├── cli.py                      # Add debug command group
+│   ├── config.py                   # Existing config (servers)
+│   ├── debug_config.py             # NEW: Debug environment config
+│   ├── debug_commands.py           # NEW: Debug command group
+│   ├── k8s/                        # NEW: Kubernetes utilities
+│   │   ├── __init__.py
+│   │   ├── client.py               # K8s client wrapper
+│   │   ├── detection.py            # Auto-detection logic
+│   │   └── queries.py              # Pod/event queries
+│   └── debug/                      # NEW: Debug subcommands
 │       ├── __init__.py
-│       ├── cli.py              # Main CLI entry point
-│       ├── config/
-│       │   ├── __init__.py
-│       │   ├── manager.py      # Config load/save
-│       │   ├── models.py       # Config dataclasses
-│       │   └── setup.py        # Interactive setup
-│       ├── k8s/
-│       │   ├── __init__.py
-│       │   ├── client.py       # K8s client wrapper
-│       │   ├── detection.py    # Auto-detection logic
-│       │   └── queries.py      # Pod/event queries
-│       ├── commands/
-│       │   ├── __init__.py
-│       │   ├── configure.py
-│       │   ├── runtime.py
-│       │   ├── health.py
-│       │   ├── list.py
-│       │   ├── app.py
-│       │   └── watch.py
-│       └── output/
-│           ├── __init__.py
-│           ├── formatters.py   # JSON, table, text
-│           └── recommendations.py
+│       ├── configure.py
+│       ├── runtime.py
+│       ├── health.py
+│       ├── list_cmd.py             # 'list' is reserved
+│       ├── app.py
+│       └── watch.py
 └── tests/
-    └── ...
+    ├── test_debug_config.py        # NEW
+    ├── test_debug_commands.py      # NEW
+    └── fixtures/
+        └── k8s/                    # NEW: K8s mock responses
 ```
 
 ### Distribution
 
-- PyPI package: `oh-debug` or `openhands-debug`
-- Install: `pip install oh-debug`
-- Or: `pipx install oh-debug`
+The debug functionality is distributed as part of the existing `oh-utils` package:
+
+```bash
+# Install oh-utils (includes debug commands)
+pip install oh-utils
+# or
+uv pip install oh-utils
+
+# Run debug commands
+ohc debug health
+ohc debug runtime <ID>
+```
+
+Optionally, a standalone entry point can be added to `pyproject.toml`:
+
+```toml
+[project.scripts]
+ohc = "ohc.cli:main"
+oh-debug = "ohc.debug_commands:main"  # Optional standalone
+```
 
 ---
 
@@ -462,7 +525,8 @@ oh-debug/
 
 ## Open Questions
 
-1. **Naming**: `oh-debug`, `openhands-debug`, `ohd`, or something else?
+1. ~~**Naming**: `oh-debug`, `openhands-debug`, `ohd`, or something else?~~
+   **Resolved**: Recommend `ohc debug` as subcommand for consistency with existing CLI
 2. **Should we support `--kubeconfig` override** for non-standard kubeconfig locations?
 3. **Caching**: Should we cache cluster info to speed up repeated queries?
 4. **Authentication**: Any special handling needed for GKE/EKS auth token refresh?
@@ -471,6 +535,7 @@ oh-debug/
 
 ## References
 
+- [oh-utils repository](https://github.com/jpshackelford/oh-utils) - This project
 - [runtime-api repository](https://github.com/OpenHands/runtime-api) - Runtime pod management
 - [OpenHands repository](https://github.com/OpenHands/OpenHands) - Main application
 - [OpenHands-Cloud repository](https://github.com/All-Hands-AI/OpenHands-Cloud) - Helm charts and deployment
