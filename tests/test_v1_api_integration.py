@@ -183,11 +183,6 @@ class TestOpenHandsV1APIIntegration:
         with pytest.raises(NotImplementedError):
             api_client.start_conversation({})
 
-        # download_workspace_archive is intentionally not implemented (V1 API gap)
-        with pytest.raises(NotImplementedError) as exc_info:
-            api_client.download_workspace_archive("test_id")
-        assert "not supported for V1 conversations" in str(exc_info.value)
-
 
 class TestV1SandboxAPI:
     """Tests for V1 sandbox-related API methods."""
@@ -450,3 +445,60 @@ class TestV1AgentServerAPI:
 
         trajectory = api_client.get_trajectory("CONV_ID_001")
         assert trajectory is None
+
+    @responses.activate
+    def test_download_workspace_archive(self, api_client, load_v1_fixture):
+        """Test downloading workspace archive via bash zip + file download."""
+        import re
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        # Mock the bash command to create the zip
+        bash_fixture = load_v1_fixture("bash_zip_workspace")
+        responses.add(
+            responses.POST,
+            bash_fixture["url"],
+            json=bash_fixture["json"],
+            status=bash_fixture["status_code"],
+        )
+
+        # Mock the zip file download - use callback to match any temp zip path
+        # The URL is case-insensitive in the host portion
+        def download_callback(request):
+            return (200, {"content-type": "application/octet-stream"}, b"PK\x03\x04fake-zip-content")
+
+        responses.add_callback(
+            responses.GET,
+            re.compile(r".*\.runtime\.all-hands\.dev/api/file/download/tmp/workspace-.*\.zip", re.IGNORECASE),
+            callback=download_callback,
+        )
+
+        # Mock the cleanup command (ignore result)
+        responses.add(
+            responses.POST,
+            bash_fixture["url"],
+            json={"exit_code": 0, "stdout": "", "stderr": ""},
+            status=200,
+        )
+
+        archive = api_client.download_workspace_archive("CONV_ID_001")
+
+        assert archive is not None
+        assert archive.startswith(b"PK")  # ZIP file magic bytes
+
+    @responses.activate
+    def test_download_workspace_archive_zip_failure(self, api_client, load_v1_fixture):
+        """Test workspace archive download when zip creation fails."""
+        self._setup_conversation_and_sandbox(load_v1_fixture)
+
+        # Mock the bash command to fail
+        responses.add(
+            responses.POST,
+            "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/bash/execute_bash_command",
+            json={"exit_code": 1, "stdout": "", "stderr": "zip: command not found"},
+            status=200,
+        )
+
+        with pytest.raises(Exception) as exc_info:
+            api_client.download_workspace_archive("CONV_ID_001")
+
+        assert "Failed to create workspace archive" in str(exc_info.value)

@@ -1,0 +1,9 @@
+{
+  "url_pattern": "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/file/download/tmp/workspace-.*.zip",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/octet-stream"
+  },
+  "content_base64": "UEsDBBQAAAAIAAAAAACUbQcAAAAAAAIAAgAAAAYAHABSRUFETUVVVAkAA9kBAAAABAAAAHV4CwABBOgDAAAE6AMAAFBLAQIeAxQAAAAIAAAAAACUbQcAAAAAAAIAAgAAAAYAGAAAAAAAAQAAAKSAAAAAAFJFQURNRVVUBQAD2QEAAHV4CwABBOgDAAAE6AMAAFBLBQYAAAAAAQABAfMAAABBAAAAAA=="
+}

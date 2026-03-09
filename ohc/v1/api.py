@@ -11,6 +11,8 @@ V1 uses a two-tier API architecture:
   - Uses `X-Session-API-Key: {session_api_key}` header
 """
 
+import contextlib
+import uuid
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urljoin
 
@@ -586,31 +588,83 @@ class OpenHandsAPI:
 
     def download_workspace_archive(
         self,
-        conversation_id: str,  # noqa: ARG002 - kept for V0 API compat
+        conversation_id: str,
         runtime_url: Optional[str] = None,  # noqa: ARG002 - kept for V0 API compat
+        workspace_path: str = "/workspace",
     ) -> Optional[bytes]:
         """
-        Download workspace archive.
+        Download workspace archive as a ZIP file.
 
-        Note: This functionality is not available in V1 API. The V1 Agent Server
-        does not provide a workspace ZIP download endpoint equivalent to V0's
-        zip-directory endpoint.
+        Uses the Agent Server's bash endpoint to create a zip archive of the
+        workspace, then downloads the resulting file. Requires a running sandbox.
 
         Args:
             conversation_id: Unique conversation identifier
-            runtime_url: Deprecated parameter (not used in V1)
+            runtime_url: Deprecated - V1 retrieves this from sandbox info automatically
+            workspace_path: Path to the workspace directory (default: /workspace)
 
         Returns:
-            Never returns - always raises NotImplementedError
+            ZIP archive content as bytes, or None if workspace doesn't exist
 
         Raises:
-            NotImplementedError: V1 API does not support workspace archive download
+            SandboxNotRunningError: If sandbox is not running
+            requests.HTTPError: If the API request fails
+            Exception: If zip creation fails
         """
-        raise NotImplementedError(
-            "Workspace archive download is not supported for V1 conversations. "
-            "V1 API has no equivalent to V0's zip-directory endpoint. "
-            "Use get_file_content() to download individual files instead."
+        agent_server_url, session_api_key, _ = self._get_agent_server_info(
+            conversation_id
         )
+
+        # Create a unique temp file path for the zip
+        temp_zip_path = f"/tmp/workspace-{uuid.uuid4().hex}.zip"
+
+        # Use bash endpoint to create the zip archive
+        zip_command = f"zip -r {temp_zip_path} {workspace_path}"
+        bash_response = self._make_agent_server_request(
+            agent_server_url=agent_server_url,
+            session_api_key=session_api_key,
+            method="POST",
+            endpoint="/api/bash/execute_bash_command",
+            json_data={"command": zip_command, "timeout": 120},
+            timeout=130,  # Allow extra time for large workspaces
+        )
+
+        if bash_response.status_code != 200:
+            bash_response.raise_for_status()
+
+        result = bash_response.json()
+        exit_code = result.get("exit_code", -1)
+        if exit_code != 0:
+            stderr = result.get("stderr", "Unknown error")
+            raise Exception(f"Failed to create workspace archive: {stderr}")
+
+        # Download the zip file
+        download_response = self._make_agent_server_request(
+            agent_server_url=agent_server_url,
+            session_api_key=session_api_key,
+            method="GET",
+            endpoint=f"/api/file/download/{temp_zip_path}",
+            timeout=120,  # Allow time for large downloads
+        )
+
+        if download_response.status_code == 404:
+            return None
+
+        download_response.raise_for_status()
+        zip_content = download_response.content
+
+        # Clean up the temp file (best effort)
+        with contextlib.suppress(Exception):
+            self._make_agent_server_request(
+                agent_server_url=agent_server_url,
+                session_api_key=session_api_key,
+                method="POST",
+                endpoint="/api/bash/execute_bash_command",
+                json_data={"command": f"rm -f {temp_zip_path}", "timeout": 10},
+                timeout=15,
+            )
+
+        return zip_content
 
     def get_trajectory(
         self,
