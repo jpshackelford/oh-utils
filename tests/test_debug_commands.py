@@ -272,3 +272,75 @@ class TestAppCommands:
             result = runner.invoke(cli_with_commands, ["debug", "app", "status"])
             assert result.exit_code != 0
             assert "No debug environment configured" in result.output
+
+
+class TestParseDuration:
+    """Tests for the parse_duration utility function."""
+
+    def test_parse_hours(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("1h") == 3600
+        assert parse_duration("2h") == 7200
+        assert parse_duration("24h") == 86400
+
+    def test_parse_minutes(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("1m") == 60
+        assert parse_duration("30m") == 1800
+        assert parse_duration("60m") == 3600
+
+    def test_parse_seconds(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("1s") == 1
+        assert parse_duration("60s") == 60
+        assert parse_duration("300s") == 300
+
+    def test_parse_days(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("1d") == 86400
+        assert parse_duration("7d") == 604800
+
+    def test_parse_plain_number_defaults_to_minutes(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("10") == 600  # 10 minutes = 600 seconds
+        assert parse_duration("30") == 1800  # 30 minutes = 1800 seconds
+
+    def test_parse_with_whitespace(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("  1h  ") == 3600
+        assert parse_duration("\t30m\n") == 1800
+
+    def test_parse_uppercase(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("1H") == 3600
+        assert parse_duration("30M") == 1800
+        assert parse_duration("60S") == 60
+
+    def test_parse_zero_values(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        assert parse_duration("0h") == 0
+        assert parse_duration("0m") == 0
+        assert parse_duration("0s") == 0
+
+    def test_parse_invalid_input_raises_error(self) -> None:
+        from ohc.debug.utils import parse_duration
+
+        # Invalid suffix
+        with pytest.raises(ValueError):
+            parse_duration("1x")
+
+        # Non-numeric
+        with pytest.raises(ValueError):
+            parse_duration("foo")
+
+        # Empty after suffix
+        with pytest.raises(ValueError):
+            parse_duration("h")
