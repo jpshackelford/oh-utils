@@ -1,9 +1,7 @@
 """Tests for Kubernetes client utilities."""
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from ohc.k8s.client import K8sClient, K8sClientError
 from ohc.k8s.detection import DetectedRuntimeConfig, RuntimeDetector

@@ -1,6 +1,5 @@
 """Tests for debug configuration management."""
 
-import json
 import os
 import sys
 import tempfile
