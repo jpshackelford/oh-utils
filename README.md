@@ -4,18 +4,15 @@ A collection of utilities for working with OpenHands (formerly All-Hands-AI / Op
 
 ## Installation
 
+> **Note:** This package is intended as a command-line utility, not an API library.
+> Internal APIs are expected to be very unstable in the short term.
+
 ### Using uv (Recommended)
 
 Install directly from GitHub:
 
 ```bash
 uv pip install git+https://github.com/jpshackelford/oh-utils.git
-```
-
-Or add as a project dependency:
-
-```bash
-uv add git+https://github.com/jpshackelford/oh-utils.git
 ```
 
 ### Development Installation
