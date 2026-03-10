@@ -66,8 +66,12 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
 
-def interactive_mode() -> None:
-    """Start the interactive conversation manager."""
+def interactive_mode(api_version: str = "v0") -> None:
+    """Start the interactive conversation manager.
+
+    Args:
+        api_version: API version to use ("v0" or "v1"), defaults to "v0"
+    """
     # Import the original conversation manager and adapt it
     try:
         # Check if we have a configured server
@@ -95,32 +99,17 @@ def interactive_mode() -> None:
         # Set environment variable for the original conversation manager
         os.environ["OH_API_KEY"] = server_config["api_key"]
 
-        # Import and run the original conversation manager
+        # Import and run the conversation manager with version support
         from conversation_manager.conversation_manager import ConversationManager
-
-        # Override the base URL in the API class if needed
-        if server_config["url"] != "https://app.all-hands.dev/api/":
-            # We need to patch the OpenHandsAPI class in the original module
-            import conversation_manager.conversation_manager as cm
-
-            original_init = cm.OpenHandsAPI.__init__
-
-            def patched_init(self: object, api_key: str, **_kwargs: object) -> None:
-                # Accept **kwargs to be compatible with both old and new signatures
-                # Ignore base_url if provided since we're setting BASE_URL directly
-                original_init(self, api_key)  # type: ignore[arg-type]
-                self.BASE_URL = server_config["url"]  # type: ignore[attr-defined]
-                self.session.headers.update(  # type: ignore[attr-defined]
-                    {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
-                )
-
-            cm.OpenHandsAPI.__init__ = patched_init  # type: ignore[assignment,method-assign]
 
         click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")
+        click.echo(f"API version: {api_version}")
         click.echo()
 
-        manager = ConversationManager()
+        manager = ConversationManager(
+            api_version=api_version, base_url=server_config["url"]
+        )
         manager.initialize()
         manager.run_interactive()
 

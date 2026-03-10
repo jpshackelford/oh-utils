@@ -32,7 +32,7 @@ def cli(ctx: click.Context, interactive: bool, api_version: str) -> None:
             # Only start interactive mode if -i flag is used
             from .conversation_commands import interactive_mode
 
-            interactive_mode()
+            interactive_mode(api_version=api_version)
         else:
             # Default behavior: show help
             click.echo(ctx.get_help())

@@ -61,19 +61,29 @@ class OpenHandsAPI:
         query: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
+        page_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search conversations using the selected API version.
+
+        Args:
+            query: Search query string (V1 only)
+            limit: Maximum number of conversations to return
+            offset: Number of results to skip (V1 only)
+            page_id: Page ID for pagination (V0 only)
 
         Returns a normalized response structure regardless of API version:
         - Results wrapped in {"results": [...]}
         - Each conversation has "conversation_id" field (normalized from V1's "id")
+        - For V0: includes "next_page_id" for pagination
         """
         if self.version == "v0":
             # v0 API uses page_id and limit, returns a dict with results
-            # For now, ignore query and offset since v0 doesn't support them
-            return cast("V0API", self._client).search_conversations(limit=limit)
+            return cast("V0API", self._client).search_conversations(
+                page_id=page_id, limit=limit
+            )
         else:
             # v1 API supports query, limit, and offset directly
+            # Note: V1 doesn't support page_id; use offset for pagination
             results = cast("V1API", self._client).search_conversations(
                 query=query, limit=limit, offset=offset
             )

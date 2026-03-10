@@ -146,8 +146,8 @@ class TestOpenHandsAPIMethodDelegation:
 
         result = api.search_conversations(query="test", limit=5, offset=10)
 
-        # v0 should ignore query and offset, only pass limit
-        mock_search.assert_called_once_with(limit=5)
+        # v0 should ignore query and offset, pass limit and page_id
+        mock_search.assert_called_once_with(page_id=None, limit=5)
         assert result == {"results": ["conv1", "conv2"]}
 
     @patch("ohc.v1.api.OpenHandsAPI.search_conversations")

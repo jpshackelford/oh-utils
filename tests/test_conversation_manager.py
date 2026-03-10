@@ -363,7 +363,7 @@ class TestConversationManager:
 
                     assert manager.api == mock_api
                     mock_print.assert_called_with(
-                        "✓ Conversation Manager initialized successfully"
+                        "✓ Conversation Manager initialized successfully (API v0)"
                     )
 
     def test_initialize_keyboard_interrupt(self):
