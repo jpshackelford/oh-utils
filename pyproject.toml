@@ -1,12 +1,23 @@
 [project]
 name = "oh-utils"
 version = "0.1.0"
-description = "A collection of utilities for working with OpenHands (formerly All-Hands-AI)"
+description = "OpenHands Utilities - CLI tools for working with OpenHands AI Agent"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "JP Shackelford" }]
 requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "requests>=2.25.0",
     "click>=8.0.0",
+    "kubernetes>=26.1.0",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +41,11 @@ test = [
 
 [project.scripts]
 ohc = "ohc.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jpshackelford/oh-utils"
+Repository = "https://github.com/jpshackelford/oh-utils"
+Issues = "https://github.com/jpshackelford/oh-utils/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -87,6 +103,10 @@ exclude = [
 [[tool.mypy.overrides]]
 module = ["_pytest.*", "pytest.*"]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["kubernetes.*"]
+ignore_missing_imports = true
 
 # Pytest configuration
 [tool.pytest.ini_options]
