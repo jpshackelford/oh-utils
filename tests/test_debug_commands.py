@@ -344,3 +344,81 @@ class TestParseDuration:
         # Empty after suffix
         with pytest.raises(ValueError):
             parse_duration("h")
+
+
+class TestSelectRuntimeContext:
+    """Tests for _select_runtime_context helper function."""
+
+    def test_same_cluster_selected_returns_app_context(self) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+            result = _select_runtime_context(contexts, "ctx-app")
+
+        assert result == "ctx-app"
+
+    def test_different_cluster_selected_returns_chosen_context(self) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc.debug.configure_cmd.click.prompt", return_value=2):
+                result = _select_runtime_context(contexts, "ctx-app")
+
+        assert result == "ctx-runtime"
+
+    def test_first_context_selected_when_choosing_different(self) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "ctx-first"}, {"name": "ctx-second"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc.debug.configure_cmd.click.prompt", return_value=1):
+                result = _select_runtime_context(contexts, "ctx-first")
+
+        assert result == "ctx-first"
+
+    def test_output_shows_runtime_cluster_header(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "ctx-app"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+            _select_runtime_context(contexts, "ctx-app")
+
+        captured = capsys.readouterr()
+        assert "Runtime Cluster" in captured.out
+
+    def test_output_shows_same_as_app_when_confirmed(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "my-context"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+            _select_runtime_context(contexts, "my-context")
+
+        captured = capsys.readouterr()
+        assert "(same as app)" in captured.out
+
+    def test_output_lists_contexts_when_different_cluster(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from ohc.debug.configure_cmd import _select_runtime_context
+
+        contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
+
+        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc.debug.configure_cmd.click.prompt", return_value=1):
+                _select_runtime_context(contexts, "ctx-app")
+
+        captured = capsys.readouterr()
+        assert "Available kubectl contexts:" in captured.out
+        assert "ctx-app" in captured.out
+        assert "(app)" in captured.out  # Marker for app context
