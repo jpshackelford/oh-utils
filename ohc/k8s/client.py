@@ -82,9 +82,7 @@ class K8sClient:
         except ApiException as e:
             raise K8sClientError(f"Failed to list namespaces: {e}") from e
 
-    def get_deployment(
-        self, name: str, namespace: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_deployment(self, name: str, namespace: str) -> Optional[Dict[str, Any]]:
         """Get a deployment by name."""
         try:
             dep = self.apps_api.read_namespaced_deployment(name, namespace)

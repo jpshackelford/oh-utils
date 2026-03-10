@@ -115,9 +115,7 @@ class RuntimeQuery:
         """Initialize with K8s client."""
         self.client = client
 
-    def get_runtime_pod(
-        self, runtime_id: str, namespace: str
-    ) -> Optional[RuntimePod]:
+    def get_runtime_pod(self, runtime_id: str, namespace: str) -> Optional[RuntimePod]:
         """Get a specific runtime pod by ID."""
         pods = self.list_runtime_pods(namespace)
         for pod in pods:
@@ -145,9 +143,7 @@ class RuntimeQuery:
 
         return [self._pod_to_runtime(p) for p in pods]
 
-    def list_runtime_pods_with_issues(
-        self, namespace: str
-    ) -> List[RuntimePod]:
+    def list_runtime_pods_with_issues(self, namespace: str) -> List[RuntimePod]:
         """List runtime pods with errors or restarts."""
         pods = self.list_runtime_pods(namespace)
         return [p for p in pods if p.has_errors or p.restart_count > 0]
@@ -164,15 +160,11 @@ class RuntimeQuery:
         pods = self.list_runtime_pods(namespace)
         return [p for p in pods if p.restart_count >= min_restarts]
 
-    def get_pod_events(
-        self, pod_name: str, namespace: str
-    ) -> List[Dict[str, Any]]:
+    def get_pod_events(self, pod_name: str, namespace: str) -> List[Dict[str, Any]]:
         """Get events for a specific pod."""
         field_selector = f"involvedObject.name={pod_name}"
         events = self.client.get_events(namespace, field_selector=field_selector)
-        return sorted(
-            events, key=lambda e: e.get("last_timestamp") or "", reverse=True
-        )
+        return sorted(events, key=lambda e: e.get("last_timestamp") or "", reverse=True)
 
     def get_cluster_health(self, namespace: str) -> ClusterHealthSummary:
         """Get cluster health summary for runtime namespace."""
@@ -198,15 +190,9 @@ class RuntimeQuery:
         except K8sClientError:
             recent_events = []
 
-        evicted = sum(
-            1
-            for e in recent_events
-            if e.get("reason") == "Evicted"
-        )
+        evicted = sum(1 for e in recent_events if e.get("reason") == "Evicted")
         failed_scheduling = sum(
-            1
-            for e in recent_events
-            if e.get("reason") == "FailedScheduling"
+            1 for e in recent_events if e.get("reason") == "FailedScheduling"
         )
 
         return ClusterHealthSummary(

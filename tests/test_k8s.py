@@ -96,7 +96,9 @@ class TestRuntimeDetector:
 
     def test_detect_error(self) -> None:
         mock_client = MagicMock(spec=K8sClient)
-        mock_client.get_deployment_env_vars.side_effect = K8sClientError("Connection failed")
+        mock_client.get_deployment_env_vars.side_effect = K8sClientError(
+            "Connection failed"
+        )
 
         detector = RuntimeDetector(mock_client)
         result = detector.detect("openhands")

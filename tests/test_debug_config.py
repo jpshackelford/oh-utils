@@ -113,7 +113,10 @@ class TestDebugConfig:
             "environments": {
                 "production": {
                     "app": {"kube_context": "prod-ctx", "namespace": "openhands"},
-                    "runtime": {"kube_context": "prod-ctx", "namespace": "runtime-pods"},
+                    "runtime": {
+                        "kube_context": "prod-ctx",
+                        "namespace": "runtime-pods",
+                    },
                 }
             },
             "default_environment": "production",
@@ -187,9 +190,7 @@ class TestDebugConfigManager:
         assert manager.remove_environment("test") is True
         assert manager.list_environments() == []
 
-    def test_remove_nonexistent_environment(
-        self, manager: DebugConfigManager
-    ) -> None:
+    def test_remove_nonexistent_environment(self, manager: DebugConfigManager) -> None:
         assert manager.remove_environment("nonexistent") is False
 
     def test_set_default_environment(self, manager: DebugConfigManager) -> None:
@@ -215,7 +216,9 @@ class TestDebugConfigManager:
         assert env.app.namespace == "my-ns"
 
     def test_get_environment_default(self, manager: DebugConfigManager) -> None:
-        manager.add_environment(name="default-env", app_context="ctx", app_namespace="ns")
+        manager.add_environment(
+            name="default-env", app_context="ctx", app_namespace="ns"
+        )
 
         env = manager.get_environment()
         assert env is not None

@@ -145,10 +145,16 @@ class TestConfigureCommand:
     ) -> None:
         with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(temp_config_dir)}):
             manager = DebugConfigManager()
-            manager.add_environment(name="env1", app_context="ctx1", app_namespace="ns1")
-            manager.add_environment(name="env2", app_context="ctx2", app_namespace="ns2")
+            manager.add_environment(
+                name="env1", app_context="ctx1", app_namespace="ns1"
+            )
+            manager.add_environment(
+                name="env2", app_context="ctx2", app_namespace="ns2"
+            )
 
-            result = runner.invoke(cli_with_commands, ["debug", "configure", "--default", "env2"])
+            result = runner.invoke(
+                cli_with_commands, ["debug", "configure", "--default", "env2"]
+            )
             assert result.exit_code == 0
             assert "env2" in result.output
             assert "set as default" in result.output
@@ -170,7 +176,9 @@ class TestConfigureCommand:
             manager = DebugConfigManager()
             manager.add_environment(name="test", app_context="ctx", app_namespace="ns")
 
-            result = runner.invoke(cli_with_commands, ["debug", "configure", "--remove", "test"])
+            result = runner.invoke(
+                cli_with_commands, ["debug", "configure", "--remove", "test"]
+            )
             assert result.exit_code == 0
             assert "removed" in result.output
 
@@ -211,7 +219,9 @@ class TestRuntimeCommand:
         self, runner: CliRunner, cli_with_commands: click.Group, temp_config_dir: Path
     ) -> None:
         with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(temp_config_dir)}):
-            result = runner.invoke(cli_with_commands, ["debug", "runtime", "test-runtime-id"])
+            result = runner.invoke(
+                cli_with_commands, ["debug", "runtime", "test-runtime-id"]
+            )
             assert result.exit_code != 0
             assert "No debug environment configured" in result.output
 
@@ -219,9 +229,7 @@ class TestRuntimeCommand:
 class TestListCommand:
     """Tests for the list command."""
 
-    def test_list_help(
-        self, runner: CliRunner, cli_with_commands: click.Group
-    ) -> None:
+    def test_list_help(self, runner: CliRunner, cli_with_commands: click.Group) -> None:
         result = runner.invoke(cli_with_commands, ["debug", "list", "--help"])
         assert result.exit_code == 0
         assert "List runtime pods" in result.output
@@ -241,9 +249,7 @@ class TestListCommand:
 class TestAppCommands:
     """Tests for the app subcommands."""
 
-    def test_app_help(
-        self, runner: CliRunner, cli_with_commands: click.Group
-    ) -> None:
+    def test_app_help(self, runner: CliRunner, cli_with_commands: click.Group) -> None:
         result = runner.invoke(cli_with_commands, ["debug", "app", "--help"])
         assert result.exit_code == 0
         assert "logs" in result.output
