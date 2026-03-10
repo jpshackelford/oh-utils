@@ -189,7 +189,8 @@ class ConversationManager:
 
             conversations_data = response.get("results", [])
             self.conversations = [
-                Conversation.from_api_response(data) for data in conversations_data
+                Conversation.from_api_response(data, self.api.base_url)
+                for data in conversations_data
             ]
 
             return True
@@ -340,7 +341,7 @@ class ConversationManager:
         if fresh_conv_data is None:
             print(f"✗ Conversation {conv_id} not found")
             return None
-        return Conversation.from_api_response(fresh_conv_data)
+        return Conversation.from_api_response(fresh_conv_data, self.api.base_url)
 
     def _get_changed_files(self, conv: Conversation) -> Optional[List[Dict[str, Any]]]:
         """Get list of changed files for a conversation."""

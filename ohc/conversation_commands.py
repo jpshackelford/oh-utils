@@ -51,7 +51,7 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
             # Use the Conversation class to handle both v0 and v1 formats
             from .conversation_display import Conversation
 
-            conv = Conversation.from_api_response(conv_data)
+            conv = Conversation.from_api_response(conv_data, api.base_url)
 
             # Format version indicator if available
             version_indicator = f"  [{conv.version}]  " if conv.version else "      "

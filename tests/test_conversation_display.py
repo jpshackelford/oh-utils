@@ -198,6 +198,48 @@ class TestConversation:
 
         assert conv.runtime_id == "direct-runtime"  # Direct takes priority
 
+    def test_from_api_response_relative_url_with_base(self):
+        """Test that relative URLs are resolved using api_base_url (enterprise servers)."""
+        api_data = {
+            "conversation_id": "enterprise-conv-123",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "runtime_status": "STATUS$READY",
+            "url": "/api/conversations/enterprise-conv-123",  # Relative URL
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(
+            api_data, api_base_url="https://myenterprise.example.com/api/"
+        )
+
+        # URL should be resolved to absolute
+        assert (
+            conv.url
+            == "https://myenterprise.example.com/api/conversations/enterprise-conv-123"
+        )
+        # runtime_id should be extracted from the resolved hostname
+        assert conv.runtime_id == "myenterprise"
+
+    def test_from_api_response_relative_url_without_base(self):
+        """Test that relative URLs remain relative if no api_base_url provided."""
+        api_data = {
+            "conversation_id": "enterprise-conv-123",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "url": "/api/conversations/enterprise-conv-123",  # Relative URL
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)  # No api_base_url
+
+        # URL should remain relative
+        assert conv.url == "/api/conversations/enterprise-conv-123"
+        # runtime_id should be None since we can't parse a relative URL
+        assert conv.runtime_id is None
+
     def test_is_active_running_with_runtime(self):
         """Test is_active returns True for running conversation with runtime."""
         conv = Conversation(
