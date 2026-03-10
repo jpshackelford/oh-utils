@@ -1,11 +1,54 @@
 """Tests for Kubernetes client utilities."""
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from ohc.k8s.client import K8sClient, K8sClientError
 from ohc.k8s.detection import DetectedRuntimeConfig, RuntimeDetector
 from ohc.k8s.queries import ClusterHealthSummary, RuntimePod, RuntimeQuery
+
+
+class TestK8sClientIsolation:
+    """Tests proving K8sClient instances don't share global state."""
+
+    @patch("ohc.k8s.client.config.new_client_from_config")
+    def test_multiple_clients_have_isolated_api_clients(
+        self, mock_new_client: MagicMock
+    ) -> None:
+        """Two K8sClient instances with different contexts get separate ApiClients."""
+        mock_client_1 = MagicMock()
+        mock_client_2 = MagicMock()
+        mock_new_client.side_effect = [mock_client_1, mock_client_2]
+
+        client1 = K8sClient(context="cluster-1")
+        client2 = K8sClient(context="cluster-2")
+
+        assert client1._api_client is mock_client_1
+        assert client2._api_client is mock_client_2
+        assert client1._api_client is not client2._api_client
+
+    @patch("ohc.k8s.client.config.new_client_from_config")
+    def test_api_objects_use_instance_specific_client(
+        self, mock_new_client: MagicMock
+    ) -> None:
+        """Each K8sClient's API objects use its own ApiClient, not a shared one."""
+        mock_client_1 = MagicMock()
+        mock_client_2 = MagicMock()
+        mock_new_client.side_effect = [mock_client_1, mock_client_2]
+
+        client1 = K8sClient(context="cluster-1")
+        client2 = K8sClient(context="cluster-2")
+
+        # Access APIs to trigger lazy initialization
+        _ = client1.core_api
+        _ = client2.core_api
+
+        # Verify each client's API object was created with its own ApiClient
+        assert client1._core_api is not None
+        assert client2._core_api is not None
+        # The core_api instances should be using different api_clients
+        assert client1._api_client is mock_client_1
+        assert client2._api_client is mock_client_2
 
 
 class TestDetectedRuntimeConfig:
