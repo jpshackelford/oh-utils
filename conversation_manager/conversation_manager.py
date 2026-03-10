@@ -497,6 +497,9 @@ class ConversationManager:
 
                 # Get fresh data from API
                 data = self.api.get_conversation(conv.id)
+                if data is None:
+                    print(f"✗ Conversation {conv.id} not found")
+                    return
                 fresh_conv = Conversation.from_api_response(data)
 
                 print("\nConversation Details:")
@@ -605,6 +608,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get list of changed files
@@ -656,6 +662,10 @@ class ConversationManager:
                             runtime_url,
                             fresh_conv.session_api_key,
                         )
+
+                        if content is None:
+                            print(f"      ⚠️  File not found: {file_path}")
+                            continue
 
                         # Create directory structure in temp folder
                         file_temp_path = temp_path / file_path
@@ -730,6 +740,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get trajectory data from API
@@ -790,6 +803,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Download workspace archive from API
@@ -806,6 +822,10 @@ class ConversationManager:
             workspace_data = self.api.download_workspace_archive(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
+
+            if workspace_data is None:
+                print("✗ Failed to download workspace archive")
+                return
 
             # Create ZIP file with unique name (API already returns ZIP data)
             base_name = f"workspace-{conv.short_id()}"
