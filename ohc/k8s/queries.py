@@ -259,35 +259,16 @@ class RuntimeQuery:
         runtime_id = labels.get("openhands.ai/runtime-id") or pod["name"]
         session_id = labels.get("openhands.ai/session-id")
 
-        # Get container status info
-        restart_count = 0
-        last_restart_reason = None
-        container_state = "unknown"
-        container_reason = None
+        # Parse container status
+        restart_count, last_restart_reason, container_state, container_reason = (
+            _parse_container_status(container_statuses)
+        )
 
-        if container_statuses:
-            cs = container_statuses[0]
-            restart_count = cs.get("restart_count", 0)
-            container_state = cs.get("state", "unknown")
-            container_reason = cs.get("reason")
+        # Parse resources
+        requests, limits = _parse_resources(pod)
 
-            if cs.get("last_state"):
-                last_state = cs["last_state"]
-                if last_state.get("state") == "terminated":
-                    last_restart_reason = last_state.get("reason")
-
-        # Get resource info
-        resources = pod.get("resources", {})
-        requests = resources.get("requests", {})
-        limits = resources.get("limits", {})
-
-        # Parse created_at
-        created_at = None
-        if pod.get("created_at"):
-            with contextlib.suppress(ValueError, AttributeError):
-                created_at = datetime.fromisoformat(
-                    pod["created_at"].replace("Z", "+00:00")
-                )
+        # Parse timestamp
+        created_at = _parse_timestamp(pod)
 
         return RuntimePod(
             name=pod["name"],
@@ -307,3 +288,66 @@ class RuntimeQuery:
             memory_limit=limits.get("memory"),
             labels=labels,
         )
+
+
+def _parse_container_status(
+    container_statuses: List[Dict[str, Any]],
+) -> tuple[int, Optional[str], str, Optional[str]]:
+    """Parse container status information from pod.
+
+    Args:
+        container_statuses: List of container status dicts from K8s API
+
+    Returns:
+        Tuple of (restart_count, last_restart_reason, container_state, container_reason)
+    """
+    if not container_statuses:
+        return 0, None, "unknown", None
+
+    cs = container_statuses[0]
+    restart_count = cs.get("restart_count", 0)
+    container_state = cs.get("state", "unknown")
+    container_reason = cs.get("reason")
+    last_restart_reason = None
+
+    if cs.get("last_state"):
+        last_state = cs["last_state"]
+        if last_state.get("state") == "terminated":
+            last_restart_reason = last_state.get("reason")
+
+    return restart_count, last_restart_reason, container_state, container_reason
+
+
+def _parse_resources(
+    pod: Dict[str, Any],
+) -> tuple[Dict[str, str], Dict[str, str]]:
+    """Parse resource requests and limits from pod.
+
+    Args:
+        pod: Pod dict from K8s API
+
+    Returns:
+        Tuple of (requests dict, limits dict)
+    """
+    resources = pod.get("resources", {})
+    requests = resources.get("requests", {})
+    limits = resources.get("limits", {})
+    return requests, limits
+
+
+def _parse_timestamp(pod: Dict[str, Any]) -> Optional[datetime]:
+    """Parse created_at timestamp from pod.
+
+    Args:
+        pod: Pod dict from K8s API
+
+    Returns:
+        Parsed datetime or None if not available/parseable
+    """
+    if not pod.get("created_at"):
+        return None
+
+    with contextlib.suppress(ValueError, AttributeError):
+        return datetime.fromisoformat(pod["created_at"].replace("Z", "+00:00"))
+
+    return None
