@@ -17,7 +17,9 @@ jobs:
     #   - Non-draft PR opened
     #   - Draft PR marked ready for review
     #   - 'review-this' label added
-    #   - Review requested from openhands-agent
+    #   - Review requested from openhands-agent (individual user only, not team)
+    # Note: Team review requests are not supported. Use individual reviewer
+    # request or the 'review-this' label as alternatives.
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
       (
