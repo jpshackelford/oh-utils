@@ -6,9 +6,25 @@ A collection of utilities for working with OpenHands (formerly All-Hands-AI / Op
 
 ### Using uv (Recommended)
 
-Install using uv:
+Install directly from GitHub:
 
 ```bash
+uv pip install git+https://github.com/jpshackelford/oh-utils.git
+```
+
+Or add as a project dependency:
+
+```bash
+uv add git+https://github.com/jpshackelford/oh-utils.git
+```
+
+### Development Installation
+
+For local development, clone the repo and install in editable mode:
+
+```bash
+git clone https://github.com/jpshackelford/oh-utils.git
+cd oh-utils
 uv pip install -e .
 ```
 
@@ -16,12 +32,6 @@ Or run directly without installation:
 
 ```bash
 uv run ohc
-```
-
-### Using pip
-
-```bash
-pip install -e .
 ```
 
 ## Quick Start
