@@ -36,11 +36,12 @@ class Conversation:
         if url is None:
             url = data.get("conversation_url")
 
-        # Extract runtime ID from URL if available (for backward compatibility)
-        # Note: This is kept for display purposes only, the URL should be used
-        # directly for API calls
-        runtime_id = None
-        if url:
+        # Extract runtime ID from multiple sources for maximum compatibility
+        # Priority: 1) Direct runtime_id field, 2) URL hostname, 3) sandbox_id
+        runtime_id = data.get("runtime_id")  # Some servers may provide this directly
+
+        # Try to extract from URL if not directly provided
+        if not runtime_id and url:
             try:
                 # Try to extract runtime ID from URL for display purposes
                 # This is more flexible and doesn't assume specific domain patterns
@@ -51,7 +52,11 @@ class Conversation:
                     # Extract the first part of the hostname as runtime ID
                     runtime_id = parsed_url.hostname.split(".")[0]
             except (IndexError, AttributeError, ValueError):
-                runtime_id = None
+                pass
+
+        # V1 fallback: use sandbox_id if available and no runtime_id yet
+        if not runtime_id:
+            runtime_id = data.get("sandbox_id")
 
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")

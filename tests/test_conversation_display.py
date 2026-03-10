@@ -147,6 +147,57 @@ class TestConversation:
         assert conv.id == "versioned-conv"
         assert conv.version == "V1"
 
+    def test_from_api_response_with_direct_runtime_id(self):
+        """Test creating Conversation with direct runtime_id field (enterprise servers)."""
+        api_data = {
+            "conversation_id": "enterprise-conv",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "runtime_status": "READY",
+            "runtime_id": "my-runtime-123",
+            "session_api_key": "session-key",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        assert conv.id == "enterprise-conv"
+        assert conv.runtime_id == "my-runtime-123"
+        assert conv.is_active() is True
+
+    def test_from_api_response_with_sandbox_id_fallback(self):
+        """Test creating Conversation uses sandbox_id as fallback for runtime_id."""
+        api_data = {
+            "id": "v1-conv-id",
+            "title": "V1 Conversation",
+            "sandbox_status": "RUNNING",
+            "sandbox_id": "SANDBOX_ID_001",
+            "updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        assert conv.id == "v1-conv-id"
+        assert conv.runtime_id == "SANDBOX_ID_001"  # Should fall back to sandbox_id
+
+    def test_from_api_response_runtime_id_priority(self):
+        """Test that direct runtime_id takes priority over URL extraction."""
+        api_data = {
+            "conversation_id": "priority-conv",
+            "title": "Priority Test",
+            "status": "RUNNING",
+            "runtime_id": "direct-runtime",  # Should use this
+            "url": "https://url-runtime.example.com/conv",  # Not this
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        assert conv.runtime_id == "direct-runtime"  # Direct takes priority
+
     def test_is_active_running_with_runtime(self):
         """Test is_active returns True for running conversation with runtime."""
         conv = Conversation(
