@@ -109,7 +109,19 @@ class ClusterHealthSummary:
 class RuntimeQuery:
     """Query helper for runtime pods and cluster health."""
 
-    # Try multiple label selectors - different deployments may use different labels
+    # Label selectors for identifying OpenHands runtime pods.
+    #
+    # Different OpenHands deployment patterns use different labeling conventions:
+    #
+    # 1. "app.kubernetes.io/managed-by=openhands" - Standard Kubernetes label used by
+    #    newer OpenHands Enterprise deployments. This is the preferred selector.
+    #
+    # 2. "runtime_id" (label exists with any value) - Fallback for older deployments
+    #    or custom runtime implementations that label pods with the runtime ID directly.
+    #
+    # The selectors are tried in order - we use the first one that returns pods.
+    # This multi-selector approach ensures backwards compatibility while preferring
+    # standard labels. If no selectors match, we fall back to name-based heuristics.
     RUNTIME_LABEL_SELECTORS = [
         "app.kubernetes.io/managed-by=openhands",
         "runtime_id",  # Label exists (any value)

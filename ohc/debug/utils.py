@@ -47,7 +47,8 @@ def parse_duration(duration: str) -> int:
     """Parse duration string to seconds.
 
     Args:
-        duration: Duration string like "1h", "30m", "300s", "2d", or plain number (minutes)
+        duration: Duration string like "1h", "30m", "300s", "2d",
+            or plain number (treated as minutes)
 
     Returns:
         Duration in seconds
