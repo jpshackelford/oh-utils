@@ -345,6 +345,132 @@ class TestConversationManager:
 
         mock_print.assert_called_with("Invalid conversation number: 1")
 
+    def test_download_conversation_files_success(self, tmp_path: Path):
+        """Test successful download and zip creation."""
+        mock_api = self._create_mock_api()
+        mock_api.get_conversation.return_value = {
+            "conversation_id": "conv-123",
+            "title": "Test Conversation",
+            "status": "RUNNING",
+            "url": "https://runtime.example.com/api/conversations/conv-123",
+            "session_api_key": "session-key",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+        mock_api.get_conversation_changes.return_value = [
+            {"path": "src/main.py", "status": "M"},
+            {"path": "deleted.txt", "status": "D"},
+        ]
+        mock_api.get_file_content.return_value = "print('hello world')"
+
+        manager = ConversationManager(mock_api)
+        conv = Conversation(
+            id="conv-123",
+            title="Test Conversation",
+            status="RUNNING",
+            runtime_status="READY",
+            runtime_id="runtime-123",
+            session_api_key="session-key",
+            last_updated="2024-01-15T10:30:00Z",
+            created_at="2024-01-15T10:00:00Z",
+            url="https://runtime.example.com/api/conversations/conv-123",
+        )
+        manager.conversations = [conv]
+
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
+            with patch("builtins.print"):
+                manager.download_conversation_files(1)
+
+        # Verify zip was created
+        zip_files = list(tmp_path.glob("*.zip"))
+        assert len(zip_files) == 1
+        assert "conv-123" in zip_files[0].name
+
+        # Verify zip contents
+        import zipfile
+
+        with zipfile.ZipFile(zip_files[0], "r") as zipf:
+            assert "src/main.py" in zipf.namelist()
+            assert "deleted.txt" not in zipf.namelist()
+
+    def test_download_conversation_files_no_changes(self):
+        """Test download when no changed files exist."""
+        mock_api = self._create_mock_api()
+        mock_api.get_conversation.return_value = {
+            "conversation_id": "conv-123",
+            "title": "Test Conversation",
+            "status": "RUNNING",
+            "url": "https://runtime.example.com/api/conversations/conv-123",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+        mock_api.get_conversation_changes.return_value = []
+
+        manager = ConversationManager(mock_api)
+        conv = Conversation(
+            id="conv-123",
+            title="Test Conversation",
+            status="RUNNING",
+            runtime_status="READY",
+            runtime_id="runtime-123",
+            session_api_key=None,
+            last_updated="2024-01-15T10:30:00Z",
+            created_at="2024-01-15T10:00:00Z",
+            url="https://runtime.example.com/api/conversations/conv-123",
+        )
+        manager.conversations = [conv]
+
+        with patch("builtins.print") as mock_print:
+            manager.download_conversation_files(1)
+
+        assert any(
+            "No changed files" in str(call) for call in mock_print.call_args_list
+        )
+
+    def test_get_fresh_conversation_not_found(self):
+        """Test _get_fresh_conversation when conversation not found."""
+        mock_api = self._create_mock_api()
+        mock_api.get_conversation.return_value = None
+
+        manager = ConversationManager(mock_api)
+
+        with patch("builtins.print") as mock_print:
+            result = manager._get_fresh_conversation("conv-123")
+
+        assert result is None
+        mock_print.assert_called_with("✗ Conversation conv-123 not found")
+
+    def test_has_runtime_info(self):
+        """Test _has_runtime_info helper method."""
+        mock_api = self._create_mock_api()
+        manager = ConversationManager(mock_api)
+
+        active_conv = Conversation(
+            id="conv-123",
+            title="Active",
+            status="RUNNING",
+            runtime_status="READY",
+            runtime_id="runtime-123",
+            session_api_key="session-key",
+            last_updated="",
+            created_at="",
+            url="https://example.com",
+        )
+        assert manager._has_runtime_info(active_conv) is True
+
+        inactive_conv = Conversation(
+            id="conv-456",
+            title="Inactive",
+            status="STOPPED",
+            runtime_status=None,
+            runtime_id=None,
+            session_api_key=None,
+            last_updated="",
+            created_at="",
+            url=None,
+        )
+        assert manager._has_runtime_info(inactive_conv) is False
+
     def test_download_trajectory_invalid_number(self):
         """Test download trajectory with invalid conversation number."""
         mock_api = self._create_mock_api()

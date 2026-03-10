@@ -342,9 +342,7 @@ class ConversationManager:
             return None
         return Conversation.from_api_response(fresh_conv_data)
 
-    def _get_changed_files(
-        self, conv: Conversation
-    ) -> Optional[List[dict]]:  # type: ignore[type-arg]
+    def _get_changed_files(self, conv: Conversation) -> Optional[List[dict]]:  # type: ignore[type-arg]
         """Get list of changed files for a conversation."""
         print("🔍 Fetching list of changed files...")
 
@@ -666,12 +664,14 @@ class ConversationManager:
         }
 
         if cmd in numbered_commands and len(parts) == 2:
-            return self._handle_numbered_command(cmd, parts[1], numbered_commands[cmd])
+            return self._handle_numbered_command(parts[1], numbered_commands[cmd])
 
         return "unknown"
 
     def _handle_numbered_command(
-        self, cmd: str, arg: str, handler: tuple  # type: ignore[type-arg]
+        self,
+        arg: str,
+        handler: tuple,  # type: ignore[type-arg]
     ) -> str:
         """Handle a command that takes a conversation number argument."""
         method, wait_after = handler
