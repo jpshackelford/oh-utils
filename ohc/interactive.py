@@ -297,7 +297,7 @@ class ConversationManager:
             print(f"Invalid conversation number: {conv_number}")
 
     def download_conversation_files(self, conv_number: int) -> None:
-        """Download all changed files from a conversation as a zip file"""
+        """Download all changed files from a conversation as a zip file."""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
             return
@@ -306,98 +306,126 @@ class ConversationManager:
         print(f"\n📦 Downloading files from conversation: {conv.formatted_title(60)}")
 
         try:
-            # Get fresh data from API
-            fresh_conv_data = self.api.get_conversation(conv.id)
-            if fresh_conv_data is None:
-                print(f"✗ Conversation {conv.id} not found")
+            # Get fresh conversation data from API
+            fresh_conv = self._get_fresh_conversation(conv.id)
+            if fresh_conv is None:
                 return
-            fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get list of changed files
-            print("🔍 Fetching list of changed files...")
-
-            runtime_url = fresh_conv.get_runtime_base_url()
-            changes = self.api.get_conversation_changes(
-                fresh_conv.id, runtime_url, fresh_conv.session_api_key
-            )
-
-            if not changes:
-                print("ℹ️  No changed files found in this conversation.")
+            changes = self._get_changed_files(fresh_conv)
+            if changes is None:
                 return
 
-            print(f"📄 Found {len(changes)} changed files")
-
-            # Create temporary directory for files
+            # Download files to temp directory and create zip
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
-                downloaded_files = []
-
-                # Download each file
-                for i, change in enumerate(changes, 1):
-                    file_path = change["path"]
-                    status = change["status"]
-
-                    # Skip deleted files
-                    if status == "D":
-                        print(
-                            f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: "
-                            f"{file_path}"
-                        )
-                        continue
-
-                    print(f"  {i:2d}/{len(changes)} ⬇️  Downloading: {file_path}")
-
-                    try:
-                        # Get file content
-                        content = self.api.get_file_content(
-                            fresh_conv.id,
-                            file_path,
-                            runtime_url,
-                            fresh_conv.session_api_key,
-                        )
-
-                        if content is None:
-                            print(f"      ⚠️  File not found: {file_path}")
-                            continue
-
-                        # Create directory structure in temp folder
-                        file_temp_path = temp_path / file_path
-                        file_temp_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Write file content
-                        with open(file_temp_path, "w", encoding="utf-8") as f:
-                            f.write(content)
-
-                        downloaded_files.append(file_path)
-
-                    except Exception as e:
-                        print(f"      ⚠️  Failed to download {file_path}: {e}")
-                        continue
+                downloaded_files = self._download_files_to_temp(
+                    fresh_conv, changes, temp_path
+                )
 
                 if not downloaded_files:
                     print("❌ No files were successfully downloaded.")
                     return
 
-                # Create zip file with unique name
-                base_name = f"conversation-{conv.short_id()}"
-                zip_path = self._get_unique_zip_path(base_name)
-
-                print(f"📦 Creating zip file: {zip_path.name}")
-
-                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                    for file_path in downloaded_files:
-                        file_temp_path = temp_path / file_path
-                        if file_temp_path.exists():
-                            zipf.write(file_temp_path, file_path)
-
-                print(f"✅ Successfully created zip file: {zip_path}")
-                print(
-                    f"📊 Contains {len(downloaded_files)} files "
-                    f"({zip_path.stat().st_size:,} bytes)"
+                self._create_zip_from_files(
+                    temp_path, downloaded_files, f"conversation-{conv.short_id()}"
                 )
 
         except Exception as e:
             print(f"❌ Failed to download files: {e}")
+
+    def _get_fresh_conversation(self, conv_id: str) -> Optional[Conversation]:
+        """Get fresh conversation data from API."""
+        fresh_conv_data = self.api.get_conversation(conv_id)
+        if fresh_conv_data is None:
+            print(f"✗ Conversation {conv_id} not found")
+            return None
+        return Conversation.from_api_response(fresh_conv_data)
+
+    def _get_changed_files(
+        self, conv: Conversation
+    ) -> Optional[List[dict]]:  # type: ignore[type-arg]
+        """Get list of changed files for a conversation."""
+        print("🔍 Fetching list of changed files...")
+
+        runtime_url = conv.get_runtime_base_url()
+        changes = self.api.get_conversation_changes(
+            conv.id, runtime_url, conv.session_api_key
+        )
+
+        if not changes:
+            print("ℹ️  No changed files found in this conversation.")
+            return None
+
+        print(f"📄 Found {len(changes)} changed files")
+        return changes
+
+    def _download_files_to_temp(
+        self,
+        conv: Conversation,
+        changes: List[dict],  # type: ignore[type-arg]
+        temp_path: Path,
+    ) -> List[str]:
+        """Download files to a temporary directory.
+
+        Returns list of successfully downloaded file paths.
+        """
+        runtime_url = conv.get_runtime_base_url()
+        downloaded_files = []
+
+        for i, change in enumerate(changes, 1):
+            file_path = change["path"]
+            status = change["status"]
+
+            # Skip deleted files
+            if status == "D":
+                print(f"  {i:2d}/{len(changes)} ⏭️  Skipping deleted file: {file_path}")
+                continue
+
+            print(f"  {i:2d}/{len(changes)} ⬇️  Downloading: {file_path}")
+
+            try:
+                content = self.api.get_file_content(
+                    conv.id, file_path, runtime_url, conv.session_api_key
+                )
+
+                if content is None:
+                    print(f"      ⚠️  File not found: {file_path}")
+                    continue
+
+                file_temp_path = temp_path / file_path
+                file_temp_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(file_temp_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+                downloaded_files.append(file_path)
+
+            except Exception as e:
+                print(f"      ⚠️  Failed to download {file_path}: {e}")
+                continue
+
+        return downloaded_files
+
+    def _create_zip_from_files(
+        self, temp_path: Path, files: List[str], base_name: str
+    ) -> Path:
+        """Create a zip file from downloaded files.
+
+        Returns the path to the created zip file.
+        """
+        zip_path = self._get_unique_zip_path(base_name)
+        print(f"📦 Creating zip file: {zip_path.name}")
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file_path in files:
+                file_temp_path = temp_path / file_path
+                if file_temp_path.exists():
+                    zipf.write(file_temp_path, file_path)
+
+        print(f"✅ Successfully created zip file: {zip_path}")
+        print(f"📊 Contains {len(files)} files ({zip_path.stat().st_size:,} bytes)")
+        return zip_path
 
     def _get_unique_zip_path(self, base_name: str) -> Path:
         """Generate a unique zip file path to avoid overwrites"""
@@ -416,7 +444,7 @@ class ConversationManager:
             counter += 1
 
     def download_trajectory(self, conv_number: int) -> None:
-        """Download trajectory data from a conversation as JSON file"""
+        """Download trajectory data from a conversation as JSON file."""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
             return
@@ -427,50 +455,52 @@ class ConversationManager:
         )
 
         try:
-            # Get fresh data from API
-            fresh_conv_data = self.api.get_conversation(conv.id)
-            if fresh_conv_data is None:
-                print(f"✗ Conversation {conv.id} not found")
+            fresh_conv = self._get_fresh_conversation(conv.id)
+            if fresh_conv is None:
                 return
-            fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
-            # Get trajectory data from API
+            # Verify conversation has required runtime information
             print("🔍 Fetching trajectory data...")
-            if (
-                fresh_conv.runtime_id is None
-                or fresh_conv.session_api_key is None
-                or fresh_conv.url is None
-            ):
+            if not self._has_runtime_info(fresh_conv):
                 print("✗ Conversation is not active or missing runtime information")
                 return
 
             runtime_url = fresh_conv.get_runtime_base_url()
-            if not runtime_url:
-                print("✗ Conversation URL is missing")
-                return
-
             trajectory_data = self.api.get_trajectory(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
-            # Create JSON file with unique name
-            base_name = f"trajectory-{conv.short_id()}"
-            json_path = self._get_unique_file_path(base_name, ".json")
-
-            print(f"💾 Creating trajectory file: {json_path.name}")
-
-            # Write trajectory data to JSON file
-            with open(json_path, "w", encoding="utf-8") as f:
-                json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
-
-            print(f"✅ Successfully created trajectory file: {json_path}")
-            print(f"📊 File size: {json_path.stat().st_size:,} bytes")
+            # Save trajectory to JSON file
+            self._save_trajectory_file(trajectory_data, f"trajectory-{conv.short_id()}")
 
         except Exception as e:
             print(f"❌ Failed to download trajectory: {e}")
 
+    def _has_runtime_info(self, conv: Conversation) -> bool:
+        """Check if conversation has required runtime information."""
+        return (
+            conv.runtime_id is not None
+            and conv.session_api_key is not None
+            and conv.url is not None
+        )
+
+    def _save_trajectory_file(self, trajectory_data: dict, base_name: str) -> Path:  # type: ignore[type-arg]
+        """Save trajectory data to a JSON file.
+
+        Returns the path to the created file.
+        """
+        json_path = self._get_unique_file_path(base_name, ".json")
+        print(f"💾 Creating trajectory file: {json_path.name}")
+
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(trajectory_data, f, indent=2, ensure_ascii=False)
+
+        print(f"✅ Successfully created trajectory file: {json_path}")
+        print(f"📊 File size: {json_path.stat().st_size:,} bytes")
+        return json_path
+
     def download_workspace(self, conv_number: int) -> None:
-        """Download entire workspace from a conversation as ZIP file"""
+        """Download entire workspace from a conversation as ZIP file."""
         if not (1 <= conv_number <= len(self.conversations)):
             print(f"Invalid conversation number: {conv_number}")
             return
@@ -481,16 +511,12 @@ class ConversationManager:
         )
 
         try:
-            # Get fresh data from API
-            fresh_conv_data = self.api.get_conversation(conv.id)
-            if fresh_conv_data is None:
-                print(f"✗ Conversation {conv.id} not found")
+            fresh_conv = self._get_fresh_conversation(conv.id)
+            if fresh_conv is None:
                 return
-            fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
-
             runtime_url = fresh_conv.get_runtime_base_url()
             workspace_data = self.api.download_workspace_archive(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
@@ -500,21 +526,26 @@ class ConversationManager:
                 print("✗ Failed to download workspace archive")
                 return
 
-            # Create ZIP file with unique name (API already returns ZIP data)
-            base_name = f"workspace-{conv.short_id()}"
-            zip_path = self._get_unique_file_path(base_name, ".zip")
-
-            print(f"💾 Saving workspace archive: {zip_path.name}")
-
-            # Write workspace ZIP data directly (API already returns ZIP format)
-            with open(zip_path, "wb") as f:
-                f.write(workspace_data)
-
-            print(f"✅ Successfully saved workspace archive: {zip_path}")
-            print(f"📊 Archive size: {zip_path.stat().st_size:,} bytes")
+            # Save workspace archive
+            self._save_workspace_archive(workspace_data, f"workspace-{conv.short_id()}")
 
         except Exception as e:
             print(f"❌ Failed to download workspace: {e}")
+
+    def _save_workspace_archive(self, workspace_data: bytes, base_name: str) -> Path:
+        """Save workspace archive data to a ZIP file.
+
+        Returns the path to the created file.
+        """
+        zip_path = self._get_unique_file_path(base_name, ".zip")
+        print(f"💾 Saving workspace archive: {zip_path.name}")
+
+        with open(zip_path, "wb") as f:
+            f.write(workspace_data)
+
+        print(f"✅ Successfully saved workspace archive: {zip_path}")
+        print(f"📊 Archive size: {zip_path.stat().st_size:,} bytes")
+        return zip_path
 
     def _get_unique_file_path(self, base_name: str, extension: str) -> Path:
         """Generate a unique file path to avoid overwrites"""
