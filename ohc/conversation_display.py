@@ -24,10 +24,17 @@ class Conversation:
     version: Optional[str] = None
 
     @classmethod
-    def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
+    def from_api_response(
+        cls, data: Dict[str, Any], api_base_url: Optional[str] = None
+    ) -> "Conversation":
         """Create Conversation from API response data.
 
         Handles both V0 and V1 API response formats.
+
+        Args:
+            data: API response data for a conversation
+            api_base_url: Optional base URL of the API server, used to resolve
+                          relative URLs returned by some enterprise servers
         """
         # Handle both v0 and v1 API response formats for URL
         # v1 API uses conversation_url instead of url
@@ -36,11 +43,23 @@ class Conversation:
         if url is None:
             url = data.get("conversation_url")
 
-        # Extract runtime ID from URL if available (for backward compatibility)
-        # Note: This is kept for display purposes only, the URL should be used
-        # directly for API calls
-        runtime_id = None
-        if url:
+        # If URL is relative and we have a base URL, make it absolute
+        if url and api_base_url and url.startswith("/"):
+            from urllib.parse import urljoin
+
+            # Remove trailing /api/ from base URL to get the server root
+            base = api_base_url.rstrip("/")
+            if base.endswith("/api"):
+                base = base[:-4]
+            url = urljoin(base, url)
+
+        # Extract runtime ID from multiple sources for maximum compatibility
+        # Priority: 1) Direct runtime_id field, 2) URL hostname, 3) sandbox_id,
+        #           4) conversation_id (fallback for enterprise servers)
+        runtime_id = data.get("runtime_id")  # Some servers may provide this directly
+
+        # Try to extract from URL if not directly provided
+        if not runtime_id and url:
             try:
                 # Try to extract runtime ID from URL for display purposes
                 # This is more flexible and doesn't assume specific domain patterns
@@ -51,7 +70,11 @@ class Conversation:
                     # Extract the first part of the hostname as runtime ID
                     runtime_id = parsed_url.hostname.split(".")[0]
             except (IndexError, AttributeError, ValueError):
-                runtime_id = None
+                pass
+
+        # V1 fallback: use sandbox_id if available and no runtime_id yet
+        if not runtime_id:
+            runtime_id = data.get("sandbox_id")
 
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")
@@ -135,7 +158,7 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
         if data is None:
             print(f"Error: Conversation {conversation_id} not found")
             return
-        conv = Conversation.from_api_response(data)
+        conv = Conversation.from_api_response(data, api.base_url)
 
         print("\nConversation Details:")
         print(f"  ID: {conv.id}")
@@ -219,7 +242,7 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
         if data is None:
             print(f"Error: Conversation {conversation_id} not found")
             return
-        conv = Conversation.from_api_response(data)
+        conv = Conversation.from_api_response(data, api.base_url)
 
         if not conv.is_active():
             print(f"⚠️  Conversation {conv.short_id()} is not currently running")
