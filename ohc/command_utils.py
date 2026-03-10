@@ -64,22 +64,6 @@ def with_server_config(func: F) -> F:
     return wrapper  # type: ignore[return-value]
 
 
-def _get_conversation_id(conv_data: dict) -> Optional[str]:
-    """
-    Extract conversation ID from conversation data, handling both v0 and v1 formats.
-
-    V0 API returns: {"conversation_id": "abc123", ...}
-    V1 API returns: {"id": "abc123", ...}
-
-    Args:
-        conv_data: Dictionary containing conversation data
-
-    Returns:
-        Conversation ID if found, None otherwise
-    """
-    return conv_data.get("conversation_id") or conv_data.get("id")
-
-
 def resolve_conversation_id(
     api: OpenHandsAPI, conversation_id_or_number: str
 ) -> Optional[str]:
@@ -90,10 +74,6 @@ def resolve_conversation_id(
     1. Numeric input (1, 2, 3...) - resolves to conversation by list position
     2. Partial ID (8 chars or less) - finds matching conversation by ID prefix
     3. Full ID - returns as-is
-
-    Supports both v0 and v1 API response formats:
-    - V0: uses "conversation_id" field
-    - V1: uses "id" field
 
     Args:
         api: OpenHandsAPI instance for making API calls
@@ -119,7 +99,8 @@ def resolve_conversation_id(
             return None
 
         conv_data = conversations[conv_number - 1]
-        return _get_conversation_id(conv_data)
+        conversation_id = conv_data.get("conversation_id")
+        return conversation_id if conversation_id else None
 
     except ValueError:
         # It's a conversation ID string - could be full or partial
@@ -133,7 +114,7 @@ def resolve_conversation_id(
             matches = [
                 c
                 for c in conversations
-                if (_get_conversation_id(c) or "").startswith(conv_id)
+                if c.get("conversation_id", "").startswith(conv_id)
             ]
 
             if not matches:
@@ -149,13 +130,14 @@ def resolve_conversation_id(
                     err=True,
                 )
                 for match in matches[:5]:  # Show first 5 matches
-                    match_id = _get_conversation_id(match) or ""
+                    match_id = match.get("conversation_id", "")
                     match_title = match.get("title", "Untitled")[:40]
                     click.echo(f"  {match_id} - {match_title}")
                 return None
             else:
                 # Single match found
-                return _get_conversation_id(matches[0])
+                conversation_id = matches[0].get("conversation_id")
+                return conversation_id if conversation_id else None
         else:
             # Assume it's a full conversation ID
             return conv_id

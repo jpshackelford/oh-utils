@@ -62,18 +62,32 @@ class OpenHandsAPI:
         limit: int = 10,
         offset: int = 0,
     ) -> Dict[str, Any]:
-        """Search conversations using the selected API version."""
+        """Search conversations using the selected API version.
+
+        Returns a normalized response structure regardless of API version:
+        - Results wrapped in {"results": [...]}
+        - Each conversation has "conversation_id" field (normalized from V1's "id")
+        """
         if self.version == "v0":
             # v0 API uses page_id and limit, returns a dict with results
             # For now, ignore query and offset since v0 doesn't support them
             return cast("V0API", self._client).search_conversations(limit=limit)
         else:
             # v1 API supports query, limit, and offset directly
-            # Wrap the results in a dict to match v0 format
             results = cast("V1API", self._client).search_conversations(
                 query=query, limit=limit, offset=offset
             )
-            return {"results": results}
+            # Normalize V1 response: map "id" to "conversation_id" for compatibility
+            normalized_results = []
+            for conv in results:
+                if isinstance(conv, dict):
+                    normalized_conv = dict(conv)
+                    if "id" in normalized_conv and "conversation_id" not in normalized_conv:
+                        normalized_conv["conversation_id"] = normalized_conv["id"]
+                    normalized_results.append(normalized_conv)
+                else:
+                    normalized_results.append(conv)
+            return {"results": normalized_results}
 
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """Get conversation details using the selected API version."""
