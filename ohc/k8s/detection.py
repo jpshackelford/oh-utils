@@ -1,9 +1,24 @@
 """Auto-detection of runtime configuration from deployed OpenHands Enterprise."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from .client import K8sClient, K8sClientError
+
+
+@dataclass
+class DetectedAppEndpoint:
+    """Result of application endpoint auto-detection."""
+
+    host: str
+    use_tls: bool
+    source: str  # e.g., "env:WEB_HOST", "ingress:openhands-root-ingress"
+
+    @property
+    def url(self) -> str:
+        """Get the full URL for the endpoint."""
+        scheme = "https" if self.use_tls else "http"
+        return f"{scheme}://{self.host}"
 
 
 @dataclass
@@ -142,3 +157,161 @@ class RuntimeDetector:
                     return ctx_name
 
         return None
+
+
+class AppEndpointDetector:
+    """Detects application endpoint from deployed OpenHands Enterprise."""
+
+    # Deployment names to check for WEB_HOST env var (in order of preference)
+    APP_DEPLOYMENT_NAMES = ["openhands", "openhands-server", "app"]
+
+    # Ingress names that typically point to the main app (in order of preference)
+    APP_INGRESS_NAMES = [
+        "openhands-root-ingress",
+        "openhands-ingress",
+        "openhands",
+        "app-ingress",
+    ]
+
+    def __init__(self, client: K8sClient) -> None:
+        """Initialize detector with K8s client."""
+        self.client = client
+
+    def detect(self, app_namespace: str) -> Optional[DetectedAppEndpoint]:
+        """
+        Detect application endpoint from cluster configuration.
+
+        Tries multiple detection methods in order of reliability:
+        1. WEB_HOST environment variable from openhands deployment
+        2. Ingress host from openhands-root-ingress or similar
+
+        Args:
+            app_namespace: Namespace where OpenHands Enterprise is deployed
+
+        Returns:
+            DetectedAppEndpoint if detection successful, None otherwise
+        """
+        # Try env var detection first (most reliable)
+        endpoint = self._detect_from_env_var(app_namespace)
+        if endpoint:
+            return endpoint
+
+        # Fallback to ingress detection
+        return self._detect_from_ingress(app_namespace)
+
+    def _detect_from_env_var(self, namespace: str) -> Optional[DetectedAppEndpoint]:
+        """Detect endpoint from WEB_HOST environment variable."""
+        for deployment_name in self.APP_DEPLOYMENT_NAMES:
+            try:
+                env_vars = self.client.get_deployment_env_vars(
+                    deployment_name, namespace
+                )
+                if not env_vars:
+                    continue
+
+                web_host = env_vars.get("WEB_HOST")
+                if web_host:
+                    # Check if TLS is likely (most deployments use TLS)
+                    # Could also check for TLS-related env vars
+                    use_tls = True  # Default to HTTPS
+                    return DetectedAppEndpoint(
+                        host=web_host,
+                        use_tls=use_tls,
+                        source=f"env:WEB_HOST (deployment: {deployment_name})",
+                    )
+            except K8sClientError:
+                continue
+
+        return None
+
+    def _detect_from_ingress(self, namespace: str) -> Optional[DetectedAppEndpoint]:
+        """Detect endpoint from ingress resources."""
+        # Try known ingress names first
+        for ingress_name in self.APP_INGRESS_NAMES:
+            try:
+                ingress = self.client.get_ingress(ingress_name, namespace)
+                if ingress and ingress.get("hosts"):
+                    host = ingress["hosts"][0]
+                    # Check if TLS is configured
+                    use_tls = host in ingress.get("tls_hosts", [])
+                    return DetectedAppEndpoint(
+                        host=host,
+                        use_tls=use_tls,
+                        source=f"ingress:{ingress_name}",
+                    )
+            except K8sClientError:
+                continue
+
+        # Fallback: search all ingresses for one that looks like the main app
+        try:
+            ingresses = self.client.list_ingresses(namespace)
+            for ingress in ingresses:
+                # Skip runtime ingresses
+                name = ingress.get("name", "")
+                if name.startswith("runtime-"):
+                    continue
+
+                # Look for ingress with "/" path (root ingress)
+                hosts = ingress.get("hosts", [])
+                if hosts:
+                    # Prefer ingresses with 'openhands' in the name
+                    if "openhands" in name.lower() or "root" in name.lower():
+                        host = hosts[0]
+                        use_tls = host in ingress.get("tls_hosts", [])
+                        return DetectedAppEndpoint(
+                            host=host,
+                            use_tls=use_tls,
+                            source=f"ingress:{name}",
+                        )
+        except K8sClientError:
+            pass
+
+        return None
+
+    def detect_all_endpoints(self, app_namespace: str) -> List[DetectedAppEndpoint]:
+        """
+        Detect all possible application endpoints.
+
+        Useful for showing user all detected endpoints when there might be
+        multiple (e.g., internal and external).
+
+        Args:
+            app_namespace: Namespace where OpenHands Enterprise is deployed
+
+        Returns:
+            List of all detected endpoints
+        """
+        endpoints: List[DetectedAppEndpoint] = []
+
+        # Get from env var
+        env_endpoint = self._detect_from_env_var(app_namespace)
+        if env_endpoint:
+            endpoints.append(env_endpoint)
+
+        # Get from ingresses
+        try:
+            ingresses = self.client.list_ingresses(app_namespace)
+            for ingress in ingresses:
+                name = ingress.get("name", "")
+                # Skip runtime ingresses
+                if name.startswith("runtime-"):
+                    continue
+
+                hosts = ingress.get("hosts", [])
+                for host in hosts:
+                    # Skip if we already have this host
+                    if any(e.host == host for e in endpoints):
+                        continue
+
+                    use_tls = host in ingress.get("tls_hosts", [])
+                    endpoints.append(
+                        DetectedAppEndpoint(
+                            host=host,
+                            use_tls=use_tls,
+                            source=f"ingress:{name}",
+                        )
+                    )
+        except K8sClientError:
+            pass
+
+        return endpoints

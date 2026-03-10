@@ -8,6 +8,7 @@ import click
 from ..debug_config import DebugConfigManager, EnvironmentConfig
 from ..k8s import K8sClient, RuntimeDetector, RuntimeQuery
 from ..k8s.client import K8sClientError
+from ..k8s.detection import AppEndpointDetector
 from ..k8s.queries import RuntimePod
 
 
@@ -305,6 +306,26 @@ def _interactive_configure(
         runtime_context = app_context
         runtime_namespace = click.prompt("Runtime namespace", default="runtime-pods")
 
+    # Detect application endpoint
+    click.echo()
+    click.echo("Detecting application endpoint...")
+
+    app_url: Optional[str] = None
+    try:
+        endpoint_detector = AppEndpointDetector(app_client)
+        endpoint = endpoint_detector.detect(app_namespace)
+        if endpoint:
+            click.echo(f"✓ Detected endpoint: {endpoint.url}")
+            click.echo(f"  Source: {endpoint.source}")
+            if click.confirm("Add this server to ohc?", default=True):
+                app_url = endpoint.url
+        else:
+            click.echo("⚠ Could not auto-detect application endpoint")
+            if click.confirm("Enter endpoint URL manually?", default=False):
+                app_url = click.prompt("Application URL (e.g., https://openhands.example.com)")
+    except K8sClientError as e:
+        click.echo(f"⚠ Could not detect endpoint: {e}")
+
     # Save configuration
     is_first = len(config_manager.list_environments()) == 0
     set_default = is_first or click.confirm(
@@ -325,9 +346,71 @@ def _interactive_configure(
     if set_default:
         click.echo(f"✓ '{env_name}' set as default")
 
+    # Add server if URL detected
+    if app_url:
+        click.echo()
+        click.echo("Adding OpenHands server...")
+        _add_server_from_url(env_name, app_url)
+
     click.echo()
     click.echo("Quick test:")
     click.echo("  ohc debug health")
+
+
+def _add_server_from_url(env_name: str, app_url: str) -> None:
+    """Add a server configuration from detected URL."""
+    from ..config import ConfigManager
+
+    config_manager = ConfigManager()
+
+    # Ensure URL ends with /api/
+    url = app_url
+    if not url.endswith("/api/") and not url.endswith("/api"):
+        if url.endswith("/"):
+            url += "api/"
+        else:
+            url += "/api/"
+
+    # Check if server already exists
+    existing_servers = config_manager.list_servers()
+    if env_name in existing_servers:
+        click.echo(f"  Server '{env_name}' already exists, skipping")
+        return
+
+    # Prompt for API key
+    click.echo(f"  Server URL: {url}")
+    apikey = click.prompt("  API Key", hide_input=True, default="", show_default=False)
+
+    if not apikey:
+        click.echo("  Skipping server add (no API key provided)")
+        click.echo(f"  You can add it later with: ohc server add --name {env_name} --url {url}")
+        return
+
+    # Test connection
+    click.echo("  Testing connection...")
+    try:
+        from ..api import create_api_client
+
+        # Get API version from context if available
+        ctx = click.get_current_context(silent=True)
+        api_version = "v0"
+        if ctx and ctx.obj:
+            api_version = ctx.obj.get("api_version", "v0")
+
+        api = create_api_client(apikey, url, api_version)
+        if api.test_connection():
+            click.echo("  ✓ Connection successful")
+        else:
+            click.echo("  ⚠ Connection test failed, but saving anyway")
+    except Exception as e:
+        click.echo(f"  ⚠ Connection test failed: {e}")
+        if not click.confirm("  Save server configuration anyway?", default=True):
+            click.echo(f"  You can add it later with: ohc server add --name {env_name} --url {url}")
+            return
+
+    # Save server
+    config_manager.add_server(env_name, url, apikey, set_default=True)
+    click.echo(f"  ✓ Server '{env_name}' added and set as default")
 
 
 @debug.command()

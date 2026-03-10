@@ -30,6 +30,7 @@ class K8sClient:
         self.context = context
         self._core_api: Optional[client.CoreV1Api] = None
         self._apps_api: Optional[client.AppsV1Api] = None
+        self._networking_api: Optional[client.NetworkingV1Api] = None
         self._load_config()
 
     def _load_config(self) -> None:
@@ -55,6 +56,13 @@ class K8sClient:
         if self._apps_api is None:
             self._apps_api = client.AppsV1Api()
         return self._apps_api
+
+    @property
+    def networking_api(self) -> client.NetworkingV1Api:
+        """Get NetworkingV1Api client, creating if necessary."""
+        if self._networking_api is None:
+            self._networking_api = client.NetworkingV1Api()
+        return self._networking_api
 
     @staticmethod
     def list_contexts() -> List[Dict[str, Any]]:
@@ -201,6 +209,24 @@ class K8sClient:
         except ApiException as e:
             raise K8sClientError(f"Failed to list nodes: {e}") from e
 
+    def list_ingresses(self, namespace: str) -> List[Dict[str, Any]]:
+        """List all ingresses in a namespace."""
+        try:
+            result = self.networking_api.list_namespaced_ingress(namespace)
+            return [self._ingress_to_dict(ing) for ing in result.items]
+        except ApiException as e:
+            raise K8sClientError(f"Failed to list ingresses: {e}") from e
+
+    def get_ingress(self, name: str, namespace: str) -> Optional[Dict[str, Any]]:
+        """Get an ingress by name."""
+        try:
+            ing = self.networking_api.read_namespaced_ingress(name, namespace)
+            return self._ingress_to_dict(ing)
+        except ApiException as e:
+            if e.status == 404:
+                return None
+            raise K8sClientError(f"Failed to get ingress {name}: {e}") from e
+
     def _deployment_to_dict(self, dep: Any) -> Dict[str, Any]:
         """Convert deployment object to dictionary."""
         containers = []
@@ -343,4 +369,29 @@ class K8sClient:
             "conditions": conditions,
             "allocatable": allocatable,
             "capacity": capacity,
+        }
+
+    def _ingress_to_dict(self, ing: Any) -> Dict[str, Any]:
+        """Convert ingress object to dictionary."""
+        hosts: List[str] = []
+        tls_hosts: List[str] = []
+
+        if ing.spec.rules:
+            for rule in ing.spec.rules:
+                if rule.host:
+                    hosts.append(rule.host)
+
+        if ing.spec.tls:
+            for tls in ing.spec.tls:
+                if tls.hosts:
+                    tls_hosts.extend(tls.hosts)
+
+        return {
+            "name": ing.metadata.name,
+            "namespace": ing.metadata.namespace,
+            "labels": dict(ing.metadata.labels or {}),
+            "annotations": dict(ing.metadata.annotations or {}),
+            "hosts": hosts,
+            "tls_hosts": tls_hosts,
+            "ingress_class": ing.spec.ingress_class_name,
         }
