@@ -31,7 +31,10 @@ class Conversation:
         """
         # Handle both v0 and v1 API response formats for URL
         # v1 API uses conversation_url instead of url
-        url = data.get("url") or data.get("conversation_url")
+        # Note: We explicitly check for None to preserve empty strings if present
+        url = data.get("url")
+        if url is None:
+            url = data.get("conversation_url")
 
         # Extract runtime ID from URL if available (for backward compatibility)
         # Note: This is kept for display purposes only, the URL should be used

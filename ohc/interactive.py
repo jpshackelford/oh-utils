@@ -595,11 +595,10 @@ class ConversationManager:
         )
 
     def run_interactive(self) -> None:
-        """Run the interactive command loop"""
+        """Run the interactive command loop."""
         print("\nOpenHands Conversation Manager")
         print("Type 'h' for help, 'q' to quit")
 
-        # Load initial conversations
         if not self.load_conversations():
             return
 
@@ -608,66 +607,17 @@ class ConversationManager:
 
             try:
                 command = input("\nCommand: ").strip().lower()
-
                 if not command:
                     continue
 
                 parts = command.split()
                 cmd = parts[0]
 
-                if cmd in ["q", "quit"]:
+                handled = self._handle_command(cmd, parts)
+                if handled == "quit":
                     break
-                elif cmd in ["h", "help"]:
-                    help_lines = self.formatter.format_help()
-                    for line in help_lines:
-                        print(line)
-                    input("Press Enter to continue...")
-                elif cmd in ["r", "refresh"]:
-                    self.refresh_conversations()
-                elif cmd in ["n", "next"]:
-                    self.next_page()
-                elif cmd in ["p", "prev"]:
-                    self.prev_page()
-                elif cmd == "w" and len(parts) == 2:
-                    try:
-                        conv_num = int(parts[1])
-                        self.wake_conversation(conv_num)
-                    except ValueError:
-                        print("Invalid conversation number")
-                elif cmd == "s" and len(parts) == 2:
-                    try:
-                        conv_num = int(parts[1])
-                        self.show_conversation_details(conv_num)
-                        input("Press Enter to continue...")
-                    except ValueError:
-                        print("Invalid conversation number")
-                elif cmd == "f" and len(parts) == 2:
-                    try:
-                        conv_num = int(parts[1])
-                        self.download_conversation_files(conv_num)
-                        input("Press Enter to continue...")
-                    except ValueError:
-                        print("Invalid conversation number")
-                elif cmd == "t" and len(parts) == 2:
-                    try:
-                        conv_num = int(parts[1])
-                        self.download_trajectory(conv_num)
-                        input("Press Enter to continue...")
-                    except ValueError:
-                        print("Invalid conversation number")
-                elif cmd == "a" and len(parts) == 2:
-                    try:
-                        conv_num = int(parts[1])
-                        self.download_workspace(conv_num)
-                        input("Press Enter to continue...")
-                    except ValueError:
-                        print("Invalid conversation number")
-                else:
+                elif handled == "unknown":
                     print("Unknown command. Type 'h' for help.")
-
-                if cmd not in ["h", "help", "s", "f", "t", "a"]:
-                    # Small delay to show status messages
-                    time.sleep(0.5)
 
             except KeyboardInterrupt:
                 print("\nExiting...")
@@ -675,3 +625,69 @@ class ConversationManager:
             except Exception as e:
                 print(f"Error: {e}")
                 input("Press Enter to continue...")
+
+    def _handle_command(self, cmd: str, parts: List[str]) -> str:
+        """Handle a single command.
+
+        Returns:
+            'quit' if user wants to exit
+            'handled' if command was processed
+            'unknown' if command was not recognized
+        """
+        # Quit commands
+        if cmd in ["q", "quit"]:
+            return "quit"
+
+        # Simple commands (no argument required)
+        simple_commands = {
+            "h": self._show_help,
+            "help": self._show_help,
+            "r": self.refresh_conversations,
+            "refresh": self.refresh_conversations,
+            "n": self.next_page,
+            "next": self.next_page,
+            "p": self.prev_page,
+            "prev": self.prev_page,
+        }
+
+        if cmd in simple_commands:
+            simple_commands[cmd]()
+            if cmd not in ["h", "help"]:
+                time.sleep(0.5)
+            return "handled"
+
+        # Commands that take a conversation number: (method, wait_after)
+        numbered_commands = {
+            "w": (self.wake_conversation, False),
+            "s": (self.show_conversation_details, True),
+            "f": (self.download_conversation_files, True),
+            "t": (self.download_trajectory, True),
+            "a": (self.download_workspace, True),
+        }
+
+        if cmd in numbered_commands and len(parts) == 2:
+            return self._handle_numbered_command(cmd, parts[1], numbered_commands[cmd])
+
+        return "unknown"
+
+    def _handle_numbered_command(
+        self, cmd: str, arg: str, handler: tuple  # type: ignore[type-arg]
+    ) -> str:
+        """Handle a command that takes a conversation number argument."""
+        method, wait_after = handler
+        try:
+            conv_num = int(arg)
+            method(conv_num)
+            if wait_after:
+                input("Press Enter to continue...")
+            else:
+                time.sleep(0.5)
+        except ValueError:
+            print("Invalid conversation number")
+        return "handled"
+
+    def _show_help(self) -> None:
+        """Display help text."""
+        for line in self.formatter.format_help():
+            print(line)
+        input("Press Enter to continue...")
