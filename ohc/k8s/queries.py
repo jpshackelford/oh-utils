@@ -109,7 +109,11 @@ class ClusterHealthSummary:
 class RuntimeQuery:
     """Query helper for runtime pods and cluster health."""
 
-    RUNTIME_LABEL_SELECTOR = "app.kubernetes.io/managed-by=openhands"
+    # Try multiple label selectors - different deployments may use different labels
+    RUNTIME_LABEL_SELECTORS = [
+        "app.kubernetes.io/managed-by=openhands",
+        "runtime_id",  # Label exists (any value)
+    ]
 
     def __init__(self, client: K8sClient) -> None:
         """Initialize with K8s client."""
@@ -131,17 +135,30 @@ class RuntimeQuery:
         label_selector: Optional[str] = None,
     ) -> List[RuntimePod]:
         """List all runtime pods in a namespace."""
-        selector = label_selector or self.RUNTIME_LABEL_SELECTOR
+        if label_selector:
+            # Use provided selector
+            try:
+                pods = self.client.list_pods(namespace, label_selector=label_selector)
+                return [self._pod_to_runtime(p) for p in pods]
+            except K8sClientError:
+                pass
 
+        # Try each known label selector until we find runtime pods
+        for selector in self.RUNTIME_LABEL_SELECTORS:
+            try:
+                pods = self.client.list_pods(namespace, label_selector=selector)
+                if pods:  # Found some pods with this selector
+                    return [self._pod_to_runtime(p) for p in pods]
+            except K8sClientError:
+                continue
+
+        # Fallback: list all pods and filter by name/labels
         try:
-            pods = self.client.list_pods(namespace, label_selector=selector)
-        except K8sClientError:
-            # Try without label selector if the standard one doesn't work
             pods = self.client.list_pods(namespace)
-            # Filter to pods that look like runtimes
-            pods = [p for p in pods if self._looks_like_runtime(p)]
-
-        return [self._pod_to_runtime(p) for p in pods]
+            runtime_pods = [p for p in pods if self._looks_like_runtime(p)]
+            return [self._pod_to_runtime(p) for p in runtime_pods]
+        except K8sClientError:
+            return []
 
     def list_runtime_pods_with_issues(self, namespace: str) -> List[RuntimePod]:
         """List runtime pods with errors or restarts."""
