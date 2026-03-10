@@ -5,7 +5,6 @@ Integrates the existing conversation management functionality into the new CLI
 structure.
 """
 
-import os
 import sys
 from typing import List, Optional
 
@@ -72,7 +71,9 @@ def interactive_mode(api_version: str = "v0") -> None:
     Args:
         api_version: API version to use ("v0" or "v1"), defaults to "v0"
     """
-    # Import the original conversation manager and adapt it
+    from .api import create_api_client
+    from .interactive import ConversationManager
+
     try:
         # Check if we have a configured server
         config_manager = ConfigManager()
@@ -96,21 +97,18 @@ def interactive_mode(api_version: str = "v0") -> None:
             else:
                 return
 
-        # Set environment variable for the original conversation manager
-        os.environ["OH_API_KEY"] = server_config["api_key"]
-
-        # Import and run the conversation manager with version support
-        from conversation_manager.conversation_manager import ConversationManager
+        # Create API client directly (no env var round-trip)
+        api = create_api_client(
+            server_config["api_key"], server_config["url"], api_version
+        )
 
         click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")
         click.echo(f"API version: {api_version}")
         click.echo()
 
-        manager = ConversationManager(
-            api_version=api_version, base_url=server_config["url"]
-        )
-        manager.initialize()
+        # Pass API directly to ConversationManager (dependency injection)
+        manager = ConversationManager(api)
         manager.run_interactive()
 
     except KeyboardInterrupt:

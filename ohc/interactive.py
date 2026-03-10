@@ -1,213 +1,22 @@
-#!/usr/bin/env python3
 """
-OpenHands Conversation Manager
+Interactive conversation manager for OpenHands.
 
-A terminal-based utility to list, manage, and interact with OpenHands conversations.
-Features:
-- List conversations with status and runtime IDs
-- Terminal-aware formatting with pagination
-- Wake up specific conversations
-- Refresh conversation list
-- Interactive command interface
+This module provides an interactive terminal-based interface for managing
+OpenHands conversations. It uses dependency injection to receive an
+OpenHandsAPI instance rather than managing its own API key retrieval.
 """
 
 import json
 import os
 import shutil
-import sys
 import tempfile
+import time
 import zipfile
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import List, Optional, Tuple
 
-# Import consolidated API client with version support
-from ohc.api import OpenHandsAPI
-
-# Import shared display functionality
-try:
-    from ohc.conversation_display import (
-        show_conversation_details as shared_show_conversation_details,
-    )
-except ImportError:
-    # Fallback if ohc module is not available
-    def shared_show_conversation_details(*args: Any, **kwargs: Any) -> None:
-        pass
-
-
-@dataclass
-class Conversation:
-    """Represents a conversation with all relevant information"""
-
-    id: str
-    title: str
-    status: str
-    runtime_status: Optional[str]
-    runtime_id: Optional[str]
-    session_api_key: Optional[str]
-    last_updated: str
-    created_at: str
-    url: Optional[str]
-
-    @classmethod
-    def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
-        """Create Conversation from API response data.
-
-        Handles both V0 and V1 API response formats.
-        """
-        # Extract runtime ID from URL if available (for backward compatibility)
-        # Note: This is kept for display purposes only, the URL should be used
-        # directly for API calls
-        runtime_id = None
-        url = data.get("url") or data.get("conversation_url")
-        if url:
-            try:
-                # Try to extract runtime ID from URL for display purposes
-                # This is more flexible and doesn't assume specific domain patterns
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(url)
-                if parsed_url.hostname:
-                    # Extract the first part of the hostname as runtime ID
-                    runtime_id = parsed_url.hostname.split(".")[0]
-            except (IndexError, AttributeError, ValueError):
-                runtime_id = None
-
-        # Handle both v0 and v1 API response formats
-        conversation_id = data.get("conversation_id") or data.get("id", "")
-
-        # Handle status - v1 API uses different status fields
-        status = data.get("status")
-        if not status:
-            # v1 API uses sandbox_status and execution_status
-            sandbox_status = data.get("sandbox_status", "UNKNOWN")
-            if sandbox_status == "RUNNING":
-                status = "RUNNING"
-            elif sandbox_status == "PAUSED":
-                status = "PAUSED"
-            elif sandbox_status == "STOPPED":
-                status = "STOPPED"
-            else:
-                status = sandbox_status
-
-        return cls(
-            id=conversation_id,
-            title=data.get("title", "Untitled"),
-            status=status,
-            runtime_status=data.get("runtime_status"),
-            runtime_id=runtime_id,
-            session_api_key=data.get("session_api_key"),
-            last_updated=data.get("last_updated_at") or data.get("updated_at", ""),
-            created_at=data.get("created_at", ""),
-            url=url,
-        )
-
-    def is_active(self) -> bool:
-        """Check if conversation is currently active/running"""
-        return self.status == "RUNNING" and self.runtime_id is not None
-
-    def short_id(self) -> str:
-        """Get shortened conversation ID for display"""
-        return self.id[:8] if self.id else "unknown"
-
-    def formatted_title(self, max_length: int = 50) -> str:
-        """Get formatted title with length limit"""
-        if len(self.title) <= max_length:
-            return self.title
-        return self.title[: max_length - 3] + "..."
-
-    def status_display(self) -> str:
-        """Get formatted status for display"""
-        if self.is_active():
-            return f"🟢 {self.status}"
-        elif self.status == "STOPPED":
-            return f"🔴 {self.status}"
-        else:
-            return f"🟡 {self.status}"
-
-
-class APIKeyManager:
-    """Manages OpenHands API key storage and retrieval"""
-
-    def __init__(self) -> None:
-        self.config_dir = Path.home() / ".openhands"
-        self.config_file = self.config_dir / "config.json"
-        self.config_dir.mkdir(exist_ok=True)
-
-    def get_stored_key(self) -> Optional[str]:
-        """Get stored API key if it exists"""
-        if self.config_file.exists():
-            try:
-                with open(self.config_file) as f:
-                    config = json.load(f)
-                    return cast("Optional[str]", config.get("api_key"))
-            except (OSError, json.JSONDecodeError):
-                return None
-        return None
-
-    def store_key(self, api_key: str) -> None:
-        """Store API key securely"""
-        config = {"api_key": api_key}
-        with open(self.config_file, "w") as f:
-            json.dump(config, f, indent=2)
-        # Set restrictive permissions
-        os.chmod(self.config_file, 0o600)
-
-    def get_valid_key(self) -> str:
-        """Get a valid API key, prompting user if necessary"""
-        # Check environment variables first
-        env_key = os.getenv("OH_API_KEY") or os.getenv("OPENHANDS_API_KEY")
-        if env_key:
-            api = OpenHandsAPI(env_key)
-            if api.test_connection():
-                try:
-                    api.search_conversations(limit=1)
-                    env_var = (
-                        "OH_API_KEY" if os.getenv("OH_API_KEY") else "OPENHANDS_API_KEY"
-                    )
-                    print(f"✓ Using API key from {env_var} environment variable")
-                    return env_key
-                except Exception as e:
-                    print(f"⚠️  Environment API key error: {e}")
-
-        # Check stored key
-        stored_key = self.get_stored_key()
-        if stored_key:
-            api = OpenHandsAPI(stored_key)
-            if api.test_connection():
-                try:
-                    api.search_conversations(limit=1)
-                    print("✓ Using stored API key")
-                    return stored_key
-                except Exception as e:
-                    print(f"⚠️  Stored API key error: {e}")
-
-        # Prompt for new key
-        print("\nPlease get your OpenHands API key from:")
-        print("https://app.all-hands.dev/settings/api-keys")
-        print()
-
-        while True:
-            try:
-                api_key = input("Enter your OpenHands API key: ").strip()
-                if not api_key:
-                    print("API key cannot be empty")
-                    continue
-
-                api = OpenHandsAPI(api_key)
-                if api.test_connection():
-                    try:
-                        api.search_conversations(limit=1)
-                        self.store_key(api_key)
-                        print("✓ API key validated and stored")
-                        return api_key
-                    except Exception as e:
-                        print(f"✗ API key validation failed: {e}")
-                else:
-                    print("✗ Invalid API key")
-            except KeyboardInterrupt:
-                print("\nExiting...")
-                sys.exit(1)
+from .api import OpenHandsAPI
+from .conversation_display import Conversation, show_conversation_details
 
 
 class TerminalFormatter:
@@ -239,7 +48,6 @@ class TerminalFormatter:
 
         # Calculate column widths based on terminal size
         # Widths: num(5) + id(10) + status(12) + runtime(17) + title(remaining)
-        # Allow for 3-digit numbers with 2 spaces before ID
         min_width = 5 + 10 + 12 + 17 + 20  # 64 chars minimum
 
         if width < min_width:
@@ -318,35 +126,30 @@ class TerminalFormatter:
 
 
 class ConversationManager:
-    """Main conversation manager application"""
+    """Main conversation manager application.
 
-    def __init__(
-        self, api_version: str = "v0", base_url: str = "https://app.all-hands.dev/api/"
-    ) -> None:
-        self.api_key_manager = APIKeyManager()
+    Uses dependency injection to receive an already-configured OpenHandsAPI
+    instance, eliminating the need for internal API key management.
+    """
+
+    def __init__(self, api: OpenHandsAPI) -> None:
+        """Initialize ConversationManager with an API client.
+
+        Args:
+            api: Pre-configured OpenHandsAPI instance
+        """
+        self.api = api
         self.formatter = TerminalFormatter()
-        self.api: Optional[OpenHandsAPI] = None
         self.conversations: List[Conversation] = []
         self.current_page = 0
         self.page_size = 20
         self.next_page_id: Optional[str] = None
         self.page_ids: List[Optional[str]] = [None]  # Track page IDs for navigation
-        self.api_version = api_version
-        self.base_url = base_url
 
-    def initialize(self) -> None:
-        """Initialize the application with API key"""
-        try:
-            api_key = self.api_key_manager.get_valid_key()
-            self.api = OpenHandsAPI(api_key, self.base_url, self.api_version)
-            version_str = f" (API {self.api_version})" if self.api_version else ""
-            print(f"✓ Conversation Manager initialized successfully{version_str}")
-        except KeyboardInterrupt:
-            print("\nExiting...")
-            sys.exit(1)
-        except Exception as e:
-            print(f"✗ Failed to initialize: {e}")
-            sys.exit(1)
+    @property
+    def api_version(self) -> str:
+        """Get the API version from the underlying API client."""
+        return str(self.api.version)
 
     def load_conversations(
         self, page_id: Optional[str] = None, offset: int = 0
@@ -358,10 +161,6 @@ class ConversationManager:
             offset: Offset for V1 API pagination
         """
         try:
-            if self.api is None:
-                print("✗ API not initialized")
-                return False
-
             # Adjust page size based on terminal height
             _, height = self.formatter.terminal_size
             # Reserve space for header, separator, help, and command prompt
@@ -466,10 +265,6 @@ class ConversationManager:
         if 1 <= conv_number <= len(self.conversations):
             conv = self.conversations[conv_number - 1]
             try:
-                if self.api is None:
-                    print("✗ API not initialized")
-                    return
-
                 print(f"Waking up conversation: {conv.formatted_title()}")
                 self.api.start_conversation(conv.id)
                 print("✓ Conversation started successfully")
@@ -490,105 +285,8 @@ class ConversationManager:
         """Show detailed information about a conversation"""
         if 1 <= conv_number <= len(self.conversations):
             conv = self.conversations[conv_number - 1]
-            try:
-                if self.api is None:
-                    print("✗ API not initialized")
-                    return
-
-                # Get fresh data from API
-                data = self.api.get_conversation(conv.id)
-                if data is None:
-                    print(f"✗ Conversation {conv.id} not found")
-                    return
-                fresh_conv = Conversation.from_api_response(data)
-
-                print("\nConversation Details:")
-                print(f"  ID: {fresh_conv.id}")
-                print(f"  Title: {fresh_conv.title}")
-                print(f"  Status: {fresh_conv.status_display()}")
-                print(f"  Runtime Status: {fresh_conv.runtime_status or 'N/A'}")
-                print(f"  Runtime ID: {fresh_conv.runtime_id or 'N/A'}")
-                print(f"  Created: {fresh_conv.created_at}")
-                print(f"  Last Updated: {fresh_conv.last_updated}")
-                if fresh_conv.url:
-                    print(f"  URL: {fresh_conv.url}")
-
-                # Show uncommitted files for running conversations
-                if fresh_conv.is_active():
-                    try:
-                        # Extract runtime base URL from conversation URL
-                        runtime_url = None
-                        if fresh_conv.url:
-                            from urllib.parse import urlparse
-
-                            parsed_url = urlparse(fresh_conv.url)
-                            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-
-                        changes = self.api.get_conversation_changes(
-                            fresh_conv.id,
-                            runtime_url,
-                            fresh_conv.session_api_key,
-                        )
-                        if changes:
-                            print(f"\n  Uncommitted Files ({len(changes)}):")
-
-                            # Group changes by status
-                            status_groups: Dict[str, List[str]] = {}
-                            for change in changes:
-                                status = change["status"]
-                                if status not in status_groups:
-                                    status_groups[status] = []
-                                status_groups[status].append(change["path"])
-
-                            # Display changes by status with icons
-                            status_icons = {
-                                "M": "📝",  # Modified
-                                "A": "➕",  # Added/New
-                                "D": "🗑️",  # Deleted
-                                "U": "⚠️",  # Unmerged/Conflict
-                            }
-
-                            status_names = {
-                                "M": "Modified",
-                                "A": "Added/New",
-                                "D": "Deleted",
-                                "U": "Unmerged",
-                            }
-
-                            for status in ["M", "A", "D", "U"]:
-                                if status in status_groups:
-                                    icon = status_icons.get(status, "•")
-                                    name = status_names.get(status, status)
-                                    files = status_groups[status]
-                                    print(f"    {icon} {name} ({len(files)}):")
-                                    for file_path in sorted(files):
-                                        print(f"      {file_path}")
-                        else:
-                            print("\n  No changes identified")
-                    except Exception as e:
-                        error_msg = str(e)
-                        if "Git repository not available or corrupted" in error_msg:
-                            print(
-                                "\n  ⚠️  Git repository not available for this "
-                                "conversation"
-                            )
-                            print(
-                                "      This may happen if the conversation workspace "
-                                "doesn't have git initialized"
-                            )
-                        elif "HTTP 401" in error_msg or "Unauthorized" in error_msg:
-                            print(
-                                "\n  ⚠️  API key doesn't have permission to access "
-                                "git changes"
-                            )
-                        else:
-                            print(
-                                f"\n  ⚠️  Could not fetch uncommitted files: {error_msg}"
-                            )
-
-                print()
-            except Exception as e:
-                print(f"✗ Failed to get conversation details: {e}")
+            # Use shared show_conversation_details function
+            show_conversation_details(self.api, conv.id)
         else:
             print(f"Invalid conversation number: {conv_number}")
 
@@ -602,10 +300,6 @@ class ConversationManager:
         print(f"\n📦 Downloading files from conversation: {conv.formatted_title(60)}")
 
         try:
-            if self.api is None:
-                print("✗ API not initialized")
-                return
-
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             if fresh_conv_data is None:
@@ -734,10 +428,6 @@ class ConversationManager:
         )
 
         try:
-            if self.api is None:
-                print("✗ API not initialized")
-                return
-
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             if fresh_conv_data is None:
@@ -797,10 +487,6 @@ class ConversationManager:
         )
 
         try:
-            if self.api is None:
-                print("✗ API not initialized")
-                return
-
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
             if fresh_conv_data is None:
@@ -963,8 +649,6 @@ class ConversationManager:
 
                 if cmd not in ["h", "help", "s", "f", "t", "a"]:
                     # Small delay to show status messages
-                    import time
-
                     time.sleep(0.5)
 
             except KeyboardInterrupt:
@@ -973,53 +657,3 @@ class ConversationManager:
             except Exception as e:
                 print(f"Error: {e}")
                 input("Press Enter to continue...")
-
-
-def main() -> None:
-    """Main entry point"""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="OpenHands Conversation Manager")
-    parser.add_argument(
-        "--api-key", "-k", help="OpenHands API key (overrides environment variables)"
-    )
-    parser.add_argument(
-        "--test", action="store_true", help="Test mode - just list conversations once"
-    )
-
-    args = parser.parse_args()
-
-    # Set API key if provided
-    if args.api_key:
-        import os
-
-        os.environ["OH_API_KEY"] = args.api_key
-
-    # Check for test mode
-    if args.test:
-        # Simple test mode - just list conversations once
-        manager = ConversationManager()
-        manager.initialize()
-        if manager.load_conversations():
-            print(f"\nLoaded {len(manager.conversations)} conversations:")
-            for i, conv in enumerate(manager.conversations, 1):
-                status_icon = "🟢" if conv.is_active() else "🔴"
-                runtime = conv.runtime_id or "─"
-                print(
-                    f"{i:2d}. {conv.short_id()} {status_icon} {conv.status:8s} "
-                    f"{runtime:15s} {conv.formatted_title(60)}"
-                )
-            print(
-                f"\nActive conversations: "
-                f"{sum(1 for c in manager.conversations if c.is_active())}/"
-                f"{len(manager.conversations)}"
-            )
-        return
-
-    manager = ConversationManager()
-    manager.initialize()
-    manager.run_interactive()
-
-
-if __name__ == "__main__":
-    main()
