@@ -82,7 +82,10 @@ class OpenHandsAPI:
             for conv in results:
                 if isinstance(conv, dict):
                     normalized_conv = dict(conv)
-                    if "id" in normalized_conv and "conversation_id" not in normalized_conv:
+                    # V1 uses "id", normalize to "conversation_id" for commands
+                    has_id = "id" in normalized_conv
+                    has_conv_id = "conversation_id" in normalized_conv
+                    if has_id and not has_conv_id:
                         normalized_conv["conversation_id"] = normalized_conv["id"]
                     normalized_results.append(normalized_conv)
                 else:
