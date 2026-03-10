@@ -46,7 +46,8 @@ class DetectedRuntimeConfig:
 class RuntimeDetector:
     """Detects runtime configuration from deployed OpenHands Enterprise."""
 
-    RUNTIME_API_DEPLOYMENT = "runtime-api"
+    # Support both naming conventions used in different deployments
+    RUNTIME_API_DEPLOYMENT_NAMES = ["openhands-runtime-api", "runtime-api"]
     ENV_VARS_TO_DETECT = [
         "RUNTIME_IN_SAME_CLUSTER",
         "K8S_NAMESPACE",
@@ -61,6 +62,14 @@ class RuntimeDetector:
         """Initialize detector with K8s client."""
         self.client = client
 
+    def _find_runtime_api_deployment_name(self, app_namespace: str) -> Optional[str]:
+        """Find the actual runtime-api deployment name in the namespace."""
+        for name in self.RUNTIME_API_DEPLOYMENT_NAMES:
+            dep = self.client.get_deployment(name, app_namespace)
+            if dep is not None:
+                return name
+        return None
+
     def detect(self, app_namespace: str) -> Optional[DetectedRuntimeConfig]:
         """
         Detect runtime configuration from runtime-api deployment.
@@ -72,8 +81,12 @@ class RuntimeDetector:
             DetectedRuntimeConfig if detection successful, None otherwise
         """
         try:
+            deployment_name = self._find_runtime_api_deployment_name(app_namespace)
+            if not deployment_name:
+                return None
+
             env_vars = self.client.get_deployment_env_vars(
-                self.RUNTIME_API_DEPLOYMENT, app_namespace
+                deployment_name, app_namespace
             )
 
             if not env_vars:
@@ -98,8 +111,7 @@ class RuntimeDetector:
 
     def find_runtime_api_deployment(self, app_namespace: str) -> bool:
         """Check if runtime-api deployment exists in the namespace."""
-        dep = self.client.get_deployment(self.RUNTIME_API_DEPLOYMENT, app_namespace)
-        return dep is not None
+        return self._find_runtime_api_deployment_name(app_namespace) is not None
 
     def match_context_to_detected(
         self, detected: DetectedRuntimeConfig, available_contexts: list
