@@ -25,6 +25,7 @@ Users report conversations erroring out with messages indicating resources have 
 ## Integration with oh-utils
 
 This tool will be implemented as part of the existing `oh-utils` repository, which already provides:
+
 - `ohc` CLI for OpenHands Cloud conversation management
 - Established patterns for configuration, commands, and display formatting
 - Testing infrastructure with >78% coverage
@@ -32,6 +33,7 @@ This tool will be implemented as part of the existing `oh-utils` repository, whi
 ### Integration Options
 
 **Option A: Subcommand of `ohc`** (Recommended)
+
 ```bash
 ohc debug runtime <ID>
 ohc debug health
@@ -39,6 +41,7 @@ ohc debug configure
 ```
 
 **Option B: Separate Entry Point**
+
 ```bash
 oh-debug runtime <ID>
 ```
@@ -58,6 +61,7 @@ Following the XDG Base Directory Specification (consistent with existing `ohc` c
 ```
 
 Or with `$XDG_CONFIG_HOME` set:
+
 ```
 $XDG_CONFIG_HOME/ohc/debug.json
 ```
@@ -107,15 +111,15 @@ Using JSON format for consistency with the existing `ohc` configuration:
 
 When runtime settings are not fully specified:
 
-| If runtime.kube_context is... | Then use... |
-|-------------------------------|-------------|
-| Specified | The specified value |
-| Omitted | `app.kube_context` |
+| If runtime.kube_context is... | Then use...         |
+| ----------------------------- | ------------------- |
+| Specified                     | The specified value |
+| Omitted                       | `app.kube_context`  |
 
-| If runtime.namespace is... | Then use... |
-|----------------------------|-------------|
-| Specified | The specified value |
-| Omitted | `runtime-pods` (default) |
+| If runtime.namespace is... | Then use...              |
+| -------------------------- | ------------------------ |
+| Specified                  | The specified value      |
+| Omitted                    | `runtime-pods` (default) |
 
 ---
 
@@ -140,7 +144,7 @@ App Cluster (where OpenHands Enterprise Server runs)
 ----------------------------------------------------
 Available kubectl contexts:
   1. gke_myproject_us-central1_prod
-  2. gke_myproject_us-central1_staging  
+  2. gke_myproject_us-central1_staging
   3. minikube
 
 ? Select app cluster context [1-3]: 1
@@ -175,19 +179,19 @@ After obtaining app cluster context and namespace, the tool:
 2. Finds the runtime-api deployment in the app namespace
 3. Reads environment variables from the deployment:
 
-| Env Var | What it tells us |
-|---------|------------------|
+| Env Var                   | What it tells us                                      |
+| ------------------------- | ----------------------------------------------------- |
 | `RUNTIME_IN_SAME_CLUSTER` | Whether runtimes run in same cluster (`true`/`false`) |
-| `K8S_NAMESPACE` | Runtime pods namespace (default: `runtime-pods`) |
-| `GKE_CLUSTER_NAME` | Target GKE cluster name (if different cluster) |
-| `GCP_PROJECT` | GCP project ID |
-| `GCP_REGION` | GCP region |
-| `AWS_REGION` | AWS region (for EKS) |
-| `CLUSTER_NAME` | EKS cluster name |
+| `K8S_NAMESPACE`           | Runtime pods namespace (default: `runtime-pods`)      |
+| `GKE_CLUSTER_NAME`        | Target GKE cluster name (if different cluster)        |
+| `GCP_PROJECT`             | GCP project ID                                        |
+| `GCP_REGION`              | GCP region                                            |
+| `AWS_REGION`              | AWS region (for EKS)                                  |
+| `CLUSTER_NAME`            | EKS cluster name                                      |
 
 4. Constructs the runtime cluster context:
    - If `RUNTIME_IN_SAME_CLUSTER=true`: Use app context
-   - If GKE: Construct `gke_{project}_{region}_{cluster}` 
+   - If GKE: Construct `gke_{project}_{region}_{cluster}`
    - If EKS: Match against available contexts
 
 5. Presents detected settings for user confirmation
@@ -201,7 +205,7 @@ Detecting runtime configuration...
 ✓ Found runtime-api deployment
 ✓ Detected: Runtimes in DIFFERENT cluster
   - Project: myproject
-  - Region: us-west1  
+  - Region: us-west1
   - Cluster: runtimes-cluster
   - Namespace: runtime-pods
 
@@ -225,7 +229,7 @@ Available contexts:
   1. gke_myproject_us-central1_prod
   2. gke_myproject_us-central1_staging
 
-? Select runtime cluster context, or 'q' to quit and configure kubectl: 
+? Select runtime cluster context, or 'q' to quit and configure kubectl:
 ```
 
 ---
@@ -327,7 +331,7 @@ Image:   ghcr.io/all-hands-ai/runtime:0.15.0
 Resources:
   CPU:    1000m requested / 1000m limit
   Memory: 2048Mi requested / 2048Mi limit (100% used) ⚠️
-  
+
 Pod Status:
   Restarts: 3
   Last Restart: 5 minutes ago
@@ -342,10 +346,10 @@ Recent Events:
 
 💡 Recommendation: This runtime is repeatedly hitting memory limits.
    Consider increasing resource_factor for this user's organization.
-   
+
    Current org setting: resource_factor=1 (2048Mi memory)
    Suggested: resource_factor=2 (4096Mi memory)
-   
+
    To update via API:
    curl -X PATCH "https://app.all-hands.dev/api/organizations/{ORG_ID}" \
      -H "Authorization: Bearer {TOKEN}" \
@@ -368,7 +372,7 @@ App Cluster: gke_myproject_us-central1_prod
 Runtime Cluster: gke_myproject_us-central1_prod
   Namespace: runtime-pods
   Status:    ⚠ Issues detected
-  
+
 Runtime Summary (last 24h):
   Total:      142
   Running:    128 (90%)
@@ -416,7 +420,7 @@ $ ohc debug runtime abc123xyz --output json
   "restart_reasons": ["OOMKilled", "OOMKilled", "OOMKilled"],
   "resources": {
     "cpu_request": "1000m",
-    "cpu_limit": "1000m", 
+    "cpu_limit": "1000m",
     "memory_request": "2048Mi",
     "memory_limit": "2048Mi"
   },
