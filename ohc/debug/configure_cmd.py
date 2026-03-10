@@ -242,13 +242,56 @@ def _interactive_configure(
             click.echo("⚠ Could not auto-detect runtime configuration")
             click.echo("  (runtime-api deployment not found)")
             click.echo()
-            runtime_context = app_context
+            click.echo("Runtime Cluster (where runtime pods run)")
+            click.echo("-" * 40)
+
+            # Ask if runtime is in a different cluster
+            same_cluster = click.confirm(
+                "Are runtime pods in the same cluster as the app?", default=True
+            )
+
+            if same_cluster:
+                runtime_context = app_context
+                click.echo(f"  Context:   {runtime_context} (same as app)")
+            else:
+                click.echo("Available kubectl contexts:")
+                for i, ctx in enumerate(contexts, 1):
+                    marker = " (app)" if ctx["name"] == app_context else ""
+                    click.echo(f"  {i}. {ctx['name']}{marker}")
+                ctx_choice = click.prompt(
+                    f"Select runtime cluster context [1-{len(contexts)}]",
+                    type=click.IntRange(1, len(contexts)),
+                )
+                runtime_context = contexts[ctx_choice - 1]["name"]
+
             runtime_namespace = click.prompt(
                 "Runtime namespace", default="runtime-pods"
             )
     except K8sClientError as e:
         click.echo(f"⚠ Could not connect to cluster: {e}")
-        runtime_context = app_context
+        click.echo()
+        click.echo("Runtime Cluster (where runtime pods run)")
+        click.echo("-" * 40)
+
+        # Ask if runtime is in a different cluster
+        same_cluster = click.confirm(
+            "Are runtime pods in the same cluster as the app?", default=True
+        )
+
+        if same_cluster:
+            runtime_context = app_context
+            click.echo(f"  Context:   {runtime_context} (same as app)")
+        else:
+            click.echo("Available kubectl contexts:")
+            for i, ctx in enumerate(contexts, 1):
+                marker = " (app)" if ctx["name"] == app_context else ""
+                click.echo(f"  {i}. {ctx['name']}{marker}")
+            ctx_choice = click.prompt(
+                f"Select runtime cluster context [1-{len(contexts)}]",
+                type=click.IntRange(1, len(contexts)),
+            )
+            runtime_context = contexts[ctx_choice - 1]["name"]
+
         runtime_namespace = click.prompt("Runtime namespace", default="runtime-pods")
 
     # Detect application endpoint
