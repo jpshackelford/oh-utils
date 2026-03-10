@@ -3,7 +3,7 @@
 from typing import Any, Dict, List, Optional
 
 from kubernetes import client, config
-from kubernetes.client import ApiException
+from kubernetes.client import ApiClient, ApiException
 from kubernetes.config import ConfigException
 
 
@@ -18,6 +18,8 @@ class K8sClient:
     Wrapper for Kubernetes client operations.
 
     Handles context switching and provides simplified access to common operations.
+    Uses isolated ApiClient instances to avoid global state issues when working
+    with multiple clusters simultaneously.
     """
 
     def __init__(self, context: Optional[str] = None) -> None:
@@ -28,18 +30,18 @@ class K8sClient:
             context: Kubernetes context to use. If None, uses current context.
         """
         self.context = context
+        self._api_client: Optional[ApiClient] = None
         self._core_api: Optional[client.CoreV1Api] = None
         self._apps_api: Optional[client.AppsV1Api] = None
         self._networking_api: Optional[client.NetworkingV1Api] = None
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load kubernetes configuration."""
+        """Load kubernetes configuration and create isolated API client."""
         try:
-            if self.context:
-                config.load_kube_config(context=self.context)
-            else:
-                config.load_kube_config()
+            # Use new_client_from_config to get an isolated ApiClient instance
+            # instead of modifying global state with load_kube_config
+            self._api_client = config.new_client_from_config(context=self.context)
         except ConfigException as e:
             raise K8sClientError(f"Failed to load kube config: {e}") from e
 
@@ -47,21 +49,21 @@ class K8sClient:
     def core_api(self) -> client.CoreV1Api:
         """Get CoreV1Api client, creating if necessary."""
         if self._core_api is None:
-            self._core_api = client.CoreV1Api()
+            self._core_api = client.CoreV1Api(api_client=self._api_client)
         return self._core_api
 
     @property
     def apps_api(self) -> client.AppsV1Api:
         """Get AppsV1Api client, creating if necessary."""
         if self._apps_api is None:
-            self._apps_api = client.AppsV1Api()
+            self._apps_api = client.AppsV1Api(api_client=self._api_client)
         return self._apps_api
 
     @property
     def networking_api(self) -> client.NetworkingV1Api:
         """Get NetworkingV1Api client, creating if necessary."""
         if self._networking_api is None:
-            self._networking_api = client.NetworkingV1Api()
+            self._networking_api = client.NetworkingV1Api(api_client=self._api_client)
         return self._networking_api
 
     @staticmethod
