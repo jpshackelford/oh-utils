@@ -12,7 +12,7 @@ import tempfile
 import time
 import zipfile
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .api import OpenHandsAPI
 from .conversation_display import Conversation, show_conversation_details
@@ -342,7 +342,7 @@ class ConversationManager:
             return None
         return Conversation.from_api_response(fresh_conv_data)
 
-    def _get_changed_files(self, conv: Conversation) -> Optional[List[dict]]:  # type: ignore[type-arg]
+    def _get_changed_files(self, conv: Conversation) -> Optional[List[Dict[str, Any]]]:
         """Get list of changed files for a conversation."""
         print("🔍 Fetching list of changed files...")
 
@@ -361,7 +361,7 @@ class ConversationManager:
     def _download_files_to_temp(
         self,
         conv: Conversation,
-        changes: List[dict],  # type: ignore[type-arg]
+        changes: List[Dict[str, Any]],
         temp_path: Path,
     ) -> List[str]:
         """Download files to a temporary directory.
@@ -468,6 +468,10 @@ class ConversationManager:
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
 
+            if trajectory_data is None:
+                print("✗ No trajectory data available")
+                return
+
             # Save trajectory to JSON file
             self._save_trajectory_file(trajectory_data, f"trajectory-{conv.short_id()}")
 
@@ -482,7 +486,9 @@ class ConversationManager:
             and conv.url is not None
         )
 
-    def _save_trajectory_file(self, trajectory_data: dict, base_name: str) -> Path:  # type: ignore[type-arg]
+    def _save_trajectory_file(
+        self, trajectory_data: List[Dict[str, Any]], base_name: str
+    ) -> Path:
         """Save trajectory data to a JSON file.
 
         Returns the path to the created file.
@@ -671,7 +677,7 @@ class ConversationManager:
     def _handle_numbered_command(
         self,
         arg: str,
-        handler: tuple,  # type: ignore[type-arg]
+        handler: Tuple[Callable[[int], None], bool],
     ) -> str:
         """Handle a command that takes a conversation number argument."""
         method, wait_after = handler
