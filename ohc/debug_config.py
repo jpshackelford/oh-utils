@@ -130,7 +130,9 @@ class DebugConfigManager:
         except OSError as e:
             raise Exception(f"Failed to save debug configuration: {e}") from e
 
-    def get_environment(self, name: Optional[str] = None) -> Optional[EnvironmentConfig]:
+    def get_environment(
+        self, name: Optional[str] = None
+    ) -> Optional[EnvironmentConfig]:
         """Get configuration for a specific environment or the default."""
         config = self.load_config()
 
@@ -154,8 +156,9 @@ class DebugConfigManager:
         if name and name in config.environments:
             return name
 
-        if config.default_environment and config.default_environment in config.environments:
-            return config.default_environment
+        default_env = config.default_environment
+        if default_env and default_env in config.environments:
+            return default_env
 
         if config.environments:
             return next(iter(config.environments.keys()))

@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -231,6 +232,9 @@ class TestDebugConfigManager:
         assert "env1" in envs
         assert "env2" in envs
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="File permissions work differently on Windows"
+    )
     def test_config_file_permissions(self, manager: DebugConfigManager) -> None:
         manager.add_environment(name="test", app_context="ctx", app_namespace="ns")
 

@@ -297,7 +297,9 @@ def _interactive_configure(
             click.echo("  (runtime-api deployment not found)")
             click.echo()
             runtime_context = app_context
-            runtime_namespace = click.prompt("Runtime namespace", default="runtime-pods")
+            runtime_namespace = click.prompt(
+                "Runtime namespace", default="runtime-pods"
+            )
     except K8sClientError as e:
         click.echo(f"⚠ Could not connect to cluster: {e}")
         runtime_context = app_context
@@ -333,7 +335,6 @@ def _interactive_configure(
 @click.option("--events", is_flag=True, help="Show full event history")
 @click.option("--logs", is_flag=True, help="Show container logs")
 @click.option("--previous", is_flag=True, help="Show logs from previous container")
-@click.option("--describe", is_flag=True, help="Show full pod description")
 @click.option("--all", "show_all", is_flag=True, help="Show everything")
 @click.pass_context
 def runtime(
@@ -342,14 +343,13 @@ def runtime(
     events: bool,
     logs: bool,
     previous: bool,
-    describe: bool,
     show_all: bool,
 ) -> None:
     """Investigate a specific runtime.
 
     RUNTIME_ID can be the runtime ID, session ID, or pod name.
     """
-    env_config, app_client, runtime_client, env_name = get_config_and_client(
+    env_config, _app_client, runtime_client, _env_name = get_config_and_client(
         ctx.obj.get("environment")
     )
     output = ctx.obj.get("output", "text")
@@ -361,8 +361,9 @@ def runtime(
     pod = query.get_runtime_pod(runtime_id, runtime_config.namespace)
 
     if not pod:
+        ns = runtime_config.namespace
         raise click.ClickException(
-            f"Runtime '{runtime_id}' not found in namespace '{runtime_config.namespace}'"
+            f"Runtime '{runtime_id}' not found in namespace '{ns}'"
         )
 
     if output == "json":
@@ -376,12 +377,19 @@ def runtime(
         click.echo(f"Session: {pod.session_id}")
     click.echo(f"Status:  {pod.status_display()}")
     click.echo(f"Pod:     {pod.name}")
-    click.echo(f"Created: {pod.created_at} ({pod.age_display} ago)" if pod.created_at else "Created: unknown")
+    if pod.created_at:
+        click.echo(f"Created: {pod.created_at} ({pod.age_display} ago)")
+    else:
+        click.echo("Created: unknown")
     click.echo()
 
     click.echo("Resources:")
-    click.echo(f"  CPU:    {pod.cpu_request or 'N/A'} requested / {pod.cpu_limit or 'N/A'} limit")
-    click.echo(f"  Memory: {pod.memory_request or 'N/A'} requested / {pod.memory_limit or 'N/A'} limit")
+    cpu_req = pod.cpu_request or "N/A"
+    cpu_lim = pod.cpu_limit or "N/A"
+    mem_req = pod.memory_request or "N/A"
+    mem_lim = pod.memory_limit or "N/A"
+    click.echo(f"  CPU:    {cpu_req} requested / {cpu_lim} limit")
+    click.echo(f"  Memory: {mem_req} requested / {mem_lim} limit")
 
     if pod.restart_count > 0:
         click.echo()
@@ -397,7 +405,8 @@ def runtime(
         pod_events = query.get_pod_events(pod.name, runtime_config.namespace)
         if pod_events:
             for event in pod_events[:10]:
-                timestamp = event.get("last_timestamp", "")[:19] if event.get("last_timestamp") else ""
+                last_ts = event.get("last_timestamp")
+                timestamp = last_ts[:19] if last_ts else ""
                 etype = event.get("type", "")
                 reason = event.get("reason", "")
                 message = event.get("message", "")
@@ -426,7 +435,7 @@ def runtime(
     if pod.is_oom_killed:
         click.echo()
         click.echo("💡 Recommendation: This runtime was OOMKilled.")
-        click.echo("   Consider increasing resource_factor for this user's organization.")
+        click.echo("   Consider increasing resource_factor for this user's org.")
 
     click.echo()
 
@@ -542,15 +551,17 @@ def health(ctx: click.Context) -> None:
     if health_summary.error_runtimes > 0:
         click.echo(f"  Error:      {health_summary.error_runtimes} ⚠")
 
-    if health_summary.oom_killed_count > 0 or health_summary.failed_scheduling_count > 0:
+    has_oom = health_summary.oom_killed_count > 0
+    has_sched = health_summary.failed_scheduling_count > 0
+    if has_oom or has_sched:
         click.echo()
         click.echo("Resource Issues:")
         if health_summary.oom_killed_count > 0:
-            click.echo(f"  OOMKilled:        {health_summary.oom_killed_count} runtimes")
+            click.echo(f"  OOMKilled:        {health_summary.oom_killed_count}")
         if health_summary.evicted_count > 0:
-            click.echo(f"  Evicted:          {health_summary.evicted_count} runtimes")
+            click.echo(f"  Evicted:          {health_summary.evicted_count}")
         if health_summary.failed_scheduling_count > 0:
-            click.echo(f"  FailedScheduling: {health_summary.failed_scheduling_count} runtimes")
+            click.echo(f"  FailedScheduling: {health_summary.failed_scheduling_count}")
 
     # Show top issues
     problem_pods = query.list_runtime_pods_with_issues(runtime_config.namespace)
@@ -572,7 +583,7 @@ def health(ctx: click.Context) -> None:
 @debug.command("list")
 @click.option("--errors", is_flag=True, help="Show only runtimes with errors")
 @click.option("--restarts", is_flag=True, help="Show runtimes with restarts")
-@click.option("--min", "min_restarts", type=int, default=1, help="Minimum restarts to show")
+@click.option("--min", "min_restarts", type=int, default=1, help="Min restarts")
 @click.option("--oom", is_flag=True, help="Show OOMKilled runtimes")
 @click.option("--recent", is_flag=True, help="Show recently created (last 1h)")
 @click.pass_context
@@ -585,23 +596,24 @@ def list_runtimes(
     recent: bool,
 ) -> None:
     """List runtime pods with optional filters."""
-    env_config, app_client, runtime_client, env_name = get_config_and_client(
+    env_config, _app_client, runtime_client, _env_name = get_config_and_client(
         ctx.obj.get("environment")
     )
     output = ctx.obj.get("output", "text")
 
     runtime_config = env_config.get_runtime_config()
     query = RuntimeQuery(runtime_client)
+    ns = runtime_config.namespace
 
     # Get pods based on filters
     if oom:
-        pods = query.list_oom_killed_runtimes(runtime_config.namespace)
+        pods = query.list_oom_killed_runtimes(ns)
     elif restarts:
-        pods = query.list_runtimes_with_restarts(runtime_config.namespace, min_restarts)
+        pods = query.list_runtimes_with_restarts(ns, min_restarts)
     elif errors:
-        pods = query.list_runtime_pods_with_issues(runtime_config.namespace)
+        pods = query.list_runtime_pods_with_issues(ns)
     else:
-        pods = query.list_runtime_pods(runtime_config.namespace)
+        pods = query.list_runtime_pods(ns)
 
     # Filter recent if requested
     if recent:
@@ -631,16 +643,15 @@ def list_runtimes(
 
     # Table output
     click.echo()
-    click.echo(f"{'RUNTIME ID':<20} {'STATUS':<15} {'RESTARTS':<10} {'REASON':<12} {'AGE':<8}")
-    click.echo("-" * 70)
+    header = f"{'RUNTIME ID':<20} {'STATUS':<15} {'RESTARTS':<10} {'REASON':<10}"
+    click.echo(header)
+    click.echo("-" * 60)
 
     for pod in pods:
-        runtime_id = pod.runtime_id[:18] if len(pod.runtime_id) > 18 else pod.runtime_id
-        status = pod.container_state[:13] if pod.container_state else pod.phase[:13]
-        reason = (pod.last_restart_reason or "-")[:10]
-        click.echo(
-            f"{runtime_id:<20} {status:<15} {pod.restart_count:<10} {reason:<12} {pod.age_display:<8}"
-        )
+        rid = pod.runtime_id[:18] if len(pod.runtime_id) > 18 else pod.runtime_id
+        st = pod.container_state[:13] if pod.container_state else pod.phase[:13]
+        rsn = (pod.last_restart_reason or "-")[:8]
+        click.echo(f"{rid:<20} {st:<15} {pod.restart_count:<10} {rsn:<10}")
 
     click.echo()
     click.echo(f"{len(pods)} runtime(s) found")

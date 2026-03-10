@@ -1,5 +1,6 @@
 """Query helpers for runtime pods and cluster health."""
 
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -231,10 +232,8 @@ class RuntimeQuery:
         # Check for OpenHands labels
         if labels.get("app.kubernetes.io/managed-by") == "openhands":
             return True
-        if labels.get("openhands.ai/runtime"):
-            return True
 
-        return False
+        return bool(labels.get("openhands.ai/runtime"))
 
     def _pod_to_runtime(self, pod: Dict[str, Any]) -> RuntimePod:
         """Convert pod dict to RuntimePod."""
@@ -270,12 +269,10 @@ class RuntimeQuery:
         # Parse created_at
         created_at = None
         if pod.get("created_at"):
-            try:
+            with contextlib.suppress(ValueError, AttributeError):
                 created_at = datetime.fromisoformat(
                     pod["created_at"].replace("Z", "+00:00")
                 )
-            except (ValueError, AttributeError):
-                pass
 
         return RuntimePod(
             name=pod["name"],
