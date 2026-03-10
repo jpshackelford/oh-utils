@@ -316,14 +316,7 @@ class ConversationManager:
             # Get list of changed files
             print("🔍 Fetching list of changed files...")
 
-            # Extract runtime base URL from conversation URL
-            runtime_url = None
-            if fresh_conv.url:
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(fresh_conv.url)
-                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-
+            runtime_url = fresh_conv.get_runtime_base_url()
             changes = self.api.get_conversation_changes(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
@@ -451,15 +444,10 @@ class ConversationManager:
                 print("✗ Conversation is not active or missing runtime information")
                 return
 
-            # Extract base runtime URL from the full conversation URL
-            if not fresh_conv.url:
+            runtime_url = fresh_conv.get_runtime_base_url()
+            if not runtime_url:
                 print("✗ Conversation URL is missing")
                 return
-
-            from urllib.parse import urlparse
-
-            parsed_url = urlparse(fresh_conv.url)
-            runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
             trajectory_data = self.api.get_trajectory(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
@@ -503,14 +491,7 @@ class ConversationManager:
             # Download workspace archive from API
             print("🔍 Fetching workspace archive...")
 
-            # Extract runtime base URL from conversation URL
-            runtime_url = None
-            if fresh_conv.url:
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(fresh_conv.url)
-                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-
+            runtime_url = fresh_conv.get_runtime_base_url()
             workspace_data = self.api.download_workspace_archive(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )

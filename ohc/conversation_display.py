@@ -107,6 +107,22 @@ class Conversation:
         else:
             return f"🟡 {self.status}"
 
+    def get_runtime_base_url(self) -> Optional[str]:
+        """Extract the runtime base URL from the conversation URL.
+
+        Returns the scheme://host portion of the URL, or None if no URL is set.
+        This is useful for making API calls to the runtime server.
+        """
+        if not self.url:
+            return None
+        try:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(self.url)
+            return f"{parsed.scheme}://{parsed.netloc}"
+        except (AttributeError, ValueError):
+            return None
+
 
 def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
     """Show detailed information about a conversation"""
@@ -132,14 +148,7 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
         # Show uncommitted files for running conversations
         if conv.is_active():
             try:
-                # Extract runtime base URL from conversation URL
-                runtime_url = None
-                if conv.url:
-                    from urllib.parse import urlparse
-
-                    parsed_url = urlparse(conv.url)
-                    runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-
+                runtime_url = conv.get_runtime_base_url()
                 changes = api.get_conversation_changes(
                     conv.id, runtime_url, conv.session_api_key
                 )
@@ -215,14 +224,7 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
             return
 
         try:
-            # Extract runtime base URL from conversation URL
-            runtime_url = None
-            if conv.url:
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(conv.url)
-                runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-
+            runtime_url = conv.get_runtime_base_url()
             changes = api.get_conversation_changes(
                 conv.id, runtime_url, conv.session_api_key
             )
