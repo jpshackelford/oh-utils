@@ -129,10 +129,13 @@ class Conversation:
 class APIKeyManager:
     """Manages OpenHands API key storage and retrieval"""
 
-    def __init__(self) -> None:
+    DEFAULT_BASE_URL = "https://app.all-hands.dev/api/"
+
+    def __init__(self, base_url: Optional[str] = None) -> None:
         self.config_dir = Path.home() / ".openhands"
         self.config_file = self.config_dir / "config.json"
         self.config_dir.mkdir(exist_ok=True)
+        self.base_url = base_url or self.DEFAULT_BASE_URL
 
     def get_stored_key(self) -> Optional[str]:
         """Get stored API key if it exists"""
@@ -158,7 +161,7 @@ class APIKeyManager:
         # Check environment variables first
         env_key = os.getenv("OH_API_KEY") or os.getenv("OPENHANDS_API_KEY")
         if env_key:
-            api = OpenHandsAPI(env_key)
+            api = OpenHandsAPI(env_key, self.base_url)
             if api.test_connection():
                 try:
                     api.search_conversations(limit=1)
@@ -173,7 +176,7 @@ class APIKeyManager:
         # Check stored key
         stored_key = self.get_stored_key()
         if stored_key:
-            api = OpenHandsAPI(stored_key)
+            api = OpenHandsAPI(stored_key, self.base_url)
             if api.test_connection():
                 try:
                     api.search_conversations(limit=1)
@@ -184,7 +187,15 @@ class APIKeyManager:
 
         # Prompt for new key
         print("\nPlease get your OpenHands API key from:")
-        print("https://app.all-hands.dev/settings/api-keys")
+        # Show appropriate URL based on base_url
+        if "app.all-hands.dev" in self.base_url:
+            print("https://app.all-hands.dev/settings/api-keys")
+        else:
+            # Extract host from base_url for enterprise instances
+            from urllib.parse import urlparse
+
+            parsed = urlparse(self.base_url)
+            print(f"https://{parsed.netloc}/settings/api-keys")
         print()
 
         while True:
@@ -194,7 +205,7 @@ class APIKeyManager:
                     print("API key cannot be empty")
                     continue
 
-                api = OpenHandsAPI(api_key)
+                api = OpenHandsAPI(api_key, self.base_url)
                 if api.test_connection():
                     try:
                         api.search_conversations(limit=1)
@@ -323,7 +334,8 @@ class ConversationManager:
     def __init__(
         self, api_version: str = "v0", base_url: str = "https://app.all-hands.dev/api/"
     ) -> None:
-        self.api_key_manager = APIKeyManager()
+        self.base_url = base_url
+        self.api_key_manager = APIKeyManager(base_url=base_url)
         self.formatter = TerminalFormatter()
         self.api: Optional[OpenHandsAPI] = None
         self.conversations: List[Conversation] = []
@@ -332,7 +344,6 @@ class ConversationManager:
         self.next_page_id: Optional[str] = None
         self.page_ids: List[Optional[str]] = [None]  # Track page IDs for navigation
         self.api_version = api_version
-        self.base_url = base_url
 
     def initialize(self) -> None:
         """Initialize the application with API key"""

@@ -121,6 +121,122 @@ uv run ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
 - Use full conversation ID (e.g., `a7f6c3c8-1234-5678-9abc-def012345678`)
 - Use partial conversation ID (e.g., `a7f6c3c8` - must be unique)
 
+### Debug Tool (Enterprise)
+
+> **Note:** The debug tool requires Kubernetes cluster access and is designed for OpenHands Enterprise deployments.
+
+The `ohc debug` command helps troubleshoot OpenHands Enterprise deployments by providing visibility into runtime pods, cluster health, and application logs.
+
+#### Prerequisites
+
+- `kubectl` configured with access to your OpenHands clusters
+- Kubernetes contexts set up for app and runtime clusters
+
+#### Configuration
+
+Before using debug commands, configure your environment:
+
+```bash
+# Interactive configuration (recommended)
+uv run ohc debug configure
+
+# This will:
+# 1. List available kubectl contexts
+# 2. Auto-detect runtime configuration from runtime-api deployment
+# 3. Optionally detect and configure the application endpoint
+# 4. Save configuration to ~/.config/ohc/debug.json
+```
+
+**Configuration Management:**
+
+```bash
+# List configured environments
+uv run ohc debug configure --list
+
+# Show full configuration details
+uv run ohc debug configure --show
+
+# Test cluster connectivity
+uv run ohc debug configure --test
+
+# Set default environment
+uv run ohc debug configure --default production
+
+# Remove an environment
+uv run ohc debug configure --remove staging
+```
+
+#### Cluster Health
+
+```bash
+# Show cluster health overview
+uv run ohc debug health
+
+# Output includes:
+# - App cluster status and deployment health
+# - Runtime cluster status
+# - Runtime pod summary (running, pending, errors)
+# - Resource issues (OOMKilled, evicted, scheduling failures)
+# - Top issues with affected runtimes
+```
+
+#### Runtime Investigation
+
+```bash
+# Investigate a specific runtime by ID, session ID, or pod name
+uv run ohc debug runtime <RUNTIME_ID>
+
+# Show with events
+uv run ohc debug runtime <RUNTIME_ID> --events
+
+# Show with container logs
+uv run ohc debug runtime <RUNTIME_ID> --logs
+
+# Show everything (events + logs)
+uv run ohc debug runtime <RUNTIME_ID> --all
+```
+
+#### List Runtimes
+
+```bash
+# List all runtime pods
+uv run ohc debug list
+
+# Filter by issues
+uv run ohc debug list --errors      # Pods with errors
+uv run ohc debug list --restarts    # Pods with restarts
+uv run ohc debug list --oom         # OOMKilled pods
+uv run ohc debug list --recent      # Created in last hour
+
+# JSON output for automation
+uv run ohc debug list --output json
+```
+
+#### App Server Diagnostics
+
+```bash
+# Show app server logs
+uv run ohc debug app logs
+uv run ohc debug app logs --since 30m --component api
+
+# Show deployment status
+uv run ohc debug app status
+
+# List app pods
+uv run ohc debug app pods
+```
+
+#### Multi-Environment Support
+
+```bash
+# Use specific environment
+uv run ohc debug -e staging health
+uv run ohc debug -e production list --oom
+
+# Add additional environments
+uv run ohc debug configure --add staging
+```
+
 ### Interactive Mode
 
 Launch the full-featured interactive conversation manager:
@@ -158,6 +274,7 @@ uv run ohc -i
 - Python 3.8+
 - requests >= 2.25.0
 - click >= 8.0.0
+- kubernetes >= 28.0.0 (for `ohc debug` commands)
 
 ## API Access
 
