@@ -153,14 +153,20 @@ class TestOpenHandsAPIMethodDelegation:
     @patch("ohc.v1.api.OpenHandsAPI.search_conversations")
     def test_search_conversations_v1(self, mock_search):
         """Test search_conversations with v1 API - uses all parameters."""
-        mock_search.return_value = ["conv1", "conv2"]
+        mock_search.return_value = [{"id": "conv1"}, {"id": "conv2"}]
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v1")
 
         result = api.search_conversations(query="test", limit=5, offset=10)
 
-        # v1 should use all parameters and wrap results in dict
+        # v1 should use all parameters, wrap results in dict, and normalize id
         mock_search.assert_called_once_with(query="test", limit=5, offset=10)
-        assert result == {"results": ["conv1", "conv2"]}
+        # V1 "id" should be normalized to "conversation_id"
+        assert result == {
+            "results": [
+                {"id": "conv1", "conversation_id": "conv1"},
+                {"id": "conv2", "conversation_id": "conv2"},
+            ]
+        }
 
     @patch("ohc.v0.api.OpenHandsAPI.get_conversation")
     def test_get_conversation_v0(self, mock_get):

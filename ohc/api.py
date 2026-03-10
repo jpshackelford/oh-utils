@@ -80,16 +80,13 @@ class OpenHandsAPI:
             # Normalize V1 response: map "id" to "conversation_id" for compatibility
             normalized_results = []
             for conv in results:
-                if isinstance(conv, dict):
-                    normalized_conv = dict(conv)
-                    # V1 uses "id", normalize to "conversation_id" for commands
-                    has_id = "id" in normalized_conv
-                    has_conv_id = "conversation_id" in normalized_conv
-                    if has_id and not has_conv_id:
-                        normalized_conv["conversation_id"] = normalized_conv["id"]
-                    normalized_results.append(normalized_conv)
-                else:
-                    normalized_results.append(conv)
+                normalized_conv = dict(conv)
+                # V1 uses "id", normalize to "conversation_id" for commands
+                has_id = "id" in normalized_conv
+                has_conv_id = "conversation_id" in normalized_conv
+                if has_id and not has_conv_id:
+                    normalized_conv["conversation_id"] = normalized_conv["id"]
+                normalized_results.append(normalized_conv)
             return {"results": normalized_results}
 
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
