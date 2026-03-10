@@ -1,0 +1,71 @@
+{
+  "description": "V0 API fixture for testing resolve_conversation_id function",
+  "api_version": "v0",
+  "field_format": "conversation_id",
+  "request": {
+    "method": "GET",
+    "url": "https://app.all-hands.dev/api/conversations",
+    "params": {
+      "limit": 100
+    }
+  },
+  "response": {
+    "status_code": 200,
+    "json": {
+      "results": [
+        {
+          "conversation_id": "d2bfa2e22a0e4fef98882ab95258d4af",
+          "title": "Test Release Process Before Merging to Main",
+          "last_updated_at": "2024-01-15T10:30:00.000Z",
+          "status": "RUNNING",
+          "runtime_status": "STATUS$READY",
+          "selected_repository": "jpshackelford/oh-utils",
+          "selected_branch": "jps/ci",
+          "git_provider": "github",
+          "trigger": "resolver",
+          "num_connections": 0,
+          "url": "https://fakeworkspace006.prod-runtime.all-hands.dev/api/conversations/d2bfa2e22a0e4fef98882ab95258d4af",
+          "session_api_key": "6510f16e-d319-4c78-9257-e3cd9da8e12c",
+          "created_at": "2024-01-15T10:30:00.000Z",
+          "pr_number": [],
+          "conversation_version": "V0"
+        },
+        {
+          "conversation_id": "f342e61469234606aed568aa543808d4",
+          "title": "Create Python Integration Tests with API Fixtures",
+          "last_updated_at": "2024-01-15T10:30:00.000Z",
+          "status": "RUNNING",
+          "runtime_status": "STATUS$READY",
+          "selected_repository": "jpshackelford/oh-utils",
+          "selected_branch": "main",
+          "git_provider": "github",
+          "trigger": "gui",
+          "num_connections": 0,
+          "url": "https://fakeworkspace013.prod-runtime.all-hands.dev/api/conversations/f342e61469234606aed568aa543808d4",
+          "session_api_key": "65a9cc5b-a4dd-43d0-b331-3e61c8337806",
+          "created_at": "2024-01-15T10:30:00.000Z",
+          "pr_number": [],
+          "conversation_version": "V0"
+        },
+        {
+          "conversation_id": "70d785223b8041898292dade15f10544",
+          "title": "Fix release workflow dependency and permissions",
+          "last_updated_at": "2024-01-15T10:30:00.000Z",
+          "status": "STOPPED",
+          "runtime_status": null,
+          "selected_repository": "jpshackelford/oh-utils",
+          "selected_branch": "jps/ci",
+          "git_provider": "github",
+          "trigger": "resolver",
+          "num_connections": 0,
+          "url": null,
+          "session_api_key": null,
+          "created_at": "2024-01-15T10:30:00.000Z",
+          "pr_number": [],
+          "conversation_version": "V0"
+        }
+      ],
+      "next_page_id": null
+    }
+  }
+}
