@@ -311,6 +311,54 @@ class TestConversation:
 
         assert conv.status_display() == "🟡 PENDING"
 
+    def test_get_runtime_base_url_with_url(self):
+        """Test extracting runtime base URL from conversation URL."""
+        conv = Conversation(
+            id="test-conv",
+            title="Test",
+            status="RUNNING",
+            runtime_status=None,
+            runtime_id="runtime-123",
+            session_api_key=None,
+            last_updated="2024-01-15T10:30:00Z",
+            created_at="2024-01-15T10:00:00Z",
+            url="https://runtime-123.example.com/api/conversations/test-conv",
+        )
+
+        assert conv.get_runtime_base_url() == "https://runtime-123.example.com"
+
+    def test_get_runtime_base_url_without_url(self):
+        """Test get_runtime_base_url returns None when no URL."""
+        conv = Conversation(
+            id="test-conv",
+            title="Test",
+            status="RUNNING",
+            runtime_status=None,
+            runtime_id=None,
+            session_api_key=None,
+            last_updated="2024-01-15T10:30:00Z",
+            created_at="2024-01-15T10:00:00Z",
+            url=None,
+        )
+
+        assert conv.get_runtime_base_url() is None
+
+    def test_get_runtime_base_url_with_port(self):
+        """Test get_runtime_base_url preserves port number."""
+        conv = Conversation(
+            id="test-conv",
+            title="Test",
+            status="RUNNING",
+            runtime_status=None,
+            runtime_id=None,
+            session_api_key=None,
+            last_updated="2024-01-15T10:30:00Z",
+            created_at="2024-01-15T10:00:00Z",
+            url="http://localhost:8080/api/conversations/test-conv",
+        )
+
+        assert conv.get_runtime_base_url() == "http://localhost:8080"
+
 
 class TestShowConversationDetails:
     """Test show_conversation_details function."""

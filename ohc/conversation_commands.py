@@ -5,7 +5,6 @@ Integrates the existing conversation management functionality into the new CLI
 structure.
 """
 
-import os
 import sys
 from typing import List, Optional
 
@@ -66,19 +65,26 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
 
-def interactive_mode(api_version: str = "v0") -> None:
+def interactive_mode(api_version: str = "v0", server: Optional[str] = None) -> None:
     """Start the interactive conversation manager.
 
     Args:
         api_version: API version to use ("v0" or "v1"), defaults to "v0"
+        server: Server name to use (defaults to configured default)
     """
-    # Import the original conversation manager and adapt it
+    from .api import create_api_client
+    from .interactive import ConversationManager
+
     try:
         # Check if we have a configured server
         config_manager = ConfigManager()
-        server_config = config_manager.get_server_config()
+        server_config = config_manager.get_server_config(server)
 
         if not server_config:
+            if server:
+                click.echo(f"✗ Server '{server}' not found.", err=True)
+                click.echo("Use 'ohc server list' to see available servers.")
+                return
             click.echo("No servers configured.")
             click.echo("Use 'ohc server add' to add a server configuration.")
 
@@ -96,21 +102,25 @@ def interactive_mode(api_version: str = "v0") -> None:
             else:
                 return
 
-        # Set environment variable for the original conversation manager
-        os.environ["OH_API_KEY"] = server_config["api_key"]
+        # Create API client directly (no env var round-trip)
+        api = create_api_client(
+            server_config["api_key"], server_config["url"], api_version
+        )
 
-        # Import and run the conversation manager with version support
-        from conversation_manager.conversation_manager import ConversationManager
+        # Get server name for display
+        server_name = server or config_manager.load_config().get("default_server", "")
+        if server_name:
+            server_display = f"{server_name} ({server_config['url']})"
+        else:
+            server_display = server_config["url"]
 
         click.echo("Starting interactive conversation manager...")
-        click.echo(f"Using server: {server_config['url']}")
+        click.echo(f"Using server: {server_display}")
         click.echo(f"API version: {api_version}")
         click.echo()
 
-        manager = ConversationManager(
-            api_version=api_version, base_url=server_config["url"]
-        )
-        manager.initialize()
+        # Pass API directly to ConversationManager (dependency injection)
+        manager = ConversationManager(api)
         manager.run_interactive()
 
     except KeyboardInterrupt:

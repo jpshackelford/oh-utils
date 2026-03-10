@@ -356,16 +356,17 @@ class TestConversationCommandsCLI:
                     mock_context_class.return_value = mock_context
 
                     with patch(
-                        "conversation_manager.conversation_manager.ConversationManager"
+                        "ohc.interactive.ConversationManager"
                     ) as mock_manager_class:
                         mock_manager = MagicMock()
                         mock_manager_class.return_value = mock_manager
 
-                        from ohc.conversation_commands import interactive_mode
+                        with patch("ohc.api.create_api_client"):
+                            from ohc.conversation_commands import interactive_mode
 
-                        interactive_mode()
+                            interactive_mode()
 
-                        mock_manager.run_interactive.assert_called_once()
+                            mock_manager.run_interactive.assert_called_once()
 
     def test_interactive_mode_success(self):
         """Test successful interactive mode launch."""
@@ -380,17 +381,16 @@ class TestConversationCommandsCLI:
             }
             mock_config_manager_class.return_value = mock_config_manager
 
-            with patch(
-                "conversation_manager.conversation_manager.ConversationManager"
-            ) as mock_manager_class:
+            with patch("ohc.interactive.ConversationManager") as mock_manager_class:
                 mock_manager = MagicMock()
                 mock_manager_class.return_value = mock_manager
 
-                from ohc.conversation_commands import interactive_mode
+                with patch("ohc.api.create_api_client"):
+                    from ohc.conversation_commands import interactive_mode
 
-                interactive_mode()
+                    interactive_mode()
 
-                mock_manager.run_interactive.assert_called_once()
+                    mock_manager.run_interactive.assert_called_once()
 
     def test_interactive_mode_exception(self):
         """Test interactive mode with exception."""

@@ -248,12 +248,12 @@ class TestURLHandling:
         # This is a meta-test to ensure we haven't missed any hardcoded references
         import inspect
 
-        from conversation_manager import conversation_manager
+        from ohc import interactive
         from ohc.v0 import api
 
         # Get source code of the modules
         api_source = inspect.getsource(api)
-        cm_source = inspect.getsource(conversation_manager)
+        interactive_source = inspect.getsource(interactive)
 
         # Check that hardcoded domain is not present in URL construction
         hardcoded_patterns = [
@@ -266,8 +266,8 @@ class TestURLHandling:
             assert pattern not in api_source, (
                 f"Found hardcoded pattern '{pattern}' in ohc.v0.api"
             )
-            assert pattern not in cm_source, (
-                f"Found hardcoded pattern '{pattern}' in conversation_manager"
+            assert pattern not in interactive_source, (
+                f"Found hardcoded pattern '{pattern}' in ohc.interactive"
             )
 
     def test_url_parameter_names_updated(self):
