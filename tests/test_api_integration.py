@@ -8,7 +8,7 @@ without making actual HTTP requests.
 import pytest
 import responses
 
-from ohc.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestOpenHandsAPIIntegration:

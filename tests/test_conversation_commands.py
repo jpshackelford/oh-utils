@@ -20,7 +20,9 @@ class TestConversationCommandsCLI:
 
     def _load_and_fix_conversations_fixture(self, fixture_name: str):
         """Load VCR fixture and transform it for API mocking."""
-        fixture_path = Path(__file__).parent / "fixtures" / "sanitized" / fixture_name
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "v0" / "sanitized" / fixture_name
+        )
         with open(fixture_path) as f:
             vcr_data = json.load(f)
             fixture_data = vcr_data["response"]["json"]
@@ -30,7 +32,9 @@ class TestConversationCommandsCLI:
 
     def _load_conversation_detail_fixture(self, fixture_name: str):
         """Load conversation detail fixture."""
-        fixture_path = Path(__file__).parent / "fixtures" / "sanitized" / fixture_name
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "v0" / "sanitized" / fixture_name
+        )
         with open(fixture_path) as f:
             vcr_data = json.load(f)
             return vcr_data["response"]["json"]
@@ -244,6 +248,7 @@ class TestConversationCommandsCLI:
         list_fixture = (
             Path(__file__).parent
             / "fixtures"
+            / "v0"
             / "sanitized"
             / "conversations_list_success.json"
         )
@@ -302,10 +307,10 @@ class TestConversationCommandsCLI:
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.OpenHandsAPI") as mock_api_class:
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.side_effect = Exception("API Error")
-                mock_api_class.return_value = mock_api
+                mock_create_api.return_value = mock_api
 
                 result = self.runner.invoke(conv, ["list"])
 
@@ -508,7 +513,6 @@ class TestConversationCommandsCLI:
                 assert "Workspace downloaded successfully: custom.zip" in result.output
                 mock_file.assert_called_once_with("custom.zip", "wb")
 
-    @responses.activate
     def test_download_command_error(self):
         """Test workspace download with error."""
         with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
@@ -516,10 +520,33 @@ class TestConversationCommandsCLI:
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.OpenHandsAPI") as mock_api_class:
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
-                mock_api.search_conversations.side_effect = Exception("Download error")
-                mock_api_class.return_value = mock_api
+
+                # Mock ID resolution - return matching conversation
+                mock_api.search_conversations.return_value = {
+                    "results": [
+                        {
+                            "conversation_id": "fake-uuid-12345678-full-id",
+                            "title": "Test Conversation",
+                        }
+                    ]
+                }
+
+                # Mock conversation details
+                mock_api.get_conversation.return_value = {
+                    "id": "fake-uuid-12345678-full-id",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/fake-uuid-12345678-full-id",
+                    "session_api_key": "session-key",
+                }
+
+                # Mock the download to throw an error (this is what we want to test)
+                mock_api.download_workspace_archive.side_effect = Exception(
+                    "Download error"
+                )
+
+                mock_create_api.return_value = mock_api
 
                 result = self.runner.invoke(conv, ["ws-download", "fake-uuid-12345678"])
 
@@ -552,3 +579,543 @@ class TestConversationCommandsCLI:
 
                 assert result.exit_code == 0
                 mock_show_changes.assert_called_once()
+
+
+class TestNewConversationCommand:
+    """Test the new conversation command."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+        self.mock_config = {"api_key": "test-api-key", "url": "https://api.test.com"}
+
+    @responses.activate
+    def test_new_command_with_prompt_argument(self):
+        """Test new command with prompt provided as argument."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED",
+        }
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json=create_response,
+            status=200,
+        )
+
+        # Mock conversation start
+        start_response = {"status": "ok"}
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations/a1b2c3d4e5f6789012345678901234ab/start",
+            json=start_response,
+            status=200,
+        )
+
+        # Mock conversation details
+        detail_response = {
+            "id": "a1b2c3d4e5f6789012345678901234ab",
+            "url": "https://runtime.test.com/conversation/a1b2c3d4e5f6789012345678901234ab",
+        }
+        responses.add(
+            responses.GET,
+            "https://api.test.com/conversations/a1b2c3d4e5f6789012345678901234ab",
+            json=detail_response,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "Help me write a Python script"])
+
+            assert result.exit_code == 0
+            assert "Creating new conversation..." in result.output
+            assert "✓ Created conversation: a1b2c3d4..." in result.output
+            assert "✓ Conversation started successfully" in result.output
+            assert "Help me write a Python script" in result.output
+
+    @responses.activate
+    def test_new_command_no_start(self):
+        """Test new command with --no-start option."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED",
+        }
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json=create_response,
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "--no-start", "Test prompt"])
+
+            assert result.exit_code == 0
+            assert "Creating new conversation..." in result.output
+            assert "✓ Created conversation: a1b2c3d4..." in result.output
+            assert "💤 Conversation created but not started" in result.output
+            assert "Test prompt" in result.output
+
+    @responses.activate
+    def test_new_command_creation_failure(self):
+        """Test new command when conversation creation fails."""
+        responses.add(
+            responses.POST,
+            "https://api.test.com/conversations",
+            json={"status": "error", "message": "Creation failed"},
+            status=200,
+        )
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            result = self.runner.invoke(conv, ["new", "Test prompt"])
+
+            assert result.exit_code == 0
+            assert "✗ Failed to create conversation" in result.output
+
+    def test_new_command_with_piped_input(self):
+        """Test new command with piped input."""
+        # Mock conversation creation
+        create_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED",
+        }
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.api.OpenHandsAPI.create_conversation") as mock_create:
+                mock_create.return_value = create_response
+
+                # Simulate piped input
+                result = self.runner.invoke(
+                    conv, ["new", "--no-start"], input="Piped prompt content"
+                )
+
+                assert result.exit_code == 0
+                assert "Creating new conversation..." in result.output
+                assert "✓ Created conversation: a1b2c3d4..." in result.output
+
+    def test_get_prompt_from_sources_argument(self):
+        """Test _get_prompt_from_sources with argument."""
+        from ohc.conversation_commands import _get_prompt_from_sources
+
+        result = _get_prompt_from_sources("Test prompt")
+        assert result == "Test prompt"
+
+    def test_get_prompt_from_sources_none(self):
+        """Test _get_prompt_from_sources with no input."""
+        from ohc.conversation_commands import _get_prompt_from_sources
+
+        with patch("sys.stdin.isatty", return_value=True):
+            with patch("builtins.input", side_effect=KeyboardInterrupt):
+                result = _get_prompt_from_sources(None)
+                assert result is None
+
+
+class TestTailCommand:
+    """Test the tail command."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.runner = CliRunner()
+        self.mock_config = {"api_key": "test-api-key", "url": "https://api.test.com"}
+
+    def test_tail_command_single_message(self):
+        """Test tail command with default count (1 message)."""
+        trajectory_data = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "user",
+                "action": "message",
+                "message": "User message",
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": "message",
+                "message": "First agent response",
+            },
+            {
+                "id": 3,
+                "timestamp": "2025-01-01T10:00:02",
+                "source": "agent",
+                "action": "message",
+                "message": "Second agent response",
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [
+                        {
+                            "conversation_id": "test-conv-123",
+                            "title": "Test Conversation",
+                        }
+                    ]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123"])
+
+                assert result.exit_code == 0
+                assert (
+                    "Last 1 agent message(s)/thought(s) from: Test Conversation"
+                    in result.output
+                )
+                assert "Second agent response" in result.output
+                assert "First agent response" not in result.output
+
+    def test_tail_command_multiple_messages(self):
+        """Test tail command with count > 1."""
+        trajectory_data = [
+            {
+                "id": 1,
+                "source": "agent",
+                "action": "message",
+                "message": "Message 1",
+                "timestamp": "2025-01-01T10:00:00",
+            },
+            {
+                "id": 2,
+                "source": "agent",
+                "action": "message",
+                "message": "Message 2",
+                "timestamp": "2025-01-01T10:00:01",
+            },
+            {
+                "id": 3,
+                "source": "agent",
+                "action": "message",
+                "message": "Message 3",
+                "timestamp": "2025-01-01T10:00:02",
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123", "-n", "2"])
+
+                assert result.exit_code == 0
+                assert "Last 2 agent message(s)/thought(s)" in result.output
+                # Check that Message 2 and Message 3 are in the output
+                # but Message 1 is not (except as part of the label "[Message 1 of 2]")
+                lines = result.output.split("\n")
+                message_lines = [line for line in lines if line.startswith("Message")]
+                assert "Message 2" in message_lines
+                assert "Message 3" in message_lines
+                # Message 1 should not appear as a message content line
+                assert not any(line == "Message 1" for line in message_lines)
+
+    def test_tail_command_no_agent_messages(self):
+        """Test tail command when no agent messages exist."""
+        trajectory_data = [
+            {"id": 1, "source": "user", "action": "message", "message": "User message"}
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123"])
+
+                assert result.exit_code == 0
+                assert "No agent messages or thoughts found" in result.output
+
+    def test_tail_command_with_thoughts(self):
+        """Test tail command includes thoughts from agent actions."""
+        trajectory_data = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "run",
+                "message": "Running command: ls",
+                "args": {"command": "ls", "thought": "Let me check the files"},
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": "message",
+                "message": "Here are the files",
+            },
+            {
+                "id": 3,
+                "timestamp": "2025-01-01T10:00:02",
+                "source": "agent",
+                "action": "edit",
+                "message": "Editing file",
+                "args": {"path": "test.py", "thought": "Now I'll update the code"},
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123", "-n", "3"])
+
+                assert result.exit_code == 0
+                assert "Last 3 agent message(s)/thought(s)" in result.output
+                assert "Let me check the files" in result.output
+                assert "Here are the files" in result.output
+                assert "Now I'll update the code" in result.output
+                # Check that messages are separated by "..." (at least 2)
+                assert result.output.count("...") >= 2
+
+    def test_tail_command_conversation_not_running(self):
+        """Test tail command when conversation is not running."""
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "url": None,
+                    "session_api_key": None,
+                }
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123"])
+
+                assert result.exit_code == 0
+                assert "Conversation is not running" in result.output
+
+    def test_tail_command_conversation_not_found(self):
+        """Test tail command when conversation is not found."""
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "other-conv-456"}]
+                }
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "nonexistent"])
+
+                assert result.exit_code == 0
+                assert "No conversation found" in result.output
+
+    def test_tail_command_follow_mode(self):
+        """Test tail command in follow mode."""
+        trajectory_data_initial = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "message",
+                "message": "Initial message",
+            }
+        ]
+
+        trajectory_data_updated = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "message",
+                "message": "Initial message",
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": "message",
+                "message": "New message",
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [{"conversation_id": "test-conv-123"}]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+
+                # Simulate two polls: first returns initial, second returns updated
+                mock_api.get_trajectory.side_effect = [
+                    trajectory_data_initial,
+                    trajectory_data_updated,
+                ]
+                mock_create_api.return_value = mock_api
+
+                # Use a timeout to stop the follow mode after a short time
+                with patch("time.sleep") as mock_sleep:
+                    # Make sleep raise KeyboardInterrupt after first call
+                    mock_sleep.side_effect = [None, KeyboardInterrupt()]
+
+                    result = self.runner.invoke(
+                        conv, ["tail", "test-conv-123", "-f", "--interval", "0.1"]
+                    )
+
+                    assert result.exit_code == 0
+                    assert "Following: Test Conversation" in result.output
+                    assert "Initial message" in result.output
+                    assert "New message" in result.output
+                    assert "Stopped following conversation" in result.output
+
+    def test_tail_command_includes_finish_message(self):
+        """Test that tail command includes detailed finish messages from the agent."""
+        trajectory_data = [
+            {
+                "id": 1,
+                "timestamp": "2025-01-01T10:00:00",
+                "source": "agent",
+                "action": "run",
+                "message": "",
+                "args": {"thought": "Let me check this"},
+            },
+            {
+                "id": 2,
+                "timestamp": "2025-01-01T10:00:01",
+                "source": "agent",
+                "action": None,
+                "message": "Command executed successfully",
+            },
+            {
+                "id": 3,
+                "timestamp": "2025-01-01T10:00:02",
+                "source": "agent",
+                "action": "finish",
+                "message": "All done! What's next on the agenda?",
+                "args": {
+                    "final_thought": "## Summary\n\nI've completed all tasks:\n1. Fixed the bug\n2. Added tests\n3. Updated documentation\n\nEverything is working correctly now!"
+                },
+            },
+        ]
+
+        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+            mock_config_manager.return_value.get_server_config.return_value = (
+                self.mock_config
+            )
+
+            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+                mock_api = Mock()
+                mock_api.search_conversations.return_value = {
+                    "results": [
+                        {
+                            "conversation_id": "test-conv-123",
+                            "title": "Test Conversation",
+                        }
+                    ]
+                }
+                mock_api.get_conversation.return_value = {
+                    "id": "test-conv-123",
+                    "title": "Test Conversation",
+                    "url": "https://runtime.test.com/conversation/test-conv-123",
+                    "session_api_key": "session-key",
+                }
+                mock_api.get_trajectory.return_value = trajectory_data
+                mock_create_api.return_value = mock_api
+
+                result = self.runner.invoke(conv, ["tail", "test-conv-123", "-n", "2"])
+
+                assert result.exit_code == 0
+                # Verify the detailed finish message (final_thought) is displayed
+                assert "## Summary" in result.output
+                assert "I've completed all tasks:" in result.output
+                assert "Fixed the bug" in result.output
+                # Also verify the thought is displayed
+                assert "Let me check this" in result.output

@@ -7,7 +7,7 @@ structure.
 
 import os
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import click
 
@@ -49,25 +49,29 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
 
         click.echo(f"Found {len(conversations)} conversations:")
         for i, conv_data in enumerate(conversations, 1):
-            conv_id = conv_data.get("conversation_id", "unknown")[:8]
-            title = conv_data.get("title", "Untitled")
-            status = conv_data.get("status", "UNKNOWN")
+            # Use the Conversation class to handle both v0 and v1 formats
+            from .conversation_display import Conversation
 
-            # Truncate title if too long
-            if len(title) > 50:
-                title = title[:47] + "..."
+            conv = Conversation.from_api_response(conv_data)
 
-            status_icon = (
-                "🟢" if status == "RUNNING" else "🔴" if status == "STOPPED" else "🟡"
+            # Format version indicator if available
+            version_indicator = f"  [{conv.version}]  " if conv.version else "      "
+
+            click.echo(
+                f"{i:2d}. {conv.short_id()} {conv.status_display():12s}"
+                f"{version_indicator}{conv.formatted_title()}"
             )
-            click.echo(f"{i:2d}. {conv_id} {status_icon} {status:8s} {title}")
 
     except Exception as e:
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
 
-def interactive_mode() -> None:
-    """Start the interactive conversation manager."""
+def interactive_mode(api_version: str = "v0") -> None:
+    """Start the interactive conversation manager.
+
+    Args:
+        api_version: API version to use ("v0" or "v1"), defaults to "v0"
+    """
     # Import the original conversation manager and adapt it
     try:
         # Check if we have a configured server
@@ -95,32 +99,17 @@ def interactive_mode() -> None:
         # Set environment variable for the original conversation manager
         os.environ["OH_API_KEY"] = server_config["api_key"]
 
-        # Import and run the original conversation manager
+        # Import and run the conversation manager with version support
         from conversation_manager.conversation_manager import ConversationManager
-
-        # Override the base URL in the API class if needed
-        if server_config["url"] != "https://app.all-hands.dev/api/":
-            # We need to patch the OpenHandsAPI class in the original module
-            import conversation_manager.conversation_manager as cm
-
-            original_init = cm.OpenHandsAPI.__init__
-
-            def patched_init(self: object, api_key: str, **_kwargs: object) -> None:
-                # Accept **kwargs to be compatible with both old and new signatures
-                # Ignore base_url if provided since we're setting BASE_URL directly
-                original_init(self, api_key)  # type: ignore[arg-type]
-                self.BASE_URL = server_config["url"]  # type: ignore[attr-defined]
-                self.session.headers.update(  # type: ignore[attr-defined]
-                    {"X-Session-API-Key": api_key, "Content-Type": "application/json"}
-                )
-
-            cm.OpenHandsAPI.__init__ = patched_init  # type: ignore[assignment,method-assign]
 
         click.echo("Starting interactive conversation manager...")
         click.echo(f"Using server: {server_config['url']}")
+        click.echo(f"API version: {api_version}")
         click.echo()
 
-        manager = ConversationManager()
+        manager = ConversationManager(
+            api_version=api_version, base_url=server_config["url"]
+        )
         manager.initialize()
         manager.run_interactive()
 
@@ -150,7 +139,10 @@ def wake(
 
         # Get conversation details for title
         conv_details = api.get_conversation(conv_id)
-        title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        if conv_details:
+            title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        else:
+            title = f"Conversation {conv_id[:8]}..."
 
         click.echo(f"Waking up conversation: {title}")
 
@@ -208,6 +200,9 @@ def ws_download(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
         conversation_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
         title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
@@ -226,6 +221,10 @@ def ws_download(
         archive_data = api.download_workspace_archive(
             conv_id, runtime_url, session_api_key
         )
+
+        if archive_data is None:
+            click.echo("✗ Failed to download workspace archive", err=True)
+            return
 
         # Determine output filename
         if not output:
@@ -304,6 +303,9 @@ def trajectory(
 
         # Get conversation details to check for runtime info
         conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
         full_url = conv_details.get("url")
         session_api_key = conv_details.get("session_api_key")
         title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
@@ -373,3 +375,318 @@ def traj(conversation_id_or_number: str, server: Optional[str]) -> None:
         conversation_id_or_number=conversation_id_or_number,
         server=server,
     )
+
+
+@conv.command()
+@click.option("--server", help="Server name to use (defaults to configured default)")
+@click.option(
+    "--start/--no-start",
+    default=True,
+    help="Start the conversation immediately (default: True)",
+)
+@click.option(
+    "--providers",
+    default="github",
+    help="Comma-separated list of providers to use (default: github)",
+)
+@click.argument("prompt", required=False)
+@with_server_config
+def new(
+    api: OpenHandsAPI,
+    server: Optional[str],  # noqa: ARG001
+    start: bool,
+    providers: str,  # noqa: ARG001
+    prompt: Optional[str],
+) -> None:
+    """Create a new conversation with an optional prompt.
+
+    PROMPT can be provided as an argument, piped from stdin, or entered interactively.
+    Examples:
+        ohc conv new "Help me write a Python script"
+        echo "Create a web app" | ohc conv new
+        ohc conv new  # Interactive prompt entry
+    """
+    try:
+        # Get the prompt from various sources
+        final_prompt = _get_prompt_from_sources(prompt)
+
+        # Create the conversation
+        click.echo("Creating new conversation...")
+        result = api.create_conversation()
+
+        if result.get("status") != "ok":
+            click.echo(f"✗ Failed to create conversation: {result}", err=True)
+            return
+
+        conversation_id = result.get("conversation_id")
+        if not conversation_id:
+            click.echo("✗ No conversation ID returned from API", err=True)
+            return
+
+        click.echo(f"✓ Created conversation: {conversation_id[:8]}...")
+
+        # Start the conversation if requested
+        if start:
+            click.echo("Starting conversation...")
+            # providers_list = [p.strip() for p in providers.split(",")]
+            start_result = api.start_conversation(conversation_id)
+
+            if start_result.get("status") == "ok":
+                click.echo("✓ Conversation started successfully")
+
+                # Get the conversation details to show the URL
+                conv_details = api.get_conversation(conversation_id)
+                if conv_details and conv_details.get("url"):
+                    click.echo(f"🌐 Conversation URL: {conv_details['url']}")
+
+                    # If we have a prompt, show instructions for using it
+                    if final_prompt:
+                        click.echo()
+                        click.echo("📝 Your prompt:")
+                        click.echo(f"   {final_prompt}")
+                        click.echo()
+                        click.echo(
+                            "💡 Copy and paste this prompt into the conversation "
+                            "to get started!"
+                        )
+                else:
+                    click.echo("⚠️  Conversation started but no URL available yet")
+            else:
+                click.echo(f"✗ Failed to start conversation: {start_result}", err=True)
+        else:
+            click.echo(
+                "💤 Conversation created but not started "
+                "(use --start to start immediately)"
+            )
+            click.echo(
+                f"   Use 'ohc conv wake {conversation_id[:8]}' to start it later"
+            )
+
+        # Show the prompt if we have one but didn't start
+        if final_prompt and not start:
+            click.echo()
+            click.echo("📝 Your prompt (saved for when you start the conversation):")
+            click.echo(f"   {final_prompt}")
+
+    except Exception as e:
+        click.echo(f"✗ Failed to create conversation: {e}", err=True)
+
+
+@conv.command()
+@click.argument("conversation_id_or_number")
+@click.option(
+    "-n",
+    "--number",
+    "count",
+    default=1,
+    type=int,
+    help="Number of recent agent messages/thoughts to display (default: 1)",
+)
+@click.option(
+    "-f",
+    "--follow",
+    is_flag=True,
+    help="Follow mode: continuously display new messages as they arrive",
+)
+@click.option(
+    "--interval",
+    default=2.0,
+    type=float,
+    help="Polling interval in seconds for follow mode (default: 2.0)",
+)
+@click.option("--server", help="Server name to use (defaults to configured default)")
+@with_server_config
+def tail(
+    api: OpenHandsAPI,
+    conversation_id_or_number: str,
+    count: int,
+    follow: bool,
+    interval: float,
+    server: Optional[str],  # noqa: ARG001
+) -> None:
+    """Display the last N agent message(s) and thought(s) from a conversation.
+
+    Shows the most recent messages and thoughts from the agent. This includes
+    both explicit messages to the user and the agent's reasoning/thoughts when
+    taking actions. Useful for checking the latest activity without viewing
+    the entire trajectory.
+
+    With -f/--follow, continuously monitors the conversation and displays new
+    messages/thoughts as they appear (like 'tail -f' for log files).
+    """
+
+    def filter_agent_messages(trajectory_data: List[dict]) -> List[dict]:
+        """Filter trajectory for agent messages and thoughts."""
+        agent_messages: List[dict] = []
+        for event in trajectory_data:
+            is_agent = event.get("source") == "agent"
+            is_message = event.get("action") == "message"
+            is_finish = event.get("action") == "finish"
+            has_thought = event.get("args", {}).get("thought")
+            if is_agent and (is_message or is_finish or has_thought):
+                agent_messages.append(event)
+        return agent_messages
+
+    def get_message_text(event: dict) -> str:
+        """Extract message text from an event."""
+        args = event.get("args", {})
+        # For finish events, use final_thought which contains the detailed message
+        final_thought: str = args.get("final_thought", "")
+        if final_thought:
+            return final_thought
+        # For other events, use thought
+        thought_text: str = args.get("thought", "")
+        if thought_text:
+            return thought_text
+        # Fallback to message
+        message: str = event.get("message", "")
+        return message
+
+    try:
+        # Resolve conversation ID using shared logic
+        conv_id = resolve_conversation_id(api, conversation_id_or_number)
+        if not conv_id:
+            return
+
+        # Get conversation details to check for runtime info
+        conv_details = api.get_conversation(conv_id)
+        if not conv_details:
+            click.echo(f"✗ Conversation {conv_id} not found", err=True)
+            return
+
+        title = conv_details.get("title", f"Conversation {conv_id[:8]}...")
+        full_url = conv_details.get("url")
+        session_api_key = conv_details.get("session_api_key")
+
+        if not full_url:
+            click.echo(
+                "✗ Conversation is not running. Trajectory is only available for "
+                "active conversations.",
+                err=True,
+            )
+            return
+
+        if not session_api_key:
+            click.echo(
+                "✗ No session API key found for this conversation.",
+                err=True,
+            )
+            return
+
+        # Extract base runtime URL from the full conversation URL
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(full_url)
+        runtime_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        if follow:
+            # Follow mode: continuously display new messages
+            import time
+
+            click.echo(f"Following: {title}")
+            click.echo(f"Conversation: {conv_id[:8]}...")
+            click.echo("=" * 80)
+            click.echo("(Press Ctrl+C to stop)")
+            click.echo()
+
+            seen_event_ids = set()
+
+            try:
+                while True:
+                    trajectory_data = api.get_trajectory(
+                        conv_id, runtime_url, session_api_key
+                    )
+
+                    if trajectory_data:
+                        agent_messages = filter_agent_messages(trajectory_data)
+
+                        # Display only new messages
+                        for event in agent_messages:
+                            event_id = event.get("id")
+                            if event_id not in seen_event_ids:
+                                seen_event_ids.add(event_id)
+                                display_text = get_message_text(event)
+                                click.echo(display_text)
+                                click.echo("...")
+
+                    time.sleep(interval)
+
+            except KeyboardInterrupt:
+                click.echo("\n✓ Stopped following conversation")
+                return
+
+        else:
+            # Regular mode: display last N messages
+            trajectory_data = api.get_trajectory(conv_id, runtime_url, session_api_key)
+
+            if not trajectory_data:
+                click.echo("✗ Failed to retrieve trajectory data", err=True)
+                return
+
+            agent_messages = filter_agent_messages(trajectory_data)
+
+            if not agent_messages:
+                click.echo("No agent messages or thoughts found in this conversation.")
+                return
+
+            # Get the last N messages
+            messages_to_show = agent_messages[-count:] if count > 0 else agent_messages
+
+            # Display header
+            count_text = f"Last {len(messages_to_show)} agent message(s)/thought(s)"
+            click.echo(f"{count_text} from: {title}")
+            click.echo(f"Conversation: {conv_id[:8]}...")
+            click.echo("=" * 80)
+
+            # Display each message
+            for i, event in enumerate(messages_to_show, 1):
+                display_text = get_message_text(event)
+                click.echo(display_text)
+                # Add separator between messages (but not after the last one)
+                if i < len(messages_to_show):
+                    click.echo("...")
+
+    except KeyboardInterrupt:
+        click.echo("\n✓ Interrupted")
+    except Exception as e:
+        click.echo(f"✗ Failed to get agent messages: {e}", err=True)
+
+
+def _get_prompt_from_sources(prompt_arg: Optional[str]) -> Optional[str]:
+    """Get prompt from argument, stdin, or interactive input."""
+    # 1. Use argument if provided
+    if prompt_arg:
+        return prompt_arg.strip()
+
+    # 2. Check if there's piped input
+    if not sys.stdin.isatty():
+        piped_input = sys.stdin.read().strip()
+        if piped_input:
+            return piped_input
+
+    # 3. Interactive input
+    try:
+        click.echo("Enter your prompt (press Enter twice to finish, Ctrl+C to skip):")
+        lines = []
+        empty_line_count = 0
+
+        while True:
+            try:
+                line = input()
+                if line.strip() == "":
+                    empty_line_count += 1
+                    if empty_line_count >= 2:
+                        break
+                    lines.append(line)
+                else:
+                    empty_line_count = 0
+                    lines.append(line)
+            except EOFError:
+                break
+
+        prompt = "\n".join(lines).strip()
+        return prompt if prompt else None
+
+    except KeyboardInterrupt:
+        click.echo("\nSkipping prompt entry...")
+        return None

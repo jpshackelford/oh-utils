@@ -1,0 +1,38 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/events/search",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "234"
+  },
+  "params": {
+    "limit": 10,
+    "offset": 0
+  },
+  "json_data": null,
+  "json": [
+    {
+      "id": "EVENT_ID_001",
+      "type": "action",
+      "timestamp": "TIMESTAMP_001",
+      "conversation_id": "CONV_ID_001",
+      "data": {
+        "action": "run",
+        "args": {
+          "command": "echo hello"
+        }
+      }
+    },
+    {
+      "id": "EVENT_ID_002",
+      "type": "observation",
+      "timestamp": "TIMESTAMP_002",
+      "conversation_id": "CONV_ID_001",
+      "data": {
+        "observation": "command_output",
+        "content": "hello\n"
+      }
+    }
+  ]
+}

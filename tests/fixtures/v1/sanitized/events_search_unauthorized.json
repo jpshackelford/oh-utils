@@ -1,0 +1,15 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/events/search",
+  "method": "GET",
+  "status_code": 401,
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "45"
+  },
+  "params": {},
+  "json_data": null,
+  "json": {
+    "error": "Unauthorized",
+    "message": "Invalid API key"
+  }
+}

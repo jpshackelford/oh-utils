@@ -11,7 +11,7 @@ import pytest
 import requests
 import responses
 
-from ohc.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestOpenHandsAPI:
@@ -253,6 +253,53 @@ class TestOpenHandsAPI:
 
         assert "API call failed" in str(exc_info.value)
         assert "HTTP 500" in str(exc_info.value)
+
+    @responses.activate
+    def test_create_conversation_success(self):
+        """Test successful conversation creation."""
+        mock_response = {
+            "status": "ok",
+            "conversation_id": "a1b2c3d4e5f6789012345678901234ab",
+            "message": None,
+            "conversation_status": "STOPPED",
+        }
+
+        responses.add(
+            responses.POST,
+            "https://app.all-hands.dev/api/conversations",
+            json=mock_response,
+            status=200,
+        )
+
+        api = OpenHandsAPI("test-key")
+        result = api.create_conversation()
+
+        assert result == mock_response
+        assert result["status"] == "ok"
+        assert "conversation_id" in result
+
+        # Check request body
+        request_body = responses.calls[0].request.body
+        import json
+
+        assert json.loads(request_body) == {}
+
+    @responses.activate
+    def test_create_conversation_failure(self):
+        """Test conversation creation failure."""
+        responses.add(
+            responses.POST,
+            "https://app.all-hands.dev/api/conversations",
+            body="Server Error",
+            status=500,
+        )
+
+        api = OpenHandsAPI("test-key")
+
+        with pytest.raises(Exception) as exc_info:
+            api.create_conversation()
+
+        assert "Failed to create conversation" in str(exc_info.value)
 
     @responses.activate
     def test_get_conversation_changes_with_runtime_url(self):

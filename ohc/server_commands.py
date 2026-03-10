@@ -6,7 +6,7 @@ Handles adding, listing, deleting, and managing server configurations.
 
 import click
 
-from .api import OpenHandsAPI
+from .api import create_api_client
 from .config import ConfigManager
 
 
@@ -47,7 +47,11 @@ def add(name: str, url: str, apikey: str, default: bool) -> None:
 
     # Test connection
     click.echo(f"Testing connection to {url}...")
-    api = OpenHandsAPI(apikey, url)
+    # Get API version from context
+    ctx = click.get_current_context()
+    api_version = ctx.obj.get("api_version", "v0") if ctx.obj else "v0"
+
+    api = create_api_client(apikey, url, api_version)
 
     try:
         if not api.test_connection():
@@ -186,7 +190,11 @@ def test(name: str) -> None:
 
     # Test connection
     click.echo(f"Testing connection to server '{name}'...")
-    api = OpenHandsAPI(server_config["api_key"], server_config["url"])
+    # Get API version from context
+    ctx = click.get_current_context()
+    api_version = ctx.obj.get("api_version", "v0") if ctx.obj else "v0"
+
+    api = create_api_client(server_config["api_key"], server_config["url"], api_version)
 
     try:
         if not api.test_connection():

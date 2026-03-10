@@ -6,12 +6,12 @@ Tests the shared decorators and utilities used across CLI commands.
 
 from unittest.mock import Mock, patch
 
-from ohc.api import OpenHandsAPI
 from ohc.command_utils import (
     handle_missing_server_config,
     resolve_conversation_id,
     with_server_config,
 )
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestWithServerConfigDecorator:

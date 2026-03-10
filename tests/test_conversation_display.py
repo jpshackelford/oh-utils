@@ -111,6 +111,42 @@ class TestConversation:
         assert conv.id == "invalid-url-conv"
         assert conv.runtime_id is None  # Should handle invalid URL gracefully
 
+    def test_from_api_response_v1_format(self):
+        """Test creating Conversation from v1 API response format."""
+        api_data = {
+            "id": "v1-conv-id",  # v1 uses 'id' instead of 'conversation_id'
+            "title": "V1 Conversation",
+            "sandbox_status": "RUNNING",  # v1 uses 'sandbox_status' instead of 'status'
+            "execution_status": "idle",
+            "conversation_url": "https://runtime.example.com/api/conversations/v1-conv-id",  # v1 uses 'conversation_url'
+            "updated_at": "2024-01-15T10:30:00Z",  # v1 uses 'updated_at' instead of 'last_updated_at'
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        assert conv.id == "v1-conv-id"
+        assert conv.title == "V1 Conversation"
+        assert conv.status == "RUNNING"  # Should map sandbox_status to status
+        assert conv.url == "https://runtime.example.com/api/conversations/v1-conv-id"
+        assert conv.last_updated == "2024-01-15T10:30:00Z"
+
+    def test_from_api_response_with_version(self):
+        """Test creating Conversation with version information."""
+        api_data = {
+            "conversation_id": "versioned-conv",
+            "title": "Versioned Conversation",
+            "status": "RUNNING",
+            "conversation_version": "V1",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        assert conv.id == "versioned-conv"
+        assert conv.version == "V1"
+
     def test_is_active_running_with_runtime(self):
         """Test is_active returns True for running conversation with runtime."""
         conv = Conversation(

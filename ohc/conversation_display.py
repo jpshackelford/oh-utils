@@ -21,6 +21,7 @@ class Conversation:
     last_updated: str
     created_at: str
     url: Optional[str]
+    version: Optional[str] = None
 
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
@@ -42,16 +43,42 @@ class Conversation:
             except (IndexError, AttributeError, ValueError):
                 runtime_id = None
 
+        # Handle both v0 and v1 API response formats
+        conversation_id = data.get("conversation_id") or data.get("id", "")
+
+        # v1 API uses different status fields
+        status = data.get("status")
+        if not status:
+            # v1 API uses sandbox_status and execution_status
+            sandbox_status = data.get("sandbox_status", "UNKNOWN")
+            # execution_status = data.get("execution_status", "unknown")
+            # Map v1 statuses to v0-like format
+            if sandbox_status == "RUNNING":
+                status = "RUNNING"
+            elif sandbox_status in ["STOPPED", "FINISHED"]:
+                status = "STOPPED"
+            else:
+                status = sandbox_status
+
+        # v1 API uses conversation_url instead of url
+        url = data.get("url")
+        if url is None:
+            url = data.get("conversation_url")
+
+        # Extract version information if available
+        version = data.get("conversation_version")
+
         return cls(
-            id=data["conversation_id"],
+            id=conversation_id,
             title=data.get("title", "Untitled"),
-            status=data.get("status", "UNKNOWN"),
+            status=status,
             runtime_status=data.get("runtime_status"),
             runtime_id=runtime_id,
             session_api_key=data.get("session_api_key"),
-            last_updated=data.get("last_updated_at", ""),
+            last_updated=data.get("last_updated_at") or data.get("updated_at", ""),
             created_at=data.get("created_at", ""),
-            url=data.get("url"),
+            url=url,
+            version=version,
         )
 
     def is_active(self) -> bool:
@@ -83,6 +110,9 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
     try:
         # Get fresh data from API
         data = api.get_conversation(conversation_id)
+        if data is None:
+            print(f"Error: Conversation {conversation_id} not found")
+            return
         conv = Conversation.from_api_response(data)
 
         print("\nConversation Details:")
@@ -171,6 +201,9 @@ def show_workspace_changes(api: OpenHandsAPI, conversation_id: str) -> None:
     try:
         # Get conversation details first
         data = api.get_conversation(conversation_id)
+        if data is None:
+            print(f"Error: Conversation {conversation_id} not found")
+            return
         conv = Conversation.from_api_response(data)
 
         if not conv.is_active():

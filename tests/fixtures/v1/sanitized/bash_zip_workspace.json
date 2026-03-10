@@ -1,0 +1,14 @@
+{
+  "url": "https://AGENT_SERVER_HOST.runtime.all-hands.dev/api/bash/execute_bash_command",
+  "method": "POST",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "json": {
+    "id": "bash_cmd_001",
+    "exit_code": 0,
+    "stdout": "  adding: workspace/ (stored 0%)\n  adding: workspace/README.md (deflated 45%)\n",
+    "stderr": ""
+  }
+}

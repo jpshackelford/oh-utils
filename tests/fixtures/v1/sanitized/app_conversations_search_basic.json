@@ -1,0 +1,40 @@
+{
+  "url": "https://app.all-hands.dev/api/v1/app-conversations/search",
+  "method": "GET",
+  "status_code": 200,
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "456"
+  },
+  "params": {
+    "limit": 10,
+    "offset": 0
+  },
+  "json_data": null,
+  "json": [
+    {
+      "id": "CONV_ID_001",
+      "title": "Test Conversation 1",
+      "status": "completed",
+      "created_at": "TIMESTAMP_001",
+      "updated_at": "TIMESTAMP_002",
+      "user_id": "USER_ID_001",
+      "metadata": {
+        "model": "gpt-4",
+        "runtime_url": "https://RUNTIME_HOST.prod-runtime.all-hands.dev"
+      }
+    },
+    {
+      "id": "CONV_ID_002",
+      "title": "Test Conversation 2",
+      "status": "running",
+      "created_at": "TIMESTAMP_003",
+      "updated_at": "TIMESTAMP_004",
+      "user_id": "USER_ID_001",
+      "metadata": {
+        "model": "claude-3-5-sonnet",
+        "runtime_url": "https://RUNTIME_HOST.prod-runtime.all-hands.dev"
+      }
+    }
+  ]
+}

@@ -81,7 +81,8 @@ disable_error_code = ["misc"]
 exclude = [
     "^.venv/",
     "^build/",
-    "^dist/"
+    "^dist/",
+    "^scripts/"
 ]
 
 [[tool.mypy.overrides]]

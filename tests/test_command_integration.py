@@ -9,8 +9,8 @@ from unittest.mock import Mock, patch
 
 import responses
 
-from ohc.api import OpenHandsAPI
 from ohc.command_utils import resolve_conversation_id, with_server_config
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestCommandIntegrationWithFixtures:

@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
-# Import consolidated API client
+# Import consolidated API client with version support
 from ohc.api import OpenHandsAPI
 
 # Import shared display functionality
@@ -51,34 +51,55 @@ class Conversation:
 
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
-        """Create Conversation from API response data"""
+        """Create Conversation from API response data.
+
+        Handles both V0 and V1 API response formats.
+        """
         # Extract runtime ID from URL if available (for backward compatibility)
         # Note: This is kept for display purposes only, the URL should be used
         # directly for API calls
         runtime_id = None
-        if data.get("url"):
+        url = data.get("url") or data.get("conversation_url")
+        if url:
             try:
                 # Try to extract runtime ID from URL for display purposes
                 # This is more flexible and doesn't assume specific domain patterns
                 from urllib.parse import urlparse
 
-                parsed_url = urlparse(data["url"])
+                parsed_url = urlparse(url)
                 if parsed_url.hostname:
                     # Extract the first part of the hostname as runtime ID
                     runtime_id = parsed_url.hostname.split(".")[0]
             except (IndexError, AttributeError, ValueError):
                 runtime_id = None
 
+        # Handle both v0 and v1 API response formats
+        conversation_id = data.get("conversation_id") or data.get("id", "")
+
+        # Handle status - v1 API uses different status fields
+        status = data.get("status")
+        if not status:
+            # v1 API uses sandbox_status and execution_status
+            sandbox_status = data.get("sandbox_status", "UNKNOWN")
+            if sandbox_status == "RUNNING":
+                status = "RUNNING"
+            elif sandbox_status == "PAUSED":
+                status = "PAUSED"
+            elif sandbox_status == "STOPPED":
+                status = "STOPPED"
+            else:
+                status = sandbox_status
+
         return cls(
-            id=data["conversation_id"],
+            id=conversation_id,
             title=data.get("title", "Untitled"),
-            status=data.get("status", "UNKNOWN"),
+            status=status,
             runtime_status=data.get("runtime_status"),
             runtime_id=runtime_id,
             session_api_key=data.get("session_api_key"),
-            last_updated=data.get("last_updated_at", ""),
+            last_updated=data.get("last_updated_at") or data.get("updated_at", ""),
             created_at=data.get("created_at", ""),
-            url=data.get("url"),
+            url=url,
         )
 
     def is_active(self) -> bool:
@@ -299,7 +320,9 @@ class TerminalFormatter:
 class ConversationManager:
     """Main conversation manager application"""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, api_version: str = "v0", base_url: str = "https://app.all-hands.dev/api/"
+    ) -> None:
         self.api_key_manager = APIKeyManager()
         self.formatter = TerminalFormatter()
         self.api: Optional[OpenHandsAPI] = None
@@ -308,13 +331,16 @@ class ConversationManager:
         self.page_size = 20
         self.next_page_id: Optional[str] = None
         self.page_ids: List[Optional[str]] = [None]  # Track page IDs for navigation
+        self.api_version = api_version
+        self.base_url = base_url
 
     def initialize(self) -> None:
         """Initialize the application with API key"""
         try:
             api_key = self.api_key_manager.get_valid_key()
-            self.api = OpenHandsAPI(api_key)
-            print("✓ Conversation Manager initialized successfully")
+            self.api = OpenHandsAPI(api_key, self.base_url, self.api_version)
+            version_str = f" (API {self.api_version})" if self.api_version else ""
+            print(f"✓ Conversation Manager initialized successfully{version_str}")
         except KeyboardInterrupt:
             print("\nExiting...")
             sys.exit(1)
@@ -322,8 +348,15 @@ class ConversationManager:
             print(f"✗ Failed to initialize: {e}")
             sys.exit(1)
 
-    def load_conversations(self, page_id: Optional[str] = None) -> bool:
-        """Load conversations from API"""
+    def load_conversations(
+        self, page_id: Optional[str] = None, offset: int = 0
+    ) -> bool:
+        """Load conversations from API.
+
+        Args:
+            page_id: Page ID for V0 API pagination
+            offset: Offset for V1 API pagination
+        """
         try:
             if self.api is None:
                 print("✗ API not initialized")
@@ -335,15 +368,24 @@ class ConversationManager:
             available_lines = max(5, height - 10)
             self.page_size = min(20, available_lines)
 
-            response = self.api.search_conversations(
-                page_id=page_id, limit=self.page_size
-            )
+            if self.api_version == "v0":
+                response = self.api.search_conversations(
+                    page_id=page_id, limit=self.page_size
+                )
+                self.next_page_id = response.get("next_page_id")
+            else:
+                # V1 uses offset-based pagination
+                response = self.api.search_conversations(
+                    limit=self.page_size, offset=offset
+                )
+                # V1 doesn't have next_page_id, check if there might be more
+                results = response.get("results", [])
+                self.next_page_id = "more" if len(results) >= self.page_size else None
 
             conversations_data = response.get("results", [])
             self.conversations = [
                 Conversation.from_api_response(data) for data in conversations_data
             ]
-            self.next_page_id = response.get("next_page_id")
 
             return True
         except Exception as e:
@@ -352,30 +394,48 @@ class ConversationManager:
 
     def refresh_conversations(self) -> None:
         """Refresh current page of conversations"""
-        current_page_id = (
-            self.page_ids[self.current_page]
-            if self.current_page < len(self.page_ids)
-            else None
-        )
-        if self.load_conversations(current_page_id):
-            print("✓ Conversations refreshed")
+        if self.api_version == "v0":
+            current_page_id = (
+                self.page_ids[self.current_page]
+                if self.current_page < len(self.page_ids)
+                else None
+            )
+            if self.load_conversations(page_id=current_page_id):
+                print("✓ Conversations refreshed")
+            else:
+                print("✗ Failed to refresh conversations")
         else:
-            print("✗ Failed to refresh conversations")
+            # V1: use offset-based pagination
+            offset = self.current_page * self.page_size
+            if self.load_conversations(offset=offset):
+                print("✓ Conversations refreshed")
+            else:
+                print("✗ Failed to refresh conversations")
 
     def next_page(self) -> None:
         """Go to next page"""
         if self.next_page_id:
-            if self.current_page + 1 >= len(self.page_ids):
-                self.page_ids.append(self.next_page_id)
+            if self.api_version == "v0":
+                if self.current_page + 1 >= len(self.page_ids):
+                    self.page_ids.append(self.next_page_id)
 
-            self.current_page += 1
-            page_id = self.page_ids[self.current_page]
+                self.current_page += 1
+                page_id = self.page_ids[self.current_page]
 
-            if self.load_conversations(page_id):
-                print(f"✓ Moved to page {self.current_page + 1}")
+                if self.load_conversations(page_id=page_id):
+                    print(f"✓ Moved to page {self.current_page + 1}")
+                else:
+                    self.current_page -= 1  # Revert on failure
+                    print("✗ Failed to load next page")
             else:
-                self.current_page -= 1  # Revert on failure
-                print("✗ Failed to load next page")
+                # V1: use offset-based pagination
+                self.current_page += 1
+                offset = self.current_page * self.page_size
+                if self.load_conversations(offset=offset):
+                    print(f"✓ Moved to page {self.current_page + 1}")
+                else:
+                    self.current_page -= 1  # Revert on failure
+                    print("✗ Failed to load next page")
         else:
             print("No more pages available")
 
@@ -383,13 +443,21 @@ class ConversationManager:
         """Go to previous page"""
         if self.current_page > 0:
             self.current_page -= 1
-            page_id = self.page_ids[self.current_page]
-
-            if self.load_conversations(page_id):
-                print(f"✓ Moved to page {self.current_page + 1}")
+            if self.api_version == "v0":
+                page_id = self.page_ids[self.current_page]
+                if self.load_conversations(page_id=page_id):
+                    print(f"✓ Moved to page {self.current_page + 1}")
+                else:
+                    self.current_page += 1  # Revert on failure
+                    print("✗ Failed to load previous page")
             else:
-                self.current_page += 1  # Revert on failure
-                print("✗ Failed to load previous page")
+                # V1: use offset-based pagination
+                offset = self.current_page * self.page_size
+                if self.load_conversations(offset=offset):
+                    print(f"✓ Moved to page {self.current_page + 1}")
+                else:
+                    self.current_page += 1  # Revert on failure
+                    print("✗ Failed to load previous page")
         else:
             print("Already on first page")
 
@@ -429,6 +497,9 @@ class ConversationManager:
 
                 # Get fresh data from API
                 data = self.api.get_conversation(conv.id)
+                if data is None:
+                    print(f"✗ Conversation {conv.id} not found")
+                    return
                 fresh_conv = Conversation.from_api_response(data)
 
                 print("\nConversation Details:")
@@ -537,6 +608,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get list of changed files
@@ -588,6 +662,10 @@ class ConversationManager:
                             runtime_url,
                             fresh_conv.session_api_key,
                         )
+
+                        if content is None:
+                            print(f"      ⚠️  File not found: {file_path}")
+                            continue
 
                         # Create directory structure in temp folder
                         file_temp_path = temp_path / file_path
@@ -662,6 +740,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Get trajectory data from API
@@ -722,6 +803,9 @@ class ConversationManager:
 
             # Get fresh data from API
             fresh_conv_data = self.api.get_conversation(conv.id)
+            if fresh_conv_data is None:
+                print(f"✗ Conversation {conv.id} not found")
+                return
             fresh_conv = Conversation.from_api_response(fresh_conv_data)
 
             # Download workspace archive from API
@@ -738,6 +822,10 @@ class ConversationManager:
             workspace_data = self.api.download_workspace_archive(
                 fresh_conv.id, runtime_url, fresh_conv.session_api_key
             )
+
+            if workspace_data is None:
+                print("✗ Failed to download workspace archive")
+                return
 
             # Create ZIP file with unique name (API already returns ZIP data)
             base_name = f"workspace-{conv.short_id()}"
