@@ -7,7 +7,6 @@ OpenHandsAPI instance rather than managing its own API key retrieval.
 """
 
 import json
-import os
 import shutil
 import tempfile
 import time
@@ -34,8 +33,15 @@ class TerminalFormatter:
             return 80, 24  # Default fallback
 
     def clear_screen(self) -> None:
-        """Clear the terminal screen"""
-        os.system("clear" if os.name == "posix" else "cls")
+        """Clear the terminal screen using ANSI escape codes.
+
+        Uses standard ANSI escape sequences instead of os.system() for:
+        - Better security (no shell execution)
+        - Better portability across platforms
+        - Faster execution
+        """
+        # ANSI escape: \033[H moves cursor to home, \033[J clears from cursor to end
+        print("\033[H\033[J", end="", flush=True)
 
     def format_conversations_table(
         self, conversations: List[Conversation], start_index: int = 0

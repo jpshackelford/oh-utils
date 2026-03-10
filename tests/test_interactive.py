@@ -31,19 +31,12 @@ class TestTerminalFormatter:
             formatter = TerminalFormatter()
             assert formatter.terminal_size == (80, 24)
 
-    def test_clear_screen_posix(self):
-        """Test clear screen on POSIX systems."""
-        with patch("os.name", "posix"), patch("os.system") as mock_system:
+    def test_clear_screen_uses_ansi(self):
+        """Test clear screen uses ANSI escape codes."""
+        with patch("builtins.print") as mock_print:
             formatter = TerminalFormatter()
             formatter.clear_screen()
-            mock_system.assert_called_once_with("clear")
-
-    def test_clear_screen_windows(self):
-        """Test clear screen on Windows systems."""
-        with patch("os.name", "nt"), patch("os.system") as mock_system:
-            formatter = TerminalFormatter()
-            formatter.clear_screen()
-            mock_system.assert_called_once_with("cls")
+            mock_print.assert_called_once_with("\033[H\033[J", end="", flush=True)
 
     def test_format_conversations_table_empty(self):
         """Test formatting empty conversation list."""
