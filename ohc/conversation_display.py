@@ -25,18 +25,25 @@ class Conversation:
 
     @classmethod
     def from_api_response(cls, data: Dict[str, Any]) -> "Conversation":
-        """Create Conversation from API response data"""
+        """Create Conversation from API response data.
+
+        Handles both V0 and V1 API response formats.
+        """
+        # Handle both v0 and v1 API response formats for URL
+        # v1 API uses conversation_url instead of url
+        url = data.get("url") or data.get("conversation_url")
+
         # Extract runtime ID from URL if available (for backward compatibility)
         # Note: This is kept for display purposes only, the URL should be used
         # directly for API calls
         runtime_id = None
-        if data.get("url"):
+        if url:
             try:
                 # Try to extract runtime ID from URL for display purposes
                 # This is more flexible and doesn't assume specific domain patterns
                 from urllib.parse import urlparse
 
-                parsed_url = urlparse(data["url"])
+                parsed_url = urlparse(url)
                 if parsed_url.hostname:
                     # Extract the first part of the hostname as runtime ID
                     runtime_id = parsed_url.hostname.split(".")[0]
@@ -46,24 +53,20 @@ class Conversation:
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")
 
-        # v1 API uses different status fields
+        # Handle status - v1 API uses different status fields
         status = data.get("status")
         if not status:
             # v1 API uses sandbox_status and execution_status
             sandbox_status = data.get("sandbox_status", "UNKNOWN")
-            # execution_status = data.get("execution_status", "unknown")
             # Map v1 statuses to v0-like format
             if sandbox_status == "RUNNING":
                 status = "RUNNING"
+            elif sandbox_status == "PAUSED":
+                status = "PAUSED"
             elif sandbox_status in ["STOPPED", "FINISHED"]:
                 status = "STOPPED"
             else:
                 status = sandbox_status
-
-        # v1 API uses conversation_url instead of url
-        url = data.get("url")
-        if url is None:
-            url = data.get("conversation_url")
 
         # Extract version information if available
         version = data.get("conversation_version")
