@@ -65,11 +65,12 @@ def list(api: OpenHandsAPI, server: Optional[str], limit: Optional[int]) -> None
         click.echo(f"✗ Failed to list conversations: {e}", err=True)
 
 
-def interactive_mode(api_version: str = "v0") -> None:
+def interactive_mode(api_version: str = "v0", server: Optional[str] = None) -> None:
     """Start the interactive conversation manager.
 
     Args:
         api_version: API version to use ("v0" or "v1"), defaults to "v0"
+        server: Server name to use (defaults to configured default)
     """
     from .api import create_api_client
     from .interactive import ConversationManager
@@ -77,9 +78,13 @@ def interactive_mode(api_version: str = "v0") -> None:
     try:
         # Check if we have a configured server
         config_manager = ConfigManager()
-        server_config = config_manager.get_server_config()
+        server_config = config_manager.get_server_config(server)
 
         if not server_config:
+            if server:
+                click.echo(f"✗ Server '{server}' not found.", err=True)
+                click.echo("Use 'ohc server list' to see available servers.")
+                return
             click.echo("No servers configured.")
             click.echo("Use 'ohc server add' to add a server configuration.")
 
@@ -102,8 +107,15 @@ def interactive_mode(api_version: str = "v0") -> None:
             server_config["api_key"], server_config["url"], api_version
         )
 
+        # Get server name for display
+        server_name = server or config_manager.load_config().get("default_server", "")
+        if server_name:
+            server_display = f"{server_name} ({server_config['url']})"
+        else:
+            server_display = server_config["url"]
+
         click.echo("Starting interactive conversation manager...")
-        click.echo(f"Using server: {server_config['url']}")
+        click.echo(f"Using server: {server_display}")
         click.echo(f"API version: {api_version}")
         click.echo()
 

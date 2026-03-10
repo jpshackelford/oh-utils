@@ -5,6 +5,8 @@ Provides the multi-command CLI interface with server management and conversation
 functionality.
 """
 
+from typing import Optional
+
 import click
 
 from . import __version__
@@ -19,12 +21,19 @@ from . import __version__
     default="v0",
     help="OpenHands API version to use (default: v0)",
 )
+@click.option(
+    "--server",
+    help="Server name to use (defaults to configured default)",
+)
 @click.pass_context
-def cli(ctx: click.Context, interactive: bool, api_version: str) -> None:
+def cli(
+    ctx: click.Context, interactive: bool, api_version: str, server: Optional[str]
+) -> None:
     """OpenHands Cloud CLI - Manage OpenHands servers and conversations."""
     ctx.ensure_object(dict)
     ctx.obj["interactive"] = interactive
     ctx.obj["api_version"] = api_version
+    ctx.obj["server"] = server
 
     # If no subcommand provided
     if ctx.invoked_subcommand is None:
@@ -32,7 +41,7 @@ def cli(ctx: click.Context, interactive: bool, api_version: str) -> None:
             # Only start interactive mode if -i flag is used
             from .conversation_commands import interactive_mode
 
-            interactive_mode(api_version=api_version)
+            interactive_mode(api_version=api_version, server=server)
         else:
             # Default behavior: show help
             click.echo(ctx.get_help())
