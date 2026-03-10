@@ -252,17 +252,16 @@ class AppEndpointDetector:
                     continue
 
                 # Look for ingress with "/" path (root ingress)
+                # Prefer ingresses with 'openhands' in the name
                 hosts = ingress.get("hosts", [])
-                if hosts:
-                    # Prefer ingresses with 'openhands' in the name
-                    if "openhands" in name.lower() or "root" in name.lower():
-                        host = hosts[0]
-                        use_tls = host in ingress.get("tls_hosts", [])
-                        return DetectedAppEndpoint(
-                            host=host,
-                            use_tls=use_tls,
-                            source=f"ingress:{name}",
-                        )
+                if hosts and ("openhands" in name.lower() or "root" in name.lower()):
+                    host = hosts[0]
+                    use_tls = host in ingress.get("tls_hosts", [])
+                    return DetectedAppEndpoint(
+                        host=host,
+                        use_tls=use_tls,
+                        source=f"ingress:{name}",
+                    )
         except K8sClientError:
             pass
 

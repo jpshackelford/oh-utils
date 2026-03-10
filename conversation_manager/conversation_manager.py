@@ -193,6 +193,7 @@ class APIKeyManager:
         else:
             # Extract host from base_url for enterprise instances
             from urllib.parse import urlparse
+
             parsed = urlparse(self.base_url)
             print(f"https://{parsed.netloc}/settings/api-keys")
         print()

@@ -322,7 +322,9 @@ def _interactive_configure(
         else:
             click.echo("⚠ Could not auto-detect application endpoint")
             if click.confirm("Enter endpoint URL manually?", default=False):
-                app_url = click.prompt("Application URL (e.g., https://openhands.example.com)")
+                app_url = click.prompt(
+                    "Application URL (e.g., https://openhands.example.com)"
+                )
     except K8sClientError as e:
         click.echo(f"⚠ Could not detect endpoint: {e}")
 
@@ -383,7 +385,9 @@ def _add_server_from_url(env_name: str, app_url: str) -> None:
 
     if not apikey:
         click.echo("  Skipping server add (no API key provided)")
-        click.echo(f"  You can add it later with: ohc server add --name {env_name} --url {url}")
+        click.echo(
+            f"  You can add it later with: ohc server add --name {env_name} --url {url}"
+        )
         return
 
     # Test connection
@@ -405,7 +409,10 @@ def _add_server_from_url(env_name: str, app_url: str) -> None:
     except Exception as e:
         click.echo(f"  ⚠ Connection test failed: {e}")
         if not click.confirm("  Save server configuration anyway?", default=True):
-            click.echo(f"  You can add it later with: ohc server add --name {env_name} --url {url}")
+            click.echo(
+                f"  You can add it later with: ohc server add "
+                f"--name {env_name} --url {url}"
+            )
             return
 
     # Save server
