@@ -31,7 +31,7 @@ class TestConversation:
             session_api_key="session-key",
             last_updated="2024-01-15T10:30:00Z",
             created_at="2024-01-15T10:00:00Z",
-            url="https://runtime-123.example.com/conv/test-conv-123",
+            url="https://runtime.example.com/runtime123abc/api/conversations/test-conv-123",
         )
 
         assert conv.id == "test-conv-123"
@@ -41,13 +41,14 @@ class TestConversation:
         assert conv.runtime_id == "runtime-123"
 
     def test_from_api_response_with_url(self):
-        """Test creating Conversation from API response with URL."""
+        """Test creating Conversation from API response with URL containing runtime_id in path."""
         api_data = {
             "conversation_id": "api-conv-123",
             "title": "API Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-456.example.com/conv/api-conv-123",
+            # Path-based routing with runtime_id before /api/conversations
+            "url": "https://runtime.example.com/runtime456abc/api/conversations/api-conv-123",
             "session_api_key": "api-session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -59,8 +60,11 @@ class TestConversation:
         assert conv.title == "API Conversation"
         assert conv.status == "RUNNING"
         assert conv.runtime_status == "READY"
-        assert conv.runtime_id == "runtime-456"  # Extracted from URL
-        assert conv.url == "https://runtime-456.example.com/conv/api-conv-123"
+        assert conv.runtime_id == "runtime456abc"  # Extracted from URL path
+        assert (
+            conv.url
+            == "https://runtime.example.com/runtime456abc/api/conversations/api-conv-123"
+        )
 
     def test_from_api_response_without_url(self):
         """Test creating Conversation from API response without URL."""
@@ -219,8 +223,9 @@ class TestConversation:
             conv.url
             == "https://myenterprise.example.com/api/conversations/enterprise-conv-123"
         )
-        # runtime_id should be extracted from the resolved hostname
-        assert conv.runtime_id == "myenterprise"
+        # runtime_id should be None because the URL doesn't contain runtime info
+        # (no path-based routing, and hostname 'myenterprise' is not a valid runtime_id pattern)
+        assert conv.runtime_id is None
 
     def test_from_api_response_relative_url_without_base(self):
         """Test that relative URLs remain relative if no api_base_url provided."""
@@ -238,6 +243,79 @@ class TestConversation:
         # URL should remain relative
         assert conv.url == "/api/conversations/enterprise-conv-123"
         # runtime_id should be None since we can't parse a relative URL
+        assert conv.runtime_id is None
+
+    def test_from_api_response_path_based_runtime_url(self):
+        """Test runtime_id extraction from path-based routing URL (enterprise)."""
+        api_data = {
+            "conversation_id": "enterprise-conv-123",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "runtime_status": "STATUS$READY",
+            # Path-based routing: https://runtime-server/{runtime_id}/api/conversations/{conv_id}
+            "url": "https://runtime-server.example.com/abc123def456/api/conversations/enterprise-conv-123",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        # runtime_id should be extracted from path before /api/conversations
+        assert conv.runtime_id == "abc123def456"
+
+    def test_from_api_response_subdomain_runtime_url(self):
+        """Test runtime_id extraction from subdomain-based URL (OpenHands Cloud)."""
+        api_data = {
+            "conversation_id": "cloud-conv-123",
+            "title": "Cloud Conversation",
+            "status": "RUNNING",
+            "runtime_status": "READY",
+            # Subdomain-based routing: https://{runtime_id}.prod-runtime.all-hands.dev/...
+            "url": "https://abcdef123456.prod-runtime.all-hands.dev/api/conversations/cloud-conv-123",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        # runtime_id should be extracted from subdomain (known runtime domain)
+        assert conv.runtime_id == "abcdef123456"
+
+    def test_from_api_response_non_runtime_subdomain(self):
+        """Test that subdomains on non-runtime domains are NOT extracted as runtime_id."""
+        api_data = {
+            "conversation_id": "enterprise-conv-123",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "runtime_status": "STATUS$READY",
+            # URL with subdomain on a non-runtime domain - should NOT extract runtime_id
+            "url": "https://myenterprise.example.com/api/conversations/enterprise-conv-123",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        # runtime_id should be None - 'myenterprise' is not on a known runtime domain
+        assert conv.runtime_id is None
+
+    def test_from_api_response_server_name_not_runtime_id(self):
+        """Test that server names are not mistaken for runtime_id."""
+        api_data = {
+            "conversation_id": "enterprise-conv-123",
+            "title": "Enterprise Conversation",
+            "status": "RUNNING",
+            "runtime_status": "STATUS$READY",
+            # URL with server name (jps01) that should NOT be extracted as runtime_id
+            "url": "https://jps01.r9.all-hands.dev/api/conversations/enterprise-conv-123",
+            "last_updated_at": "2024-01-15T10:30:00Z",
+            "created_at": "2024-01-15T10:00:00Z",
+        }
+
+        conv = Conversation.from_api_response(api_data)
+
+        # runtime_id should be None - 'jps01' is a server name, not a runtime_id
+        # (it's only 5 chars, runtime_ids are typically 10+ chars)
         assert conv.runtime_id is None
 
     def test_is_active_running_with_runtime(self):
@@ -415,10 +493,10 @@ class TestConversation:
             session_api_key=None,
             last_updated="2024-01-15T10:30:00Z",
             created_at="2024-01-15T10:00:00Z",
-            url="https://runtime-123.example.com/api/conversations/test-conv",
+            url="https://runtime.example.com/runtime123abc/api/conversations/test-conv",
         )
 
-        assert conv.get_runtime_base_url() == "https://runtime-123.example.com"
+        assert conv.get_runtime_base_url() == "https://runtime.example.com"
 
     def test_get_runtime_base_url_without_url(self):
         """Test get_runtime_base_url returns None when no URL."""
@@ -486,7 +564,7 @@ class TestShowConversationDetails:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -506,7 +584,7 @@ class TestShowConversationDetails:
             "title": "Active Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/active-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/active-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -522,7 +600,7 @@ class TestShowConversationDetails:
             show_conversation_details(mock_api, "active-conv-123")
 
         mock_api.get_conversation_changes.assert_called_once_with(
-            "active-conv-123", "https://runtime-123.example.com", "session-key"
+            "active-conv-123", "https://runtime.example.com", "session-key"
         )
 
         # Verify print was called
@@ -536,7 +614,7 @@ class TestShowConversationDetails:
             "title": "Active Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/active-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/active-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -558,7 +636,7 @@ class TestShowConversationDetails:
             "title": "Active Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/active-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/active-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -595,7 +673,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -612,7 +690,7 @@ class TestShowWorkspaceChanges:
             show_workspace_changes(mock_api, "test-conv-123")
 
         mock_api.get_conversation_changes.assert_called_once_with(
-            "test-conv-123", "https://runtime-123.example.com", "session-key"
+            "test-conv-123", "https://runtime.example.com", "session-key"
         )
 
         # Verify print was called
@@ -626,7 +704,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-conv-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-conv-123",
             "session_api_key": "session-key",
             "last_updated_at": "2024-01-15T10:30:00Z",
             "created_at": "2024-01-15T10:00:00Z",
@@ -681,7 +759,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-123",
             "session_api_key": "session-key",
             "created_at": "2024-01-01T00:00:00Z",
             "last_updated_at": "2024-01-01T00:00:00Z",
@@ -707,7 +785,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-123",
             "session_api_key": "session-key",
             "created_at": "2024-01-01T00:00:00Z",
             "last_updated_at": "2024-01-01T00:00:00Z",
@@ -736,7 +814,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-123",
             "session_api_key": "session-key",
             "created_at": "2024-01-01T00:00:00Z",
             "last_updated_at": "2024-01-01T00:00:00Z",
@@ -765,7 +843,7 @@ class TestShowWorkspaceChanges:
             "title": "Test Conversation",
             "status": "RUNNING",
             "runtime_status": "READY",
-            "url": "https://runtime-123.example.com/conv/test-123",
+            "url": "https://runtime.example.com/runtime123abc/api/conversations/test-123",
             "session_api_key": "session-key",
             "created_at": "2024-01-01T00:00:00Z",
             "last_updated_at": "2024-01-01T00:00:00Z",

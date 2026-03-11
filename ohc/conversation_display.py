@@ -4,8 +4,76 @@ Shared conversation display functionality for both CLI and interactive modes.
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from .api import OpenHandsAPI
+
+
+def _extract_runtime_id_from_url(url: str) -> Optional[str]:
+    """Extract runtime_id from a conversation URL.
+
+    Handles multiple URL formats:
+    1. Subdomain format (OpenHands Cloud):
+       https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conv_id}
+       -> runtime_id from hostname subdomain (only for known runtime domains)
+
+    2. Path format (Enterprise with RUNTIME_ROUTING_MODE=path):
+       https://runtime-server/{runtime_id}/api/conversations/{conv_id}
+       -> runtime_id from path before /api/conversations
+
+    3. Relative URL (Enterprise without runtime info):
+       /api/conversations/{conv_id}
+       -> Returns None (no runtime_id available)
+
+    4. Server URL without runtime info:
+       https://server.example.com/api/conversations/{conv_id}
+       -> Returns None (no runtime_id in URL)
+
+    Returns:
+        The runtime_id if found, None otherwise.
+    """
+    if not url:
+        return None
+
+    # Relative URLs don't contain runtime_id
+    if url.startswith("/"):
+        return None
+
+    try:
+        parsed = urlparse(url)
+
+        # First, check for path-based routing: /{runtime_id}/api/conversations/...
+        # This is used by Enterprise deployments with RUNTIME_ROUTING_MODE=path
+        if "/api/conversations" in parsed.path:
+            path_before_api = parsed.path.split("/api/conversations")[0]
+            # path_before_api would be "/{runtime_id}" or empty
+            if path_before_api and path_before_api != "/":
+                # Strip leading slash to get runtime_id
+                runtime_id = path_before_api.lstrip("/")
+                if runtime_id:
+                    return runtime_id
+
+        # Second, check for subdomain-based routing:
+        # {runtime_id}.prod-runtime.all-hands.dev
+        # Only used by OpenHands Cloud with known runtime domains.
+        # We must be careful not to extract server names as runtime IDs.
+        if parsed.hostname:
+            parts = parsed.hostname.split(".")
+            # Only extract from subdomain if the domain looks like a runtime domain
+            # Known patterns: *.prod-runtime.all-hands.dev, *.runtime.all-hands.dev
+            if len(parts) >= 4:
+                # Check for known runtime domain patterns
+                domain_suffix = ".".join(parts[1:])
+                known_runtime_domains = [
+                    "prod-runtime.all-hands.dev",
+                    "runtime.all-hands.dev",
+                ]
+                if domain_suffix in known_runtime_domains:
+                    return parts[0]
+
+        return None
+    except (IndexError, AttributeError, ValueError):
+        return None
 
 
 @dataclass
@@ -54,23 +122,12 @@ class Conversation:
             url = urljoin(base, url)
 
         # Extract runtime ID from multiple sources for maximum compatibility
-        # Priority: 1) Direct runtime_id field, 2) URL hostname, 3) sandbox_id,
-        #           4) conversation_id (fallback for enterprise servers)
+        # Priority: 1) Direct runtime_id field, 2) URL path/hostname, 3) sandbox_id
         runtime_id = data.get("runtime_id")  # Some servers may provide this directly
 
         # Try to extract from URL if not directly provided
         if not runtime_id and url:
-            try:
-                # Try to extract runtime ID from URL for display purposes
-                # This is more flexible and doesn't assume specific domain patterns
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(url)
-                if parsed_url.hostname:
-                    # Extract the first part of the hostname as runtime ID
-                    runtime_id = parsed_url.hostname.split(".")[0]
-            except (IndexError, AttributeError, ValueError):
-                pass
+            runtime_id = _extract_runtime_id_from_url(url)
 
         # V1 fallback: use sandbox_id if available and no runtime_id yet
         if not runtime_id:
