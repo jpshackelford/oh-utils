@@ -158,17 +158,12 @@ class Conversation:
                 base = base[:-4]
             url = urljoin(base, url)
 
-        # Extract runtime ID from multiple sources for maximum compatibility
-        # Priority: 1) Direct runtime_id field, 2) URL path/hostname, 3) sandbox_id
-        runtime_id = data.get("runtime_id")  # Some servers may provide this directly
+        # Extract runtime ID from API response or URL
+        runtime_id = data.get("runtime_id")  # Some servers provide this directly
 
         # Try to extract from URL if not directly provided
         if not runtime_id and url:
             runtime_id = _extract_runtime_id_from_url(url)
-
-        # V1 fallback: use sandbox_id if available and no runtime_id yet
-        if not runtime_id:
-            runtime_id = data.get("sandbox_id")
 
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")

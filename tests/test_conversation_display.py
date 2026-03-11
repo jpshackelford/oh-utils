@@ -170,22 +170,6 @@ class TestConversation:
         assert conv.runtime_id == "my-runtime-123"
         assert conv.is_active() is True
 
-    def test_from_api_response_with_sandbox_id_fallback(self):
-        """Test creating Conversation uses sandbox_id as fallback for runtime_id."""
-        api_data = {
-            "id": "v1-conv-id",
-            "title": "V1 Conversation",
-            "sandbox_status": "RUNNING",
-            "sandbox_id": "SANDBOX_ID_001",
-            "updated_at": "2024-01-15T10:30:00Z",
-            "created_at": "2024-01-15T10:00:00Z",
-        }
-
-        conv = Conversation.from_api_response(api_data)
-
-        assert conv.id == "v1-conv-id"
-        assert conv.runtime_id == "SANDBOX_ID_001"  # Should fall back to sandbox_id
-
     def test_from_api_response_runtime_id_priority(self):
         """Test that direct runtime_id takes priority over URL extraction."""
         api_data = {
