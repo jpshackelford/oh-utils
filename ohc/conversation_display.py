@@ -203,10 +203,7 @@ class Conversation:
         )
 
     def is_active(self) -> bool:
-        """Check if conversation is currently active/running.
-
-        A conversation is active if status is RUNNING and runtime_status indicates ready.
-        """
+        """Check if conversation is currently active/running."""
         if self.status != "RUNNING":
             return False
         return bool(self.runtime_status and "READY" in self.runtime_status)
@@ -265,7 +262,7 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
                 if runtime_config and "runtime_id" in runtime_config:
                     conv.runtime_id = runtime_config["runtime_id"]
             except Exception as e:
-                logger.debug(f"Could not fetch runtime config for {conversation_id}: {e}")
+                logger.debug(f"Could not fetch runtime config for {conv.id}: {e}")
 
         print("\nConversation Details:")
         print(f"  ID: {conv.id}")
