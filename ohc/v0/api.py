@@ -110,6 +110,36 @@ class OpenHandsAPI:
 
         return cast("Dict[str, Any]", data)
 
+    def get_runtime_config(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get runtime configuration for a conversation.
+
+        This endpoint returns runtime_id and session_id from the runtime,
+        which is useful for enterprise deployments where the runtime_id
+        may not be extractable from the conversation URL.
+
+        Args:
+            conversation_id: Full conversation ID
+
+        Returns:
+            Dictionary containing:
+            - runtime_id: The runtime identifier
+            - session_id: The session identifier
+            Returns None if the endpoint is not available or conversation not running
+
+        Note:
+            This endpoint only works when the conversation has an active runtime.
+        """
+        url = urljoin(self.base_url, f"conversations/{conversation_id}/config")
+        try:
+            response = self.session.get(url, timeout=10)
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return cast("Optional[Dict[str, Any]]", response.json())
+        except Exception:
+            return None
+
     def create_conversation(self) -> Dict[str, Any]:
         """
         Create a new conversation.

@@ -66,6 +66,17 @@ class TestURLHandling:
                 "url": "https://runtime-server.company.com/runtimexyz/api/conversations/conv123",
                 "expected_runtime_id": "runtimexyz",
             },
+            # Enterprise pattern: runtime.{cluster}.r9.all-hands.dev
+            # This is the jps01 staging deployment pattern
+            {
+                "url": "https://upjdgissrjizlbzi.runtime.jps01.r9.all-hands.dev/api/conversations/conv123",
+                "expected_runtime_id": "upjdgissrjizlbzi",
+            },
+            # Another enterprise pattern variant
+            {
+                "url": "https://runtimeabc12345.runtime.staging.r9.all-hands.dev/workspace",
+                "expected_runtime_id": "runtimeabc12345",
+            },
             # Custom domain without known pattern - should NOT extract runtime_id
             {
                 "url": "https://session-456.k8s-cluster.example.org/",

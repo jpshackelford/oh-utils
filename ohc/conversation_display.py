@@ -18,6 +18,19 @@ _DEFAULT_RUNTIME_DOMAINS = [
     "runtime.all-hands.dev",
 ]
 
+# Patterns for enterprise/staging runtime domains.
+# These are suffix patterns that match URLs like:
+#   {runtime_id}.runtime.{cluster}.r9.all-hands.dev
+# The pattern matches the suffix after the runtime_id subdomain.
+_RUNTIME_DOMAIN_PATTERNS = [
+    # Enterprise pattern: runtime.{cluster}.r9.all-hands.dev
+    # e.g., runtime.jps01.r9.all-hands.dev
+    ".r9.all-hands.dev",
+    # Enterprise pattern: runtime.{cluster}.all-hands.dev
+    # e.g., runtime.staging.all-hands.dev
+    ".all-hands.dev",
+]
+
 
 def _get_runtime_domains() -> List[str]:
     """Get runtime domains from env var (if set) combined with defaults."""
@@ -26,6 +39,28 @@ def _get_runtime_domains() -> List[str]:
     if extra:
         domains.extend(d.strip() for d in extra.split(",") if d.strip())
     return domains
+
+
+def _matches_runtime_pattern(domain_suffix: str) -> bool:
+    """Check if domain suffix matches a known runtime pattern.
+
+    Handles enterprise/staging patterns like:
+    - runtime.jps01.r9.all-hands.dev
+    - runtime.staging.all-hands.dev
+
+    Args:
+        domain_suffix: The domain suffix after the first subdomain
+                       e.g., "runtime.jps01.r9.all-hands.dev"
+
+    Returns:
+        True if the domain suffix looks like a runtime domain
+    """
+    # Must start with "runtime." to be a runtime subdomain
+    if not domain_suffix.startswith("runtime."):
+        return False
+
+    # Check against known patterns
+    return any(domain_suffix.endswith(pattern) for pattern in _RUNTIME_DOMAIN_PATTERNS)
 
 
 def _is_valid_runtime_id(value: str) -> bool:
@@ -47,23 +82,49 @@ def _extract_from_path(path: str) -> Optional[str]:
 
 
 def _extract_from_subdomain(hostname: str) -> Optional[str]:
-    """Extract runtime_id from subdomain ({runtime_id}.prod-runtime.all-hands.dev).
+    """Extract runtime_id from subdomain.
 
-    Handles domains of any depth by checking all possible domain suffixes.
+    Handles multiple URL patterns:
+    1. Cloud pattern: {runtime_id}.prod-runtime.all-hands.dev
+    2. Enterprise pattern: {runtime_id}.runtime.{cluster}.r9.all-hands.dev
+       e.g., upjdgissrjizlbzi.runtime.jps01.r9.all-hands.dev
+
+    Handles domains of any depth by checking all possible domain suffixes
+    against known runtime domains and patterns.
+
     For example, with `OHC_RUNTIME_DOMAINS=example.com`:
     - `runtime123.example.com` → matches suffix `example.com`, returns `runtime123`
+
+    Args:
+        hostname: The hostname to extract runtime_id from
+
+    Returns:
+        The runtime_id if found, None otherwise
     """
     parts = hostname.split(".")
     if len(parts) < 2:
         return None
 
     runtime_domains = _get_runtime_domains()
+
+    # Check exact match against known runtime domains
     for i in range(len(parts) - 1):
         domain_suffix = ".".join(parts[i + 1 :])
         if domain_suffix in runtime_domains:
             runtime_id = parts[i]
             if _is_valid_runtime_id(runtime_id):
                 return runtime_id
+
+    # Check pattern match for enterprise/staging domains
+    # e.g., upjdgissrjizlbzi.runtime.jps01.r9.all-hands.dev
+    # where domain_suffix would be runtime.jps01.r9.all-hands.dev
+    if len(parts) >= 4:
+        domain_suffix = ".".join(parts[1:])
+        if _matches_runtime_pattern(domain_suffix):
+            runtime_id = parts[0]
+            if _is_valid_runtime_id(runtime_id):
+                return runtime_id
+
     return None
 
 
@@ -79,11 +140,16 @@ def _extract_runtime_id_from_url(url: str) -> Optional[str]:
        https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conv_id}
        -> runtime_id from hostname subdomain (only for known runtime domains)
 
-    3. Relative URL (Enterprise without runtime info):
+    3. Subdomain format (Enterprise with pattern matching):
+       https://{runtime_id}.runtime.{cluster}.r9.all-hands.dev/...
+       e.g., https://upjdgissrjizlbzi.runtime.jps01.r9.all-hands.dev/...
+       -> runtime_id from hostname subdomain (for *.runtime.*.all-hands.dev patterns)
+
+    4. Relative URL (Enterprise without runtime info):
        /api/conversations/{conv_id}
        -> Returns None (no runtime_id available)
 
-    4. Server URL without runtime info:
+    5. Server URL without runtime info:
        https://server.example.com/api/conversations/{conv_id}
        -> Returns None (no runtime_id in URL)
 
@@ -248,6 +314,16 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
             print(f"Error: Conversation {conversation_id} not found")
             return
         conv = Conversation.from_api_response(data, api.base_url)
+
+        # If runtime_id is not available from the conversation data,
+        # try to fetch it from the runtime config endpoint (for enterprise deployments)
+        if not conv.runtime_id and conv.status == "RUNNING":
+            try:
+                runtime_config = api.get_runtime_config(conversation_id)
+                if runtime_config and "runtime_id" in runtime_config:
+                    conv.runtime_id = runtime_config["runtime_id"]
+            except Exception:
+                pass  # Silently ignore if endpoint not available
 
         print("\nConversation Details:")
         print(f"  ID: {conv.id}")
