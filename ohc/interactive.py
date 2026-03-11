@@ -91,7 +91,8 @@ class TerminalFormatter:
 
         # Conversation rows
         for i, conv in enumerate(conversations, start_index + 1):
-            runtime_display = conv.runtime_id or "─"
+            # Only show runtime_id for active conversations
+            runtime_display = conv.runtime_id if conv.is_active() else "─"
 
             row = (
                 f"{i:>{num_width - 2}}  "  # Right-align number with 2 spaces
