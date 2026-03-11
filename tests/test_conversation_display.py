@@ -318,6 +318,30 @@ class TestConversation:
         # (it's only 5 chars, runtime_ids are typically 10+ chars)
         assert conv.runtime_id is None
 
+    def test_from_api_response_custom_runtime_domain_via_env(self):
+        """Test runtime_id extraction with custom domain from OHC_RUNTIME_DOMAINS env var."""
+        import os
+
+        old_val = os.environ.get("OHC_RUNTIME_DOMAINS")
+        try:
+            os.environ["OHC_RUNTIME_DOMAINS"] = "runtime.company.com"
+            api_data = {
+                "conversation_id": "custom-conv-123",
+                "title": "Custom Domain Conversation",
+                "status": "RUNNING",
+                "url": "https://myruntime001.runtime.company.com/api/conversations/custom-conv-123",
+                "last_updated_at": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-15T10:00:00Z",
+            }
+
+            conv = Conversation.from_api_response(api_data)
+            assert conv.runtime_id == "myruntime001"
+        finally:
+            if old_val is None:
+                os.environ.pop("OHC_RUNTIME_DOMAINS", None)
+            else:
+                os.environ["OHC_RUNTIME_DOMAINS"] = old_val
+
     def test_is_active_running_with_runtime(self):
         """Test is_active returns True for running conversation with runtime."""
         conv = Conversation(

@@ -1,6 +1,7 @@
 """Tests for Kubernetes client utilities."""
 
 from datetime import datetime, timezone
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 from ohc.k8s.client import K8sClient, K8sClientError
@@ -251,7 +252,7 @@ class TestRuntimeDetector:
         mock_client.get_deployment_env_vars.side_effect = mock_get_env_vars
 
         # get_deployment returns deployment for runtime-api and openhands
-        def mock_get_deployment(name: str, namespace: str) -> dict | None:
+        def mock_get_deployment(name: str, namespace: str) -> Optional[dict]:
             if name in ["runtime-api", "openhands"]:
                 return {"name": name}
             return None
@@ -284,7 +285,7 @@ class TestRuntimeDetector:
 
         mock_client.get_deployment_env_vars.side_effect = mock_get_env_vars
 
-        def mock_get_deployment(name: str, namespace: str) -> dict | None:
+        def mock_get_deployment(name: str, namespace: str) -> Optional[dict]:
             if name in ["runtime-api", "openhands"]:
                 return {"name": name}
             return None

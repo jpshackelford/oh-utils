@@ -2,24 +2,74 @@
 Shared conversation display functionality for both CLI and interactive modes.
 """
 
+import os
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from .api import OpenHandsAPI
 
+# Default runtime domains for subdomain-based runtime ID extraction.
+# Additional domains can be added via OHC_RUNTIME_DOMAINS environment variable
+# (comma-separated list of domains).
+_DEFAULT_RUNTIME_DOMAINS = [
+    "prod-runtime.all-hands.dev",
+    "runtime.all-hands.dev",
+]
+
+
+def _get_runtime_domains() -> List[str]:
+    """Get runtime domains from env var (if set) combined with defaults."""
+    domains = list(_DEFAULT_RUNTIME_DOMAINS)
+    extra = os.environ.get("OHC_RUNTIME_DOMAINS", "").strip()
+    if extra:
+        domains.extend(d.strip() for d in extra.split(",") if d.strip())
+    return domains
+
+
+def _is_valid_runtime_id(value: str) -> bool:
+    """Validate runtime_id format (alphanumeric, at least 8 chars)."""
+    return bool(re.match(r"^[a-zA-Z0-9_-]{8,}$", value))
+
+
+def _extract_from_path(path: str) -> Optional[str]:
+    """Extract runtime_id from URL path (/{runtime_id}/api/conversations/...)."""
+    if "/api/conversations" not in path:
+        return None
+    path_before_api = path.split("/api/conversations")[0]
+    if not path_before_api or path_before_api == "/":
+        return None
+    runtime_id = path_before_api.lstrip("/")
+    if runtime_id and _is_valid_runtime_id(runtime_id):
+        return runtime_id
+    return None
+
+
+def _extract_from_subdomain(hostname: str) -> Optional[str]:
+    """Extract runtime_id from subdomain ({runtime_id}.prod-runtime.all-hands.dev)."""
+    parts = hostname.split(".")
+    if len(parts) < 4:
+        return None
+    domain_suffix = ".".join(parts[1:])
+    if domain_suffix in _get_runtime_domains():
+        runtime_id = parts[0]
+        if _is_valid_runtime_id(runtime_id):
+            return runtime_id
+    return None
+
 
 def _extract_runtime_id_from_url(url: str) -> Optional[str]:
     """Extract runtime_id from a conversation URL.
 
     Handles multiple URL formats:
-    1. Subdomain format (OpenHands Cloud):
-       https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conv_id}
-       -> runtime_id from hostname subdomain (only for known runtime domains)
-
-    2. Path format (Enterprise with RUNTIME_ROUTING_MODE=path):
+    1. Path format (Enterprise with RUNTIME_ROUTING_MODE=path):
        https://runtime-server/{runtime_id}/api/conversations/{conv_id}
        -> runtime_id from path before /api/conversations
+
+    2. Subdomain format (OpenHands Cloud):
+       https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conv_id}
+       -> runtime_id from hostname subdomain (only for known runtime domains)
 
     3. Relative URL (Enterprise without runtime info):
        /api/conversations/{conv_id}
@@ -29,49 +79,23 @@ def _extract_runtime_id_from_url(url: str) -> Optional[str]:
        https://server.example.com/api/conversations/{conv_id}
        -> Returns None (no runtime_id in URL)
 
+    Configuration:
+        Set OHC_RUNTIME_DOMAINS env var to add custom runtime domains
+        (comma-separated, e.g., "runtime.company.com,my-runtime.internal").
+
     Returns:
         The runtime_id if found, None otherwise.
     """
-    if not url:
-        return None
-
-    # Relative URLs don't contain runtime_id
-    if url.startswith("/"):
+    if not url or url.startswith("/"):
         return None
 
     try:
         parsed = urlparse(url)
-
-        # First, check for path-based routing: /{runtime_id}/api/conversations/...
-        # This is used by Enterprise deployments with RUNTIME_ROUTING_MODE=path
-        if "/api/conversations" in parsed.path:
-            path_before_api = parsed.path.split("/api/conversations")[0]
-            # path_before_api would be "/{runtime_id}" or empty
-            if path_before_api and path_before_api != "/":
-                # Strip leading slash to get runtime_id
-                runtime_id = path_before_api.lstrip("/")
-                if runtime_id:
-                    return runtime_id
-
-        # Second, check for subdomain-based routing:
-        # {runtime_id}.prod-runtime.all-hands.dev
-        # Only used by OpenHands Cloud with known runtime domains.
-        # We must be careful not to extract server names as runtime IDs.
-        if parsed.hostname:
-            parts = parsed.hostname.split(".")
-            # Only extract from subdomain if the domain looks like a runtime domain
-            # Known patterns: *.prod-runtime.all-hands.dev, *.runtime.all-hands.dev
-            if len(parts) >= 4:
-                # Check for known runtime domain patterns
-                domain_suffix = ".".join(parts[1:])
-                known_runtime_domains = [
-                    "prod-runtime.all-hands.dev",
-                    "runtime.all-hands.dev",
-                ]
-                if domain_suffix in known_runtime_domains:
-                    return parts[0]
-
-        return None
+        return (
+            _extract_from_path(parsed.path)
+            or (parsed.hostname and _extract_from_subdomain(parsed.hostname))
+            or None
+        )
     except (IndexError, AttributeError, ValueError):
         return None
 
