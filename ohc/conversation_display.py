@@ -2,6 +2,7 @@
 Shared conversation display functionality for both CLI and interactive modes.
 """
 
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -9,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from .api import OpenHandsAPI
+
+logger = logging.getLogger(__name__)
 
 # Default runtime domains for subdomain-based runtime ID extraction.
 # Additional domains can be added via OHC_RUNTIME_DOMAINS environment variable
@@ -202,17 +205,11 @@ class Conversation:
     def is_active(self) -> bool:
         """Check if conversation is currently active/running.
 
-        A conversation is active if:
-        - status is RUNNING and runtime_status indicates ready, OR
-        - status is RUNNING and we have a runtime_id (for compatibility)
+        A conversation is active if status is RUNNING and runtime_status indicates ready.
         """
         if self.status != "RUNNING":
             return False
-        # Check runtime_status first (available from list endpoint)
-        if self.runtime_status and "READY" in self.runtime_status:
-            return True
-        # Fallback to runtime_id check (for when we've fetched config)
-        return self.runtime_id is not None
+        return bool(self.runtime_status and "READY" in self.runtime_status)
 
     def short_id(self) -> str:
         """Get shortened conversation ID for display"""
@@ -267,8 +264,8 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
                 runtime_config = api.get_runtime_config(conversation_id)
                 if runtime_config and "runtime_id" in runtime_config:
                     conv.runtime_id = runtime_config["runtime_id"]
-            except Exception:
-                pass  # Silently ignore if endpoint not available
+            except Exception as e:
+                logger.debug(f"Could not fetch runtime config for {conversation_id}: {e}")
 
         print("\nConversation Details:")
         print(f"  ID: {conv.id}")

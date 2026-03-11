@@ -7,6 +7,7 @@ OpenHandsAPI instance rather than managing its own API key retrieval.
 """
 
 import json
+import logging
 import shutil
 import tempfile
 import time
@@ -16,6 +17,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .api import OpenHandsAPI
 from .conversation_display import Conversation, show_conversation_details
+
+logger = logging.getLogger(__name__)
 
 
 class TerminalFormatter:
@@ -206,20 +209,24 @@ class ConversationManager:
             print(f"✗ Failed to load conversations: {e}")
             return False
 
-    def _enrich_runtime_ids(self) -> None:
-        """Fetch runtime_id for active conversations that don't have it.
+    def _fetch_runtime_id_for_conversation(self, conv: Conversation) -> None:
+        """Fetch runtime_id from API for active conversations without it.
 
         This is needed for enterprise deployments where the conversation URL
         doesn't contain the runtime_id (it's a relative path).
         """
+        if conv.is_active() and not conv.runtime_id:
+            try:
+                runtime_config = self.api.get_runtime_config(conv.id)
+                if runtime_config and "runtime_id" in runtime_config:
+                    conv.runtime_id = runtime_config["runtime_id"]
+            except Exception as e:
+                logger.debug(f"Could not fetch runtime_id for {conv.id}: {e}")
+
+    def _enrich_runtime_ids(self) -> None:
+        """Fetch runtime_id for active conversations that don't have it."""
         for conv in self.conversations:
-            if conv.is_active() and not conv.runtime_id:
-                try:
-                    runtime_config = self.api.get_runtime_config(conv.id)
-                    if runtime_config and "runtime_id" in runtime_config:
-                        conv.runtime_id = runtime_config["runtime_id"]
-                except Exception:
-                    pass  # Silently ignore if endpoint not available
+            self._fetch_runtime_id_for_conversation(conv)
 
     def refresh_conversations(self) -> None:
         """Refresh current page of conversations"""
@@ -365,17 +372,7 @@ class ConversationManager:
             print(f"✗ Conversation {conv_id} not found")
             return None
         conv = Conversation.from_api_response(fresh_conv_data, self.api.base_url)
-
-        # Fetch runtime_id from config endpoint for running conversations
-        # (needed for enterprise deployments where URL doesn't contain runtime_id)
-        if conv.is_active() and not conv.runtime_id:
-            try:
-                runtime_config = self.api.get_runtime_config(conv_id)
-                if runtime_config and "runtime_id" in runtime_config:
-                    conv.runtime_id = runtime_config["runtime_id"]
-            except Exception:
-                pass  # Silently ignore if endpoint not available
-
+        self._fetch_runtime_id_for_conversation(conv)
         return conv
 
     def _get_changed_files(self, conv: Conversation) -> Optional[List[Dict[str, Any]]]:
