@@ -153,11 +153,14 @@ uv run ohc debug configure
 # List configured environments
 uv run ohc debug configure --list
 
-# Show full configuration details
+# Show full configuration details (includes runtime routing config)
 uv run ohc debug configure --show
 
 # Test cluster connectivity
 uv run ohc debug configure --test
+
+# Re-run detection to refresh configuration for an environment
+uv run ohc debug configure --refresh production
 
 # Set default environment
 uv run ohc debug configure --default production
@@ -175,9 +178,13 @@ uv run ohc debug health
 # Output includes:
 # - App cluster status and deployment health
 # - Runtime cluster status
+# - Runtime routing configuration (if detected)
 # - Runtime pod summary (running, pending, errors)
 # - Resource issues (OOMKilled, evicted, scheduling failures)
 # - Top issues with affected runtimes
+
+# JSON output for automation
+uv run ohc debug health --output json
 ```
 
 #### Runtime Investigation

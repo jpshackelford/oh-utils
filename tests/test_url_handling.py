@@ -25,7 +25,11 @@ class TestURLHandling:
         )
 
     def test_conversation_from_api_response_with_custom_domain(self):
-        """Test that Conversation.from_api_response works with custom domains."""
+        """Test that Conversation.from_api_response works with custom domains.
+
+        Custom domains without a known runtime URL pattern (like prod-runtime.all-hands.dev)
+        should NOT have runtime_id extracted from hostname to avoid false positives.
+        """
         # Test with custom domain (not prod-runtime.all-hands.dev)
         custom_url = "https://runtime-123.custom-k8s.example.com/workspace"
         api_data = {
@@ -45,31 +49,32 @@ class TestURLHandling:
         assert conv.title == "Test Conversation"
         assert conv.status == "RUNNING"
         assert conv.url == custom_url
-        # Runtime ID should be extracted from hostname for display purposes
-        assert conv.runtime_id == "runtime-123"
+        # Runtime ID should NOT be extracted from unknown domains
+        # to avoid mistakenly using server names as runtime IDs
+        assert conv.runtime_id is None
 
     def test_conversation_from_api_response_with_different_url_patterns(self):
         """Test that runtime ID extraction works with various URL patterns."""
         test_cases = [
-            # Standard prod-runtime pattern
+            # Standard prod-runtime pattern (known runtime domain)
             {
-                "url": "https://work-1-abc123.prod-runtime.all-hands.dev/workspace",
-                "expected_runtime_id": "work-1-abc123",
+                "url": "https://work1abc123.prod-runtime.all-hands.dev/workspace",
+                "expected_runtime_id": "work1abc123",
             },
-            # Custom domain with different pattern
+            # Path-based routing (enterprise with RUNTIME_ROUTING_MODE=path)
             {
-                "url": "https://runtime-xyz.internal.company.com/api",
-                "expected_runtime_id": "runtime-xyz",
+                "url": "https://runtime-server.company.com/runtimexyz/api/conversations/conv123",
+                "expected_runtime_id": "runtimexyz",
             },
-            # Different subdomain structure
+            # Custom domain without known pattern - should NOT extract runtime_id
             {
                 "url": "https://session-456.k8s-cluster.example.org/",
-                "expected_runtime_id": "session-456",
+                "expected_runtime_id": None,
             },
-            # IP address (should extract first part)
+            # IP address - should NOT extract runtime_id
             {
                 "url": "https://192.168.1.100:8080/workspace",
-                "expected_runtime_id": "192",
+                "expected_runtime_id": None,
             },
         ]
 
@@ -82,7 +87,9 @@ class TestURLHandling:
             }
 
             conv = Conversation.from_api_response(api_data)
-            assert conv.runtime_id == case["expected_runtime_id"]
+            assert conv.runtime_id == case["expected_runtime_id"], (
+                f"Failed for URL: {case['url']}"
+            )
             assert conv.url == case["url"]
 
     def test_conversation_from_api_response_with_invalid_url(self):
@@ -91,10 +98,8 @@ class TestURLHandling:
             {"url": "not-a-url", "expected_runtime_id": None},
             {"url": "", "expected_runtime_id": None},
             {"url": None, "expected_runtime_id": None},
-            {
-                "url": "ftp://invalid-protocol.com",
-                "expected_runtime_id": "invalid-protocol",
-            },  # This actually parses correctly
+            # FTP URL - should NOT extract runtime_id from non-runtime domains
+            {"url": "ftp://invalid-protocol.com", "expected_runtime_id": None},
         ]
 
         for case in test_cases:
@@ -107,7 +112,9 @@ class TestURLHandling:
 
             conv = Conversation.from_api_response(api_data)
             # Should not crash and runtime_id should match expected
-            assert conv.runtime_id == case["expected_runtime_id"]
+            assert conv.runtime_id == case["expected_runtime_id"], (
+                f"Failed for URL: {case['url']}"
+            )
             assert conv.url == case["url"]
 
     @responses.activate

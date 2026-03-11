@@ -2,10 +2,118 @@
 Shared conversation display functionality for both CLI and interactive modes.
 """
 
+import logging
+import os
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from .api import OpenHandsAPI
+
+logger = logging.getLogger(__name__)
+
+# Default runtime domains for subdomain-based runtime ID extraction.
+# Additional domains can be added via OHC_RUNTIME_DOMAINS environment variable
+# (comma-separated list of domains).
+_DEFAULT_RUNTIME_DOMAINS = [
+    "prod-runtime.all-hands.dev",
+    "runtime.all-hands.dev",
+]
+
+
+def _get_runtime_domains() -> List[str]:
+    """Get runtime domains from env var (if set) combined with defaults."""
+    domains = list(_DEFAULT_RUNTIME_DOMAINS)
+    extra = os.environ.get("OHC_RUNTIME_DOMAINS", "").strip()
+    if extra:
+        domains.extend(d.strip() for d in extra.split(",") if d.strip())
+    return domains
+
+
+def _is_valid_runtime_id(value: str) -> bool:
+    """Validate runtime_id format (alphanumeric, at least 8 chars)."""
+    return bool(re.match(r"^[a-zA-Z0-9_-]{8,}$", value))
+
+
+def _extract_from_path(path: str) -> Optional[str]:
+    """Extract runtime_id from URL path (/{runtime_id}/api/conversations/...)."""
+    if "/api/conversations" not in path:
+        return None
+    path_before_api = path.split("/api/conversations")[0]
+    if not path_before_api or path_before_api == "/":
+        return None
+    runtime_id = path_before_api.lstrip("/")
+    if runtime_id and _is_valid_runtime_id(runtime_id):
+        return runtime_id
+    return None
+
+
+def _extract_from_subdomain(hostname: str) -> Optional[str]:
+    """Extract runtime_id from subdomain ({runtime_id}.prod-runtime.all-hands.dev).
+
+    Handles domains of any depth by checking all possible domain suffixes.
+    For example, with `OHC_RUNTIME_DOMAINS=example.com`:
+    - `runtime123.example.com` → matches suffix `example.com`, returns `runtime123`
+    """
+    parts = hostname.split(".")
+    if len(parts) < 2:
+        return None
+
+    runtime_domains = _get_runtime_domains()
+    for i in range(len(parts) - 1):
+        domain_suffix = ".".join(parts[i + 1 :])
+        if domain_suffix in runtime_domains:
+            runtime_id = parts[i]
+            if _is_valid_runtime_id(runtime_id):
+                return runtime_id
+    return None
+
+
+def _extract_runtime_id_from_url(url: str) -> Optional[str]:
+    """Extract runtime_id from a conversation URL.
+
+    Handles multiple URL formats:
+    1. Path format (Enterprise with RUNTIME_ROUTING_MODE=path):
+       https://runtime-server/{runtime_id}/api/conversations/{conv_id}
+       -> runtime_id from path before /api/conversations
+
+    2. Subdomain format (OpenHands Cloud):
+       https://{runtime_id}.prod-runtime.all-hands.dev/api/conversations/{conv_id}
+       -> runtime_id from hostname subdomain (only for known runtime domains)
+
+    3. Subdomain format (Enterprise with pattern matching):
+       https://{runtime_id}.runtime.{cluster}.r9.all-hands.dev/...
+       e.g., https://upjdgissrjizlbzi.runtime.jps01.r9.all-hands.dev/...
+       -> runtime_id from hostname subdomain (for *.runtime.*.all-hands.dev patterns)
+
+    4. Relative URL (Enterprise without runtime info):
+       /api/conversations/{conv_id}
+       -> Returns None (no runtime_id available)
+
+    5. Server URL without runtime info:
+       https://server.example.com/api/conversations/{conv_id}
+       -> Returns None (no runtime_id in URL)
+
+    Configuration:
+        Set OHC_RUNTIME_DOMAINS env var to add custom runtime domains
+        (comma-separated, e.g., "runtime.company.com,my-runtime.internal").
+
+    Returns:
+        The runtime_id if found, None otherwise.
+    """
+    if not url or url.startswith("/"):
+        return None
+
+    try:
+        parsed = urlparse(url)
+        return (
+            _extract_from_path(parsed.path)
+            or (parsed.hostname and _extract_from_subdomain(parsed.hostname))
+            or None
+        )
+    except (IndexError, AttributeError, ValueError):
+        return None
 
 
 @dataclass
@@ -53,28 +161,12 @@ class Conversation:
                 base = base[:-4]
             url = urljoin(base, url)
 
-        # Extract runtime ID from multiple sources for maximum compatibility
-        # Priority: 1) Direct runtime_id field, 2) URL hostname, 3) sandbox_id,
-        #           4) conversation_id (fallback for enterprise servers)
-        runtime_id = data.get("runtime_id")  # Some servers may provide this directly
+        # Extract runtime ID from API response or URL
+        runtime_id = data.get("runtime_id")  # Some servers provide this directly
 
         # Try to extract from URL if not directly provided
         if not runtime_id and url:
-            try:
-                # Try to extract runtime ID from URL for display purposes
-                # This is more flexible and doesn't assume specific domain patterns
-                from urllib.parse import urlparse
-
-                parsed_url = urlparse(url)
-                if parsed_url.hostname:
-                    # Extract the first part of the hostname as runtime ID
-                    runtime_id = parsed_url.hostname.split(".")[0]
-            except (IndexError, AttributeError, ValueError):
-                pass
-
-        # V1 fallback: use sandbox_id if available and no runtime_id yet
-        if not runtime_id:
-            runtime_id = data.get("sandbox_id")
+            runtime_id = _extract_runtime_id_from_url(url)
 
         # Handle both v0 and v1 API response formats
         conversation_id = data.get("conversation_id") or data.get("id", "")
@@ -111,8 +203,10 @@ class Conversation:
         )
 
     def is_active(self) -> bool:
-        """Check if conversation is currently active/running"""
-        return self.status == "RUNNING" and self.runtime_id is not None
+        """Check if conversation is currently active/running."""
+        if self.status != "RUNNING":
+            return False
+        return bool(self.runtime_status and "READY" in self.runtime_status)
 
     def short_id(self) -> str:
         """Get shortened conversation ID for display"""
@@ -159,6 +253,16 @@ def show_conversation_details(api: OpenHandsAPI, conversation_id: str) -> None:
             print(f"Error: Conversation {conversation_id} not found")
             return
         conv = Conversation.from_api_response(data, api.base_url)
+
+        # If runtime_id is not available from the conversation data,
+        # try to fetch it from the runtime config endpoint (for enterprise deployments)
+        if not conv.runtime_id and conv.status == "RUNNING":
+            try:
+                runtime_config = api.get_runtime_config(conversation_id)
+                if runtime_config and "runtime_id" in runtime_config:
+                    conv.runtime_id = runtime_config["runtime_id"]
+            except Exception as e:
+                logger.debug(f"Could not fetch runtime config for {conv.id}: {e}")
 
         print("\nConversation Details:")
         print(f"  ID: {conv.id}")

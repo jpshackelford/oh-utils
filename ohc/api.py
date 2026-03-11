@@ -103,6 +103,23 @@ class OpenHandsAPI:
         """Get conversation details using the selected API version."""
         return self._client.get_conversation(conversation_id)
 
+    def get_runtime_config(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+        """Get runtime configuration for a conversation.
+
+        This is useful for enterprise deployments where the runtime_id
+        may not be extractable from the conversation URL.
+
+        Args:
+            conversation_id: Full conversation ID
+
+        Returns:
+            Dictionary containing runtime_id and session_id, or None if unavailable
+        """
+        if self.version == "v0":
+            return cast("V0API", self._client).get_runtime_config(conversation_id)
+        # V1 doesn't need this - sandbox_id is already in conversation data
+        return None
+
     def create_conversation(self) -> Dict[str, Any]:
         """Create a new conversation using the selected API version."""
         return self._client.create_conversation()

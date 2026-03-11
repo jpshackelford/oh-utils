@@ -7,6 +7,7 @@ OpenHandsAPI instance rather than managing its own API key retrieval.
 """
 
 import json
+import logging
 import shutil
 import tempfile
 import time
@@ -16,6 +17,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .api import OpenHandsAPI
 from .conversation_display import Conversation, show_conversation_details
+
+logger = logging.getLogger(__name__)
 
 
 class TerminalFormatter:
@@ -76,29 +79,33 @@ class TerminalFormatter:
             20, width - num_width - id_width - status_width - runtime_width - 4
         )  # 4 for separators
 
-        # Header
+        # Header - no trailing padding on last column to avoid line wrap
         header = (
             f"{'#':>{num_width - 2}}  "  # Right-align number with 2 spaces
             f"{'ID':<{id_width}} "
             f"{'Status':<{status_width}} "
             f"{'Runtime':<{runtime_width}} "
-            f"{'Title':<{title_width}}"
+            f"{'Title'}"
         )
 
-        separator = "─" * min(len(header), width - 1)
+        # Separator - keep it shorter than terminal width to avoid wrapping
+        total_width = num_width + id_width + status_width + runtime_width + title_width
+        separator = "─" * min(total_width, width - 2)
 
         lines = [header, separator]
 
         # Conversation rows
         for i, conv in enumerate(conversations, start_index + 1):
-            runtime_display = conv.runtime_id or "─"
+            # Only show runtime_id for active conversations
+            runtime_display = conv.runtime_id if conv.is_active() else "─"
 
+            # No trailing padding on title to avoid line wrap at terminal edge
             row = (
                 f"{i:>{num_width - 2}}  "  # Right-align number with 2 spaces
                 f"{conv.short_id():<{id_width}} "
                 f"{conv.status_display():<{status_width}} "
                 f"{runtime_display:<{runtime_width}} "
-                f"{conv.formatted_title(title_width):<{title_width}}"
+                f"{conv.formatted_title(title_width)}"
             )
 
             lines.append(row)
@@ -193,10 +200,33 @@ class ConversationManager:
                 for data in conversations_data
             ]
 
+            # Fetch runtime_id for active conversations that don't have it
+            # (needed for enterprise deployments where URL doesn't contain runtime_id)
+            self._enrich_runtime_ids()
+
             return True
         except Exception as e:
             print(f"✗ Failed to load conversations: {e}")
             return False
+
+    def _fetch_runtime_id_for_conversation(self, conv: Conversation) -> None:
+        """Fetch runtime_id from API for active conversations without it.
+
+        This is needed for enterprise deployments where the conversation URL
+        doesn't contain the runtime_id (it's a relative path).
+        """
+        if conv.is_active() and not conv.runtime_id:
+            try:
+                runtime_config = self.api.get_runtime_config(conv.id)
+                if runtime_config and "runtime_id" in runtime_config:
+                    conv.runtime_id = runtime_config["runtime_id"]
+            except Exception as e:
+                logger.debug(f"Could not fetch runtime_id for {conv.id}: {e}")
+
+    def _enrich_runtime_ids(self) -> None:
+        """Fetch runtime_id for active conversations that don't have it."""
+        for conv in self.conversations:
+            self._fetch_runtime_id_for_conversation(conv)
 
     def refresh_conversations(self) -> None:
         """Refresh current page of conversations"""
@@ -336,12 +366,14 @@ class ConversationManager:
             print(f"❌ Failed to download files: {e}")
 
     def _get_fresh_conversation(self, conv_id: str) -> Optional[Conversation]:
-        """Get fresh conversation data from API."""
+        """Get fresh conversation data from API, including runtime_id if running."""
         fresh_conv_data = self.api.get_conversation(conv_id)
         if fresh_conv_data is None:
             print(f"✗ Conversation {conv_id} not found")
             return None
-        return Conversation.from_api_response(fresh_conv_data, self.api.base_url)
+        conv = Conversation.from_api_response(fresh_conv_data, self.api.base_url)
+        self._fetch_runtime_id_for_conversation(conv)
+        return conv
 
     def _get_changed_files(self, conv: Conversation) -> Optional[List[Dict[str, Any]]]:
         """Get list of changed files for a conversation."""

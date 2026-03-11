@@ -1,6 +1,7 @@
 """Tests for Kubernetes client utilities."""
 
 from datetime import datetime, timezone
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 from ohc.k8s.client import K8sClient, K8sClientError
@@ -92,6 +93,37 @@ class TestDetectedRuntimeConfig:
         assert "DIFFERENT cluster" in desc
         assert "myproject" in desc
 
+    def test_get_routing_description_with_pattern(self) -> None:
+        config = DetectedRuntimeConfig(
+            same_cluster=True,
+            namespace="runtime-pods",
+            runtime_routing_mode="path",
+            runtime_url_pattern="https://runtime.example.com/{runtime_id}",
+        )
+        desc = config.get_routing_description()
+        assert desc is not None
+        assert "path" in desc
+        assert "https://runtime.example.com/{runtime_id}" in desc
+
+    def test_get_routing_description_with_base_url(self) -> None:
+        config = DetectedRuntimeConfig(
+            same_cluster=True,
+            namespace="runtime-pods",
+            runtime_routing_mode="subdomain",
+            runtime_base_url="runtime.example.com",
+        )
+        desc = config.get_routing_description()
+        assert desc is not None
+        assert "subdomain" in desc
+        assert "runtime.example.com" in desc
+
+    def test_get_routing_description_none(self) -> None:
+        config = DetectedRuntimeConfig(
+            same_cluster=True,
+            namespace="runtime-pods",
+        )
+        assert config.get_routing_description() is None
+
 
 class TestRuntimeDetector:
     """Tests for RuntimeDetector."""
@@ -176,6 +208,95 @@ class TestRuntimeDetector:
 
         result = detector.match_context_to_detected(detected, contexts)
         assert result == "gke_myproject_us-west1_runtime-cluster"
+
+    def test_detect_routing_config_from_runtime_api(self) -> None:
+        """Test detection of routing config from runtime-api deployment."""
+        mock_client = MagicMock(spec=K8sClient)
+        # Simulate runtime-api env vars
+        mock_client.get_deployment_env_vars.return_value = {
+            "RUNTIME_IN_SAME_CLUSTER": "true",
+            "K8S_NAMESPACE": "runtime-pods",
+            "RUNTIME_BASE_URL": "runtime.example.com",
+            "RUNTIME_ROUTING_MODE": "path",
+        }
+        # get_deployment returns None for app deployments (no app deployment found)
+        mock_client.get_deployment.side_effect = lambda name, ns: (
+            {"name": name} if name in ["runtime-api", "openhands-runtime-api"] else None
+        )
+
+        detector = RuntimeDetector(mock_client)
+        result = detector.detect("openhands")
+
+        assert result is not None
+        assert result.runtime_base_url == "runtime.example.com"
+        assert result.runtime_routing_mode == "path"
+
+    def test_detect_url_pattern_from_app_deployment(self) -> None:
+        """Test detection of RUNTIME_URL_PATTERN from app deployment."""
+        mock_client = MagicMock(spec=K8sClient)
+
+        # First call for runtime-api, second for openhands app
+        def mock_get_env_vars(name: str, namespace: str) -> dict:
+            if name in ["runtime-api", "openhands-runtime-api"]:
+                return {
+                    "RUNTIME_IN_SAME_CLUSTER": "true",
+                    "K8S_NAMESPACE": "runtime-pods",
+                }
+            elif name in ["openhands", "openhands-server", "app"]:
+                return {
+                    "RUNTIME_URL_PATTERN": "https://runtime.example.com/{runtime_id}",
+                    "RUNTIME_ROUTING_MODE": "path",
+                }
+            return {}
+
+        mock_client.get_deployment_env_vars.side_effect = mock_get_env_vars
+
+        # get_deployment returns deployment for runtime-api and openhands
+        def mock_get_deployment(name: str, namespace: str) -> Optional[dict]:
+            if name in ["runtime-api", "openhands"]:
+                return {"name": name}
+            return None
+
+        mock_client.get_deployment.side_effect = mock_get_deployment
+
+        detector = RuntimeDetector(mock_client)
+        result = detector.detect("openhands")
+
+        assert result is not None
+        assert result.runtime_url_pattern == "https://runtime.example.com/{runtime_id}"
+        assert result.runtime_routing_mode == "path"
+
+    def test_detect_routing_mode_fallback_to_app(self) -> None:
+        """Test that RUNTIME_ROUTING_MODE falls back to app deployment if not in runtime-api."""
+        mock_client = MagicMock(spec=K8sClient)
+
+        def mock_get_env_vars(name: str, namespace: str) -> dict:
+            if name in ["runtime-api", "openhands-runtime-api"]:
+                return {
+                    "RUNTIME_IN_SAME_CLUSTER": "true",
+                    "K8S_NAMESPACE": "runtime-pods",
+                    # No RUNTIME_ROUTING_MODE here
+                }
+            elif name in ["openhands", "openhands-server", "app"]:
+                return {
+                    "RUNTIME_ROUTING_MODE": "subdomain",
+                }
+            return {}
+
+        mock_client.get_deployment_env_vars.side_effect = mock_get_env_vars
+
+        def mock_get_deployment(name: str, namespace: str) -> Optional[dict]:
+            if name in ["runtime-api", "openhands"]:
+                return {"name": name}
+            return None
+
+        mock_client.get_deployment.side_effect = mock_get_deployment
+
+        detector = RuntimeDetector(mock_client)
+        result = detector.detect("openhands")
+
+        assert result is not None
+        assert result.runtime_routing_mode == "subdomain"
 
 
 class TestRuntimePod:

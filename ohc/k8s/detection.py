@@ -33,6 +33,10 @@ class DetectedRuntimeConfig:
     gke_cluster_name: Optional[str] = None
     aws_region: Optional[str] = None
     eks_cluster_name: Optional[str] = None
+    # Runtime URL routing configuration
+    runtime_url_pattern: Optional[str] = None  # e.g., "https://server/{runtime_id}"
+    runtime_routing_mode: Optional[str] = None  # "path" or "subdomain"
+    runtime_base_url: Optional[str] = None  # e.g., "runtime.example.com"
 
     def construct_gke_context(self) -> Optional[str]:
         """Construct GKE context name from detected settings."""
@@ -57,13 +61,30 @@ class DetectedRuntimeConfig:
             parts.append(f"Namespace: {self.namespace}")
             return ", ".join(parts)
 
+    def get_routing_description(self) -> Optional[str]:
+        """Get human-readable description of runtime URL routing config."""
+        if not self.runtime_url_pattern and not self.runtime_routing_mode:
+            return None
+
+        parts = []
+        if self.runtime_routing_mode:
+            parts.append(f"Mode: {self.runtime_routing_mode}")
+        if self.runtime_url_pattern:
+            parts.append(f"Pattern: {self.runtime_url_pattern}")
+        elif self.runtime_base_url:
+            parts.append(f"Base URL: {self.runtime_base_url}")
+        return ", ".join(parts) if parts else None
+
 
 class RuntimeDetector:
     """Detects runtime configuration from deployed OpenHands Enterprise."""
 
     # Support both naming conventions used in different deployments
     RUNTIME_API_DEPLOYMENT_NAMES = ["openhands-runtime-api", "runtime-api"]
-    ENV_VARS_TO_DETECT = [
+    APP_DEPLOYMENT_NAMES = ["openhands", "openhands-server", "app"]
+
+    # Env vars to detect from runtime-api deployment
+    RUNTIME_API_ENV_VARS = [
         "RUNTIME_IN_SAME_CLUSTER",
         "K8S_NAMESPACE",
         "GKE_CLUSTER_NAME",
@@ -71,6 +92,16 @@ class RuntimeDetector:
         "GCP_REGION",
         "AWS_REGION",
         "CLUSTER_NAME",
+        # Routing configuration
+        "RUNTIME_BASE_URL",
+        "RUNTIME_ROUTING_MODE",
+        "RUNTIME_URL_SEPARATOR",
+    ]
+
+    # Env vars to detect from app deployment (for URL pattern)
+    APP_ENV_VARS = [
+        "RUNTIME_URL_PATTERN",
+        "RUNTIME_ROUTING_MODE",
     ]
 
     def __init__(self, client: K8sClient) -> None:
@@ -85,9 +116,27 @@ class RuntimeDetector:
                 return name
         return None
 
+    def _find_app_deployment_name(self, app_namespace: str) -> Optional[str]:
+        """Find the actual app deployment name in the namespace."""
+        for name in self.APP_DEPLOYMENT_NAMES:
+            dep = self.client.get_deployment(name, app_namespace)
+            if dep is not None:
+                return name
+        return None
+
+    def _get_app_env_vars(self, app_namespace: str) -> dict:
+        """Get environment variables from the app deployment."""
+        app_deployment = self._find_app_deployment_name(app_namespace)
+        if not app_deployment:
+            return {}
+        try:
+            return self.client.get_deployment_env_vars(app_deployment, app_namespace)
+        except K8sClientError:
+            return {}
+
     def detect(self, app_namespace: str) -> Optional[DetectedRuntimeConfig]:
         """
-        Detect runtime configuration from runtime-api deployment.
+        Detect runtime configuration from runtime-api and app deployments.
 
         Args:
             app_namespace: Namespace where OpenHands Enterprise is deployed
@@ -97,30 +146,63 @@ class RuntimeDetector:
         """
         try:
             deployment_name = self._find_runtime_api_deployment_name(app_namespace)
-            if not deployment_name:
-                return None
 
-            env_vars = self.client.get_deployment_env_vars(
-                deployment_name, app_namespace
-            )
+            # Get app env vars once (used by both runtime-api and fallback paths)
+            app_env_vars = self._get_app_env_vars(app_namespace)
 
-            if not env_vars:
-                return None
+            # If runtime-api exists, get config from it
+            if deployment_name:
+                env_vars = self.client.get_deployment_env_vars(
+                    deployment_name, app_namespace
+                )
 
-            same_cluster_str = env_vars.get("RUNTIME_IN_SAME_CLUSTER", "true")
-            same_cluster = same_cluster_str.lower() in ("true", "1", "yes")
+                if not env_vars:
+                    return None
 
-            namespace = env_vars.get("K8S_NAMESPACE", "runtime-pods")
+                same_cluster_str = env_vars.get("RUNTIME_IN_SAME_CLUSTER", "true")
+                same_cluster = same_cluster_str.lower() in ("true", "1", "yes")
 
-            return DetectedRuntimeConfig(
-                same_cluster=same_cluster,
-                namespace=namespace,
-                gcp_project=env_vars.get("GCP_PROJECT"),
-                gcp_region=env_vars.get("GCP_REGION"),
-                gke_cluster_name=env_vars.get("GKE_CLUSTER_NAME"),
-                aws_region=env_vars.get("AWS_REGION"),
-                eks_cluster_name=env_vars.get("CLUSTER_NAME"),
-            )
+                namespace = env_vars.get("K8S_NAMESPACE", "runtime-pods")
+
+                # Get routing config from runtime-api deployment
+                runtime_base_url = env_vars.get("RUNTIME_BASE_URL")
+                runtime_routing_mode = env_vars.get("RUNTIME_ROUTING_MODE")
+
+                # Also check app deployment for RUNTIME_URL_PATTERN
+                # (this is where it's typically set in helm values)
+                runtime_url_pattern = app_env_vars.get("RUNTIME_URL_PATTERN")
+
+                # App deployment may also have RUNTIME_ROUTING_MODE
+                if not runtime_routing_mode:
+                    runtime_routing_mode = app_env_vars.get("RUNTIME_ROUTING_MODE")
+
+                return DetectedRuntimeConfig(
+                    same_cluster=same_cluster,
+                    namespace=namespace,
+                    gcp_project=env_vars.get("GCP_PROJECT"),
+                    gcp_region=env_vars.get("GCP_REGION"),
+                    gke_cluster_name=env_vars.get("GKE_CLUSTER_NAME"),
+                    aws_region=env_vars.get("AWS_REGION"),
+                    eks_cluster_name=env_vars.get("CLUSTER_NAME"),
+                    runtime_url_pattern=runtime_url_pattern,
+                    runtime_routing_mode=runtime_routing_mode,
+                    runtime_base_url=runtime_base_url,
+                )
+
+            # Fallback: No runtime-api deployment, but check app deployment
+            # for RUNTIME_URL_PATTERN (some deployments don't use runtime-api)
+            runtime_url_pattern = app_env_vars.get("RUNTIME_URL_PATTERN")
+            runtime_routing_mode = app_env_vars.get("RUNTIME_ROUTING_MODE")
+
+            if runtime_url_pattern or runtime_routing_mode:
+                return DetectedRuntimeConfig(
+                    same_cluster=False,  # Assume different cluster if no runtime-api
+                    namespace="runtime-pods",  # Default namespace
+                    runtime_url_pattern=runtime_url_pattern,
+                    runtime_routing_mode=runtime_routing_mode,
+                )
+
+            return None
         except K8sClientError:
             return None
 
