@@ -142,6 +142,7 @@ class RuntimeQuery:
         - Exact match on session_id
         - Prefix match on runtime_id (for truncated IDs from list output)
         - Prefix match on pod name
+        - Substring match (e.g., "abc123" matches "runtime-abc123...")
 
         Returns:
             RuntimePod if exactly one match is found, None otherwise.
@@ -166,19 +167,28 @@ class RuntimeQuery:
         if len(matches) == 1:
             return matches[0]
 
+        # Third pass: substring match (e.g., "abc123" matches "runtime-abc123")
+        # Only if no prefix matches found
+        if not matches:
+            for pod in pods:
+                if runtime_id in pod.runtime_id or runtime_id in pod.name:
+                    matches.append(pod)
+            if len(matches) == 1:
+                return matches[0]
+
         return None
 
     def find_runtime_pods(self, runtime_id: str, namespace: str) -> List["RuntimePod"]:
-        """Find all runtime pods matching an ID or prefix.
+        """Find all runtime pods matching an ID, prefix, or substring.
 
         Unlike get_runtime_pod(), this returns all matches, useful for
-        providing feedback when a prefix is ambiguous.
+        providing feedback when a search term is ambiguous.
         """
         pods = self.list_runtime_pods(namespace)
         matches = []
 
         for pod in pods:
-            # Check exact or prefix match
+            # Check exact, prefix, or substring match
             is_exact = (
                 pod.runtime_id == runtime_id
                 or pod.name == runtime_id
@@ -187,7 +197,8 @@ class RuntimeQuery:
             is_prefix = pod.runtime_id.startswith(runtime_id) or pod.name.startswith(
                 runtime_id
             )
-            if is_exact or is_prefix:
+            is_substring = runtime_id in pod.runtime_id or runtime_id in pod.name
+            if is_exact or is_prefix or is_substring:
                 matches.append(pod)
 
         return matches

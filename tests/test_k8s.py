@@ -618,6 +618,29 @@ class TestRuntimeQuery:
         assert pod is not None
         assert pod.runtime_id == "runtime-fhwqbshpikab"
 
+    def test_get_runtime_pod_by_substring(self) -> None:
+        """Substring matching should work when user omits 'runtime-' prefix."""
+        mock_client = MagicMock(spec=K8sClient)
+        mock_client.list_pods.return_value = [
+            {
+                "name": "runtime-eovtvmvpedxy",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-eovtvmvpedxy"},
+                "container_statuses": [],
+                "resources": {},
+            }
+        ]
+
+        query = RuntimeQuery(mock_client)
+        # User provides ID without 'runtime-' prefix
+        pod = query.get_runtime_pod("eovtvmvped", "runtime-pods")
+
+        assert pod is not None
+        assert pod.runtime_id == "runtime-eovtvmvpedxy"
+
     def test_get_runtime_pod_prefix_ambiguous_returns_none(self) -> None:
         """Ambiguous prefix should return None (caller should use find_runtime_pods)."""
         mock_client = MagicMock(spec=K8sClient)
