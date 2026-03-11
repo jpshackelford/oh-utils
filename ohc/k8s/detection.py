@@ -147,6 +147,9 @@ class RuntimeDetector:
         try:
             deployment_name = self._find_runtime_api_deployment_name(app_namespace)
 
+            # Get app env vars once (used by both runtime-api and fallback paths)
+            app_env_vars = self._get_app_env_vars(app_namespace)
+
             # If runtime-api exists, get config from it
             if deployment_name:
                 env_vars = self.client.get_deployment_env_vars(
@@ -167,7 +170,6 @@ class RuntimeDetector:
 
                 # Also check app deployment for RUNTIME_URL_PATTERN
                 # (this is where it's typically set in helm values)
-                app_env_vars = self._get_app_env_vars(app_namespace)
                 runtime_url_pattern = app_env_vars.get("RUNTIME_URL_PATTERN")
 
                 # App deployment may also have RUNTIME_ROUTING_MODE
@@ -189,7 +191,6 @@ class RuntimeDetector:
 
             # Fallback: No runtime-api deployment, but check app deployment
             # for RUNTIME_URL_PATTERN (some deployments don't use runtime-api)
-            app_env_vars = self._get_app_env_vars(app_namespace)
             runtime_url_pattern = app_env_vars.get("RUNTIME_URL_PATTERN")
             runtime_routing_mode = app_env_vars.get("RUNTIME_ROUTING_MODE")
 

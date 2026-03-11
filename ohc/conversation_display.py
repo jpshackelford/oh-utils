@@ -47,15 +47,23 @@ def _extract_from_path(path: str) -> Optional[str]:
 
 
 def _extract_from_subdomain(hostname: str) -> Optional[str]:
-    """Extract runtime_id from subdomain ({runtime_id}.prod-runtime.all-hands.dev)."""
+    """Extract runtime_id from subdomain ({runtime_id}.prod-runtime.all-hands.dev).
+
+    Handles domains of any depth by checking all possible domain suffixes.
+    For example, with `OHC_RUNTIME_DOMAINS=example.com`:
+    - `runtime123.example.com` → matches suffix `example.com`, returns `runtime123`
+    """
     parts = hostname.split(".")
-    if len(parts) < 4:
+    if len(parts) < 2:
         return None
-    domain_suffix = ".".join(parts[1:])
-    if domain_suffix in _get_runtime_domains():
-        runtime_id = parts[0]
-        if _is_valid_runtime_id(runtime_id):
-            return runtime_id
+
+    runtime_domains = _get_runtime_domains()
+    for i in range(len(parts) - 1):
+        domain_suffix = ".".join(parts[i + 1 :])
+        if domain_suffix in runtime_domains:
+            runtime_id = parts[i]
+            if _is_valid_runtime_id(runtime_id):
+                return runtime_id
     return None
 
 

@@ -175,32 +175,23 @@ def _test_connectivity(config_manager: DebugConfigManager) -> None:
         click.echo()
 
 
-def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> None:
-    """Re-run detection and refresh config for an existing environment."""
-    env = config_manager.get_environment(env_name)
-    if not env:
-        raise click.ClickException(f"Environment '{env_name}' not found")
+def _detect_runtime_config(
+    env: Any, app_client: K8sClient
+) -> tuple[Any, RuntimeDetector]:
+    """Detect runtime configuration from clusters.
 
-    click.echo(f"Refreshing configuration for '{env_name}'...")
-    click.echo()
+    Returns:
+        Tuple of (detected config or None, detector used for app cluster)
+    """
+    from ..debug_config import EnvironmentConfig
 
-    # Connect to app cluster
-    try:
-        app_client = K8sClient(env.app.kube_context)
-    except K8sClientError as e:
-        raise click.ClickException(f"Could not connect to app cluster: {e}") from None
+    env_config: EnvironmentConfig = env
+    runtime_config = env_config.get_runtime_config()
+    is_two_cluster = runtime_config.kube_context != env_config.app.kube_context
 
-    # Detect runtime configuration
-    # For two-cluster setups, runtime-api is in the runtime cluster
-    click.echo("Detecting runtime configuration...")
-    runtime_config = env.get_runtime_config()
-    is_two_cluster = runtime_config.kube_context != env.app.kube_context
-
-    # First try app cluster (same-cluster setup)
     detector = RuntimeDetector(app_client)
-    detected = detector.detect(env.app.namespace)
+    detected = detector.detect(env_config.app.namespace)
 
-    # If not found and this is a two-cluster setup, try runtime cluster
     if detected is None and is_two_cluster:
         try:
             runtime_client = K8sClient(runtime_config.kube_context)
@@ -209,18 +200,30 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
         except K8sClientError as e:
             click.echo(f"⚠ Could not connect to runtime cluster: {e}")
 
+    return detected, detector
+
+
+def _update_routing_config(
+    config_manager: DebugConfigManager,
+    env_name: str,
+    env: Any,
+    detected: Any,
+    detector: RuntimeDetector,
+) -> list[str]:
+    """Update routing config and return list of changes made."""
+    from ..debug_config import EnvironmentConfig
+
+    env_config: EnvironmentConfig = env
     changes: list[str] = []
 
     if detected:
-        # Check if we found runtime-api or just app deployment with routing
-        has_runtime_api = detector.find_runtime_api_deployment(env.app.namespace)
+        has_runtime_api = detector.find_runtime_api_deployment(env_config.app.namespace)
         if has_runtime_api:
             click.echo("✓ Found runtime-api deployment")
         else:
             click.echo("✓ Found runtime routing config (from app deployment)")
 
-        # Check for routing config changes
-        old_routing = env.get_routing_config()
+        old_routing = env_config.get_routing_config()
         new_url_pattern = detected.runtime_url_pattern
         new_routing_mode = detected.runtime_routing_mode
         new_base_url = detected.runtime_base_url
@@ -229,24 +232,25 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
             routing_desc = detected.get_routing_description()
             click.echo(f"✓ Runtime routing: {routing_desc}")
 
-            # Check if routing changed
             if old_routing:
                 if old_routing.url_pattern != new_url_pattern:
-                    old = old_routing.url_pattern or "N/A"
-                    new = new_url_pattern or "N/A"
-                    changes.append(f"URL pattern: {old} → {new}")
+                    changes.append(
+                        f"URL pattern: {old_routing.url_pattern or 'N/A'} → "
+                        f"{new_url_pattern or 'N/A'}"
+                    )
                 if old_routing.routing_mode != new_routing_mode:
-                    old = old_routing.routing_mode or "N/A"
-                    new = new_routing_mode or "N/A"
-                    changes.append(f"Routing mode: {old} → {new}")
+                    changes.append(
+                        f"Routing mode: {old_routing.routing_mode or 'N/A'} → "
+                        f"{new_routing_mode or 'N/A'}"
+                    )
                 if old_routing.base_url != new_base_url:
-                    old = old_routing.base_url or "N/A"
-                    new = new_base_url or "N/A"
-                    changes.append(f"Base URL: {old} → {new}")
+                    changes.append(
+                        f"Base URL: {old_routing.base_url or 'N/A'} → "
+                        f"{new_base_url or 'N/A'}"
+                    )
             else:
                 changes.append("Added routing configuration")
 
-            # Update routing config
             config_manager.update_environment_routing(
                 name=env_name,
                 runtime_url_pattern=new_url_pattern,
@@ -263,13 +267,17 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
         click.echo("⚠ Could not detect runtime configuration")
         click.echo("  (runtime-api deployment not found)")
 
-    # Detect application endpoint
+    return changes
+
+
+def _detect_and_report_endpoint(app_client: K8sClient, namespace: str) -> None:
+    """Detect and report application endpoint."""
     click.echo()
     click.echo("Detecting application endpoint...")
 
     try:
         endpoint_detector = AppEndpointDetector(app_client)
-        endpoint = endpoint_detector.detect(env.app.namespace)
+        endpoint = endpoint_detector.detect(namespace)
         if endpoint:
             click.echo(f"✓ Detected endpoint: {endpoint.url}")
             click.echo(f"  Source: {endpoint.source}")
@@ -278,7 +286,9 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
     except K8sClientError as e:
         click.echo(f"⚠ Could not detect endpoint: {e}")
 
-    # Report changes
+
+def _report_config_changes(changes: list[str]) -> None:
+    """Report configuration changes to the user."""
     click.echo()
     if changes:
         click.echo("Changes applied:")
@@ -288,6 +298,29 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
         click.echo("✓ Configuration updated")
     else:
         click.echo("✓ No changes needed - configuration is up to date")
+
+
+def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> None:
+    """Re-run detection and refresh config for an existing environment."""
+    env = config_manager.get_environment(env_name)
+    if not env:
+        raise click.ClickException(f"Environment '{env_name}' not found")
+
+    click.echo(f"Refreshing configuration for '{env_name}'...")
+    click.echo()
+
+    try:
+        app_client = K8sClient(env.app.kube_context)
+    except K8sClientError as e:
+        raise click.ClickException(f"Could not connect to app cluster: {e}") from None
+
+    click.echo("Detecting runtime configuration...")
+    detected, detector = _detect_runtime_config(env, app_client)
+
+    changes = _update_routing_config(config_manager, env_name, env, detected, detector)
+
+    _detect_and_report_endpoint(app_client, env.app.namespace)
+    _report_config_changes(changes)
 
 
 def _select_runtime_context(contexts: list[dict[str, Any]], app_context: str) -> str:

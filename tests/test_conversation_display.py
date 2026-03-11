@@ -342,6 +342,61 @@ class TestConversation:
             else:
                 os.environ["OHC_RUNTIME_DOMAINS"] = old_val
 
+    def test_from_api_response_three_part_custom_domain(self):
+        """Test runtime_id extraction with 3-part domain like example.com."""
+        import os
+
+        old_val = os.environ.get("OHC_RUNTIME_DOMAINS")
+        try:
+            os.environ["OHC_RUNTIME_DOMAINS"] = "example.com"
+            api_data = {
+                "conversation_id": "short-domain-conv",
+                "title": "Short Domain Conversation",
+                "status": "RUNNING",
+                "url": "https://runtime12345.example.com/api/conversations/short-domain-conv",
+                "last_updated_at": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-15T10:00:00Z",
+            }
+
+            conv = Conversation.from_api_response(api_data)
+            # Should extract from 3-part domain (subdomain.example.com)
+            assert conv.runtime_id == "runtime12345"
+        finally:
+            if old_val is None:
+                os.environ.pop("OHC_RUNTIME_DOMAINS", None)
+            else:
+                os.environ["OHC_RUNTIME_DOMAINS"] = old_val
+
+    def test_from_api_response_multiple_custom_domains(self):
+        """Test runtime_id extraction with multiple custom domains."""
+        import os
+
+        old_val = os.environ.get("OHC_RUNTIME_DOMAINS")
+        try:
+            os.environ["OHC_RUNTIME_DOMAINS"] = "runtime.acme.com,example.com"
+            # Test first domain
+            api_data = {
+                "conversation_id": "conv-1",
+                "title": "Conversation 1",
+                "status": "RUNNING",
+                "url": "https://runtime123456.runtime.acme.com/api/conversations/conv-1",
+                "last_updated_at": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-15T10:00:00Z",
+            }
+
+            conv = Conversation.from_api_response(api_data)
+            assert conv.runtime_id == "runtime123456"
+
+            # Test second domain (3-part)
+            api_data["url"] = "https://myruntime99.example.com/api/conversations/conv-1"
+            conv = Conversation.from_api_response(api_data)
+            assert conv.runtime_id == "myruntime99"
+        finally:
+            if old_val is None:
+                os.environ.pop("OHC_RUNTIME_DOMAINS", None)
+            else:
+                os.environ["OHC_RUNTIME_DOMAINS"] = old_val
+
     def test_is_active_running_with_runtime(self):
         """Test is_active returns True for running conversation with runtime."""
         conv = Conversation(
