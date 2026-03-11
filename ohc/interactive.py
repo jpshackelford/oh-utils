@@ -85,7 +85,12 @@ class TerminalFormatter:
             f"{'Title':<{title_width}}"
         )
 
-        separator = "─" * min(len(header), width - 1)
+        # Separator should match the actual column widths, not header length
+        # (header padding can make len(header) longer than visible width)
+        total_width = (
+            num_width + id_width + status_width + runtime_width + title_width + 4
+        )
+        separator = "─" * min(total_width, width - 1)
 
         lines = [header, separator]
 
