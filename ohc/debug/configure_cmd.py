@@ -212,7 +212,12 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
     changes: list[str] = []
 
     if detected:
-        click.echo("✓ Found runtime-api deployment")
+        # Check if we found runtime-api or just app deployment with routing
+        has_runtime_api = detector.find_runtime_api_deployment(env.app.namespace)
+        if has_runtime_api:
+            click.echo("✓ Found runtime-api deployment")
+        else:
+            click.echo("✓ Found runtime routing config (from app deployment)")
 
         # Check for routing config changes
         old_routing = env.get_routing_config()
