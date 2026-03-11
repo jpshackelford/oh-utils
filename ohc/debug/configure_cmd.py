@@ -184,16 +184,30 @@ def _refresh_environment(config_manager: DebugConfigManager, env_name: str) -> N
     click.echo(f"Refreshing configuration for '{env_name}'...")
     click.echo()
 
-    # Connect to cluster and re-run detection
+    # Connect to app cluster
     try:
         app_client = K8sClient(env.app.kube_context)
     except K8sClientError as e:
-        raise click.ClickException(f"Could not connect to cluster: {e}") from None
+        raise click.ClickException(f"Could not connect to app cluster: {e}") from None
 
     # Detect runtime configuration
+    # For two-cluster setups, runtime-api is in the runtime cluster
     click.echo("Detecting runtime configuration...")
+    runtime_config = env.get_runtime_config()
+    is_two_cluster = runtime_config.kube_context != env.app.kube_context
+
+    # First try app cluster (same-cluster setup)
     detector = RuntimeDetector(app_client)
     detected = detector.detect(env.app.namespace)
+
+    # If not found and this is a two-cluster setup, try runtime cluster
+    if detected is None and is_two_cluster:
+        try:
+            runtime_client = K8sClient(runtime_config.kube_context)
+            runtime_detector = RuntimeDetector(runtime_client)
+            detected = runtime_detector.detect(runtime_config.namespace)
+        except K8sClientError as e:
+            click.echo(f"⚠ Could not connect to runtime cluster: {e}")
 
     changes: list[str] = []
 
