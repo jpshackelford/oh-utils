@@ -205,8 +205,19 @@ class Conversation:
         )
 
     def is_active(self) -> bool:
-        """Check if conversation is currently active/running"""
-        return self.status == "RUNNING" and self.runtime_id is not None
+        """Check if conversation is currently active/running.
+
+        A conversation is active if:
+        - status is RUNNING and runtime_status indicates ready, OR
+        - status is RUNNING and we have a runtime_id (for compatibility)
+        """
+        if self.status != "RUNNING":
+            return False
+        # Check runtime_status first (available from list endpoint)
+        if self.runtime_status and "READY" in self.runtime_status:
+            return True
+        # Fallback to runtime_id check (for when we've fetched config)
+        return self.runtime_id is not None
 
     def short_id(self) -> str:
         """Get shortened conversation ID for display"""

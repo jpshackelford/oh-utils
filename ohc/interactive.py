@@ -336,12 +336,24 @@ class ConversationManager:
             print(f"❌ Failed to download files: {e}")
 
     def _get_fresh_conversation(self, conv_id: str) -> Optional[Conversation]:
-        """Get fresh conversation data from API."""
+        """Get fresh conversation data from API, including runtime_id if running."""
         fresh_conv_data = self.api.get_conversation(conv_id)
         if fresh_conv_data is None:
             print(f"✗ Conversation {conv_id} not found")
             return None
-        return Conversation.from_api_response(fresh_conv_data, self.api.base_url)
+        conv = Conversation.from_api_response(fresh_conv_data, self.api.base_url)
+
+        # Fetch runtime_id from config endpoint for running conversations
+        # (needed for enterprise deployments where URL doesn't contain runtime_id)
+        if conv.is_active() and not conv.runtime_id:
+            try:
+                runtime_config = self.api.get_runtime_config(conv_id)
+                if runtime_config and "runtime_id" in runtime_config:
+                    conv.runtime_id = runtime_config["runtime_id"]
+            except Exception:
+                pass  # Silently ignore if endpoint not available
+
+        return conv
 
     def _get_changed_files(self, conv: Conversation) -> Optional[List[Dict[str, Any]]]:
         """Get list of changed files for a conversation."""
