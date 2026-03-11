@@ -131,15 +131,66 @@ class RuntimeQuery:
         """Initialize with K8s client."""
         self.client = client
 
-    def get_runtime_pod(self, runtime_id: str, namespace: str) -> Optional[RuntimePod]:
-        """Get a specific runtime pod by ID."""
+    def get_runtime_pod(
+        self, runtime_id: str, namespace: str
+    ) -> Optional["RuntimePod"]:
+        """Get a specific runtime pod by ID, name, or prefix.
+
+        Supports:
+        - Exact match on runtime_id
+        - Exact match on pod name
+        - Exact match on session_id
+        - Prefix match on runtime_id (for truncated IDs from list output)
+        - Prefix match on pod name
+
+        Returns:
+            RuntimePod if exactly one match is found, None otherwise.
+            Use find_runtime_pods() to get all matches when prefix is ambiguous.
+        """
         pods = self.list_runtime_pods(namespace)
+
+        # First pass: exact matches
         for pod in pods:
             if pod.runtime_id == runtime_id or pod.name == runtime_id:
                 return pod
             if pod.session_id and pod.session_id == runtime_id:
                 return pod
+
+        # Second pass: prefix matches (for truncated IDs from list output)
+        matches = []
+        for pod in pods:
+            if pod.runtime_id.startswith(runtime_id) or pod.name.startswith(runtime_id):
+                matches.append(pod)
+
+        # Only return if exactly one prefix match to avoid ambiguity
+        if len(matches) == 1:
+            return matches[0]
+
         return None
+
+    def find_runtime_pods(self, runtime_id: str, namespace: str) -> List["RuntimePod"]:
+        """Find all runtime pods matching an ID or prefix.
+
+        Unlike get_runtime_pod(), this returns all matches, useful for
+        providing feedback when a prefix is ambiguous.
+        """
+        pods = self.list_runtime_pods(namespace)
+        matches = []
+
+        for pod in pods:
+            # Check exact or prefix match
+            is_exact = (
+                pod.runtime_id == runtime_id
+                or pod.name == runtime_id
+                or (pod.session_id and pod.session_id == runtime_id)
+            )
+            is_prefix = pod.runtime_id.startswith(runtime_id) or pod.name.startswith(
+                runtime_id
+            )
+            if is_exact or is_prefix:
+                matches.append(pod)
+
+        return matches
 
     def list_runtime_pods(
         self,

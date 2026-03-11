@@ -40,12 +40,22 @@ def register_runtime_command(debug_group: click.Group) -> None:
 
         runtime_config = env_config.get_runtime_config()
         query = RuntimeQuery(runtime_client)
+        ns = runtime_config.namespace
 
         # Find the runtime pod
-        pod = query.get_runtime_pod(runtime_id, runtime_config.namespace)
+        pod = query.get_runtime_pod(runtime_id, ns)
 
         if not pod:
-            ns = runtime_config.namespace
+            # Check if there are multiple matches (ambiguous prefix)
+            matches = query.find_runtime_pods(runtime_id, ns)
+            if len(matches) > 1:
+                ids = ", ".join(p.runtime_id for p in matches[:5])
+                if len(matches) > 5:
+                    ids += f", ... ({len(matches)} total)"
+                raise click.ClickException(
+                    f"Ambiguous runtime ID '{runtime_id}' matches multiple "
+                    f"runtimes: {ids}\nPlease provide a more specific ID."
+                )
             raise click.ClickException(
                 f"Runtime '{runtime_id}' not found in namespace '{ns}'"
             )

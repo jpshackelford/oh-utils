@@ -595,6 +595,105 @@ class TestRuntimeQuery:
 
         assert pod is None
 
+    def test_get_runtime_pod_by_prefix(self) -> None:
+        """Prefix matching should work for truncated IDs from list output."""
+        mock_client = MagicMock(spec=K8sClient)
+        mock_client.list_pods.return_value = [
+            {
+                "name": "runtime-fhwqbshpikab",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-fhwqbshpikab"},
+                "container_statuses": [],
+                "resources": {},
+            }
+        ]
+
+        query = RuntimeQuery(mock_client)
+        # Truncated ID like shown in list output
+        pod = query.get_runtime_pod("runtime-fhwqbshpik", "runtime-pods")
+
+        assert pod is not None
+        assert pod.runtime_id == "runtime-fhwqbshpikab"
+
+    def test_get_runtime_pod_prefix_ambiguous_returns_none(self) -> None:
+        """Ambiguous prefix should return None (caller should use find_runtime_pods)."""
+        mock_client = MagicMock(spec=K8sClient)
+        mock_client.list_pods.return_value = [
+            {
+                "name": "runtime-abc123",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-abc123"},
+                "container_statuses": [],
+                "resources": {},
+            },
+            {
+                "name": "runtime-abc456",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-abc456"},
+                "container_statuses": [],
+                "resources": {},
+            },
+        ]
+
+        query = RuntimeQuery(mock_client)
+        # Prefix matches both runtimes
+        pod = query.get_runtime_pod("runtime-abc", "runtime-pods")
+
+        assert pod is None
+
+    def test_find_runtime_pods_returns_all_matches(self) -> None:
+        """find_runtime_pods should return all matches for ambiguous prefix."""
+        mock_client = MagicMock(spec=K8sClient)
+        mock_client.list_pods.return_value = [
+            {
+                "name": "runtime-abc123",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-abc123"},
+                "container_statuses": [],
+                "resources": {},
+            },
+            {
+                "name": "runtime-abc456",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-abc456"},
+                "container_statuses": [],
+                "resources": {},
+            },
+            {
+                "name": "runtime-xyz789",
+                "namespace": "runtime-pods",
+                "phase": "Running",
+                "node_name": None,
+                "created_at": None,
+                "labels": {"openhands.ai/runtime-id": "runtime-xyz789"},
+                "container_statuses": [],
+                "resources": {},
+            },
+        ]
+
+        query = RuntimeQuery(mock_client)
+        # Prefix matches two runtimes
+        matches = query.find_runtime_pods("runtime-abc", "runtime-pods")
+
+        assert len(matches) == 2
+        runtime_ids = {m.runtime_id for m in matches}
+        assert runtime_ids == {"runtime-abc123", "runtime-abc456"}
+
     def test_list_oom_killed_runtimes(self) -> None:
         mock_client = MagicMock(spec=K8sClient)
         mock_client.list_pods.return_value = [
