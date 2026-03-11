@@ -131,7 +131,10 @@ def register_runtime_command(debug_group: click.Group) -> None:
         if pod.is_oom_killed:
             click.echo()
             click.echo("💡 Recommendation: This runtime was OOMKilled.")
-            click.echo("   Consider increasing resource_factor for this user's org.")
+            click.echo("   Consider increasing runtime-api helm values:")
+            click.echo("     runtime-api.env.MEMORY_LIMIT (e.g., '4096Mi')")
+            click.echo("     runtime-api.env.MEMORY_REQUEST (e.g., '4096Mi')")
+            click.echo("   See: OpenHands-Cloud charts/openhands/values.yaml")
 
         click.echo()
 
