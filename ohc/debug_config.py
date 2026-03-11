@@ -31,11 +31,57 @@ class ClusterConfig:
 
 
 @dataclass
+class RuntimeRoutingConfig:
+    """Configuration for runtime URL routing."""
+
+    url_pattern: Optional[str] = None  # e.g., "https://server/{runtime_id}"
+    routing_mode: Optional[str] = None  # "path" or "subdomain"
+    base_url: Optional[str] = None  # e.g., "runtime.example.com"
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+        if self.url_pattern:
+            result["url_pattern"] = self.url_pattern
+        if self.routing_mode:
+            result["routing_mode"] = self.routing_mode
+        if self.base_url:
+            result["base_url"] = self.base_url
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RuntimeRoutingConfig":
+        return cls(
+            url_pattern=data.get("url_pattern"),
+            routing_mode=data.get("routing_mode"),
+            base_url=data.get("base_url"),
+        )
+
+    def is_configured(self) -> bool:
+        """Check if any routing config is set."""
+        return bool(self.url_pattern or self.routing_mode or self.base_url)
+
+    def get_description(self) -> Optional[str]:
+        """Get human-readable description of routing config."""
+        if not self.is_configured():
+            return None
+
+        parts = []
+        if self.routing_mode:
+            parts.append(f"Mode: {self.routing_mode}")
+        if self.url_pattern:
+            parts.append(f"Pattern: {self.url_pattern}")
+        elif self.base_url:
+            parts.append(f"Base URL: {self.base_url}")
+        return ", ".join(parts) if parts else None
+
+
+@dataclass
 class EnvironmentConfig:
     """Configuration for a debug environment (app + runtime clusters)."""
 
     app: ClusterConfig
     runtime: Optional[ClusterConfig] = None
+    routing: Optional[RuntimeRoutingConfig] = None
 
     def get_runtime_config(self) -> ClusterConfig:
         """Get runtime config, falling back to app config if not specified."""
@@ -47,10 +93,18 @@ class EnvironmentConfig:
             namespace=self.runtime.namespace if self.runtime else "runtime-pods",
         )
 
+    def get_routing_config(self) -> Optional[RuntimeRoutingConfig]:
+        """Get routing config if configured."""
+        if self.routing and self.routing.is_configured():
+            return self.routing
+        return None
+
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {"app": self.app.to_dict()}
         if self.runtime:
             result["runtime"] = self.runtime.to_dict()
+        if self.routing and self.routing.is_configured():
+            result["routing"] = self.routing.to_dict()
         return result
 
     @classmethod
@@ -59,7 +113,10 @@ class EnvironmentConfig:
         runtime = None
         if "runtime" in data:
             runtime = ClusterConfig.from_dict(data["runtime"])
-        return cls(app=app, runtime=runtime)
+        routing = None
+        if "routing" in data:
+            routing = RuntimeRoutingConfig.from_dict(data["routing"])
+        return cls(app=app, runtime=runtime, routing=routing)
 
 
 @dataclass
@@ -173,6 +230,9 @@ class DebugConfigManager:
         runtime_context: Optional[str] = None,
         runtime_namespace: str = "runtime-pods",
         set_default: bool = False,
+        runtime_url_pattern: Optional[str] = None,
+        runtime_routing_mode: Optional[str] = None,
+        runtime_base_url: Optional[str] = None,
     ) -> None:
         """Add a new environment configuration."""
         config = self.load_config()
@@ -182,7 +242,19 @@ class DebugConfigManager:
             kube_context=runtime_context or app_context,
             namespace=runtime_namespace,
         )
-        env_config = EnvironmentConfig(app=app_config, runtime=runtime_config)
+
+        # Create routing config if any routing info provided
+        routing_config = None
+        if runtime_url_pattern or runtime_routing_mode or runtime_base_url:
+            routing_config = RuntimeRoutingConfig(
+                url_pattern=runtime_url_pattern,
+                routing_mode=runtime_routing_mode,
+                base_url=runtime_base_url,
+            )
+
+        env_config = EnvironmentConfig(
+            app=app_config, runtime=runtime_config, routing=routing_config
+        )
 
         config.environments[name] = env_config
 
@@ -190,6 +262,37 @@ class DebugConfigManager:
             config.default_environment = name
 
         self.save_config(config)
+
+    def update_environment_routing(
+        self,
+        name: str,
+        runtime_url_pattern: Optional[str] = None,
+        runtime_routing_mode: Optional[str] = None,
+        runtime_base_url: Optional[str] = None,
+    ) -> bool:
+        """Update routing configuration for an existing environment.
+
+        Returns True if environment exists and was updated.
+        """
+        config = self.load_config()
+
+        if name not in config.environments:
+            return False
+
+        env = config.environments[name]
+
+        # Create or update routing config
+        if runtime_url_pattern or runtime_routing_mode or runtime_base_url:
+            env.routing = RuntimeRoutingConfig(
+                url_pattern=runtime_url_pattern,
+                routing_mode=runtime_routing_mode,
+                base_url=runtime_base_url,
+            )
+        else:
+            env.routing = None
+
+        self.save_config(config)
+        return True
 
     def remove_environment(self, name: str) -> bool:
         """Remove an environment configuration. Returns True if found and removed."""

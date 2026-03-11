@@ -115,6 +115,15 @@ def _show_configuration(config_manager: DebugConfigManager, output: str) -> None
         click.echo("  Runtime cluster:")
         click.echo(f"    Context:   {runtime.kube_context}")
         click.echo(f"    Namespace: {runtime.namespace}")
+        routing = env.get_routing_config()
+        if routing:
+            click.echo("  Runtime routing:")
+            if routing.routing_mode:
+                click.echo(f"    Mode:      {routing.routing_mode}")
+            if routing.url_pattern:
+                click.echo(f"    Pattern:   {routing.url_pattern}")
+            elif routing.base_url:
+                click.echo(f"    Base URL:  {routing.base_url}")
         click.echo()
 
 
@@ -236,9 +245,21 @@ def _interactive_configure(
         detector = RuntimeDetector(app_client)
 
         detected = detector.detect(app_namespace)
+        runtime_url_pattern: Optional[str] = None
+        runtime_routing_mode: Optional[str] = None
+        runtime_base_url: Optional[str] = None
+
         if detected:
             click.echo("✓ Found runtime-api deployment")
             click.echo(f"✓ Detected: {detected.get_description()}")
+
+            # Show routing config if detected
+            routing_desc = detected.get_routing_description()
+            if routing_desc:
+                click.echo(f"✓ Runtime routing: {routing_desc}")
+                runtime_url_pattern = detected.runtime_url_pattern
+                runtime_routing_mode = detected.runtime_routing_mode
+                runtime_base_url = detected.runtime_base_url
 
             click.echo()
             click.echo("Runtime Cluster (where runtime pods run)")
@@ -285,6 +306,9 @@ def _interactive_configure(
         click.echo()
         runtime_context = _select_runtime_context(contexts, app_context)
         runtime_namespace = click.prompt("Runtime namespace", default="runtime-pods")
+        runtime_url_pattern = None
+        runtime_routing_mode = None
+        runtime_base_url = None
 
     # Detect application endpoint
     click.echo()
@@ -321,6 +345,9 @@ def _interactive_configure(
         runtime_context=runtime_context,
         runtime_namespace=runtime_namespace,
         set_default=set_default,
+        runtime_url_pattern=runtime_url_pattern,
+        runtime_routing_mode=runtime_routing_mode,
+        runtime_base_url=runtime_base_url,
     )
 
     click.echo()
