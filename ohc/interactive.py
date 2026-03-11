@@ -193,10 +193,29 @@ class ConversationManager:
                 for data in conversations_data
             ]
 
+            # Fetch runtime_id for active conversations that don't have it
+            # (needed for enterprise deployments where URL doesn't contain runtime_id)
+            self._enrich_runtime_ids()
+
             return True
         except Exception as e:
             print(f"✗ Failed to load conversations: {e}")
             return False
+
+    def _enrich_runtime_ids(self) -> None:
+        """Fetch runtime_id for active conversations that don't have it.
+
+        This is needed for enterprise deployments where the conversation URL
+        doesn't contain the runtime_id (it's a relative path).
+        """
+        for conv in self.conversations:
+            if conv.is_active() and not conv.runtime_id:
+                try:
+                    runtime_config = self.api.get_runtime_config(conv.id)
+                    if runtime_config and "runtime_id" in runtime_config:
+                        conv.runtime_id = runtime_config["runtime_id"]
+                except Exception:
+                    pass  # Silently ignore if endpoint not available
 
     def refresh_conversations(self) -> None:
         """Refresh current page of conversations"""
