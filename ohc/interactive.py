@@ -76,21 +76,18 @@ class TerminalFormatter:
             20, width - num_width - id_width - status_width - runtime_width - 4
         )  # 4 for separators
 
-        # Header
+        # Header - no trailing padding on last column to avoid line wrap
         header = (
             f"{'#':>{num_width - 2}}  "  # Right-align number with 2 spaces
             f"{'ID':<{id_width}} "
             f"{'Status':<{status_width}} "
             f"{'Runtime':<{runtime_width}} "
-            f"{'Title':<{title_width}}"
+            f"{'Title'}"
         )
 
-        # Separator should match the actual column widths, not header length
-        # (header padding can make len(header) longer than visible width)
-        total_width = (
-            num_width + id_width + status_width + runtime_width + title_width + 4
-        )
-        separator = "─" * min(total_width, width - 1)
+        # Separator - keep it shorter than terminal width to avoid wrapping
+        total_width = num_width + id_width + status_width + runtime_width + title_width
+        separator = "─" * min(total_width, width - 2)
 
         lines = [header, separator]
 
@@ -99,12 +96,13 @@ class TerminalFormatter:
             # Only show runtime_id for active conversations
             runtime_display = conv.runtime_id if conv.is_active() else "─"
 
+            # No trailing padding on title to avoid line wrap at terminal edge
             row = (
                 f"{i:>{num_width - 2}}  "  # Right-align number with 2 spaces
                 f"{conv.short_id():<{id_width}} "
                 f"{conv.status_display():<{status_width}} "
                 f"{runtime_display:<{runtime_width}} "
-                f"{conv.formatted_title(title_width):<{title_width}}"
+                f"{conv.formatted_title(title_width)}"
             )
 
             lines.append(row)
