@@ -26,7 +26,7 @@ def register_health_command(debug_group: click.Group) -> None:
         health_summary = query.get_cluster_health(runtime_config.namespace)
 
         if output == "json":
-            data = {
+            data: dict = {
                 "environment": env_name,
                 "app_cluster": {
                     "context": env_config.app.kube_context,
@@ -46,6 +46,14 @@ def register_health_command(debug_group: click.Group) -> None:
                     "failed_scheduling": health_summary.failed_scheduling_count,
                 },
             }
+            # Add routing config if available
+            routing = env_config.get_routing_config()
+            if routing:
+                data["routing"] = {
+                    "mode": routing.routing_mode,
+                    "url_pattern": routing.url_pattern,
+                    "base_url": routing.base_url,
+                }
             click.echo(json.dumps(data, indent=2))
             return
 
@@ -80,6 +88,18 @@ def register_health_command(debug_group: click.Group) -> None:
             click.echo("  Status:    ⚠ Issues detected")
         else:
             click.echo("  Status:    ✓ Healthy")
+
+        # Show routing config if available
+        routing = env_config.get_routing_config()
+        if routing:
+            click.echo()
+            click.echo("Runtime Routing:")
+            if routing.routing_mode:
+                click.echo(f"  Mode:      {routing.routing_mode}")
+            if routing.url_pattern:
+                click.echo(f"  Pattern:   {routing.url_pattern}")
+            elif routing.base_url:
+                click.echo(f"  Base URL:  {routing.base_url}")
 
         click.echo()
         click.echo("Runtime Summary:")
