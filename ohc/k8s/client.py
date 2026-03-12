@@ -102,10 +102,14 @@ class K8sClient:
                 return None
             raise K8sClientError(f"Failed to get deployment {name}: {e}") from e
 
-    def list_deployments(self, namespace: str) -> List[Dict[str, Any]]:
-        """List all deployments in a namespace."""
+    def list_deployments(
+        self, namespace: str, label_selector: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List deployments in a namespace with optional label selector."""
         try:
-            result = self.apps_api.list_namespaced_deployment(namespace)
+            result = self.apps_api.list_namespaced_deployment(
+                namespace, label_selector=label_selector
+            )
             return [self._deployment_to_dict(dep) for dep in result.items]
         except ApiException as e:
             raise K8sClientError(f"Failed to list deployments: {e}") from e

@@ -28,6 +28,7 @@ class RuntimePod:
     memory_request: Optional[str]
     memory_limit: Optional[str]
     labels: Dict[str, str] = field(default_factory=dict)
+    is_warm: bool = False  # True if this is a warm (unclaimed) runtime
 
     @property
     def is_oom_killed(self) -> bool:
@@ -209,11 +210,17 @@ class RuntimeQuery:
         label_selector: Optional[str] = None,
     ) -> List[RuntimePod]:
         """List all runtime pods in a namespace."""
+        # Build a mapping of runtime_id -> is_warm from deployments
+        warm_runtime_ids = self._get_warm_runtime_ids(namespace)
+
         if label_selector:
             # Use provided selector
             try:
                 pods = self.client.list_pods(namespace, label_selector=label_selector)
-                return [self._pod_to_runtime(p) for p in pods]
+                return [
+                    self._pod_to_runtime(p, warm_runtime_ids=warm_runtime_ids)
+                    for p in pods
+                ]
             except K8sClientError:
                 pass
 
@@ -222,7 +229,10 @@ class RuntimeQuery:
             try:
                 pods = self.client.list_pods(namespace, label_selector=selector)
                 if pods:  # Found some pods with this selector
-                    return [self._pod_to_runtime(p) for p in pods]
+                    return [
+                        self._pod_to_runtime(p, warm_runtime_ids=warm_runtime_ids)
+                        for p in pods
+                    ]
             except K8sClientError:
                 continue
 
@@ -230,9 +240,28 @@ class RuntimeQuery:
         try:
             pods = self.client.list_pods(namespace)
             runtime_pods = [p for p in pods if self._looks_like_runtime(p)]
-            return [self._pod_to_runtime(p) for p in runtime_pods]
+            return [
+                self._pod_to_runtime(p, warm_runtime_ids=warm_runtime_ids)
+                for p in runtime_pods
+            ]
         except K8sClientError:
             return []
+
+    def _get_warm_runtime_ids(self, namespace: str) -> set:
+        """Get set of runtime IDs that are warm (no session_id label on deployment)."""
+        warm_ids: set = set()
+        try:
+            # Query deployments without session_id label
+            warm_deployments = self.client.list_deployments(
+                namespace, label_selector="runtime_id,!session_id"
+            )
+            for dep in warm_deployments:
+                runtime_id = dep.get("labels", {}).get("runtime_id")
+                if runtime_id:
+                    warm_ids.add(runtime_id)
+        except K8sClientError:
+            pass
+        return warm_ids
 
     def list_runtime_pods_with_issues(self, namespace: str) -> List[RuntimePod]:
         """List runtime pods with errors or restarts."""
@@ -312,14 +341,23 @@ class RuntimeQuery:
 
         return bool(labels.get("openhands.ai/runtime"))
 
-    def _pod_to_runtime(self, pod: Dict[str, Any]) -> RuntimePod:
+    def _pod_to_runtime(
+        self, pod: Dict[str, Any], warm_runtime_ids: Optional[set] = None
+    ) -> RuntimePod:
         """Convert pod dict to RuntimePod."""
         labels = pod.get("labels", {})
         container_statuses = pod.get("container_statuses", [])
 
         # Extract runtime ID from labels or name
         runtime_id = labels.get("openhands.ai/runtime-id") or pod["name"]
+        # Also check for runtime_id label (used by runtime-api)
+        runtime_id_label = labels.get("runtime_id")
         session_id = labels.get("openhands.ai/session-id")
+
+        # Determine if this is a warm runtime
+        is_warm = False
+        if warm_runtime_ids is not None and runtime_id_label:
+            is_warm = runtime_id_label in warm_runtime_ids
 
         # Parse container status
         restart_count, last_restart_reason, container_state, container_reason = (
@@ -349,6 +387,7 @@ class RuntimeQuery:
             memory_request=requests.get("memory"),
             memory_limit=limits.get("memory"),
             labels=labels,
+            is_warm=is_warm,
         )
 
 
