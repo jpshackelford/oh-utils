@@ -27,7 +27,7 @@ def register_list_command(debug_group: click.Group) -> None:
         recent: bool,
     ) -> None:
         """List runtime pods with optional filters."""
-        env_config, _app_client, runtime_client, _env_name = get_config_and_client(
+        env_config, _app_client, runtime_client, env_name = get_config_and_client(
             ctx.obj.get("environment")
         )
         output = ctx.obj.get("output", "text")
@@ -69,10 +69,12 @@ def register_list_command(debug_group: click.Group) -> None:
             return
 
         if not pods:
-            click.echo("No runtimes found matching criteria.")
+            click.echo(f"No runtimes found matching criteria in {env_name}.")
             return
 
-        # Table output
+        # Table output - show environment header
+        click.echo()
+        click.echo(f"Environment: {env_name} (namespace: {ns})")
         click.echo()
         header = f"{'RUNTIME ID':<20} {'STATUS':<15} {'RESTARTS':<10} {'REASON':<10}"
         click.echo(header)
