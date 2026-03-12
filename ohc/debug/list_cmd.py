@@ -17,6 +17,8 @@ def register_list_command(debug_group: click.Group) -> None:
     @click.option("--min", "min_restarts", type=int, default=1, help="Min restarts")
     @click.option("--oom", is_flag=True, help="Show OOMKilled runtimes")
     @click.option("--recent", is_flag=True, help="Show recently created (last 1h)")
+    @click.option("--warm", is_flag=True, help="Show only warm (unclaimed) runtimes")
+    @click.option("--active", is_flag=True, help="Show only active (claimed) runtimes")
     @click.pass_context
     def list_runtimes(
         ctx: click.Context,
@@ -25,6 +27,8 @@ def register_list_command(debug_group: click.Group) -> None:
         min_restarts: int,
         oom: bool,
         recent: bool,
+        warm: bool,
+        active: bool,
     ) -> None:
         """List runtime pods with optional filters."""
         env_config, _app_client, runtime_client, env_name = get_config_and_client(
@@ -53,6 +57,12 @@ def register_list_command(debug_group: click.Group) -> None:
             cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
             pods = [p for p in pods if p.created_at and p.created_at > cutoff]
 
+        # Filter by warm/active status
+        if warm:
+            pods = [p for p in pods if p.is_warm]
+        elif active:
+            pods = [p for p in pods if not p.is_warm]
+
         if output == "json":
             data = [
                 {
@@ -62,6 +72,7 @@ def register_list_command(debug_group: click.Group) -> None:
                     "restarts": p.restart_count,
                     "restart_reason": p.last_restart_reason,
                     "age": p.age_display,
+                    "is_warm": p.is_warm,
                 }
                 for p in pods
             ]
@@ -76,15 +87,25 @@ def register_list_command(debug_group: click.Group) -> None:
         click.echo()
         click.echo(f"Environment: {env_name} (namespace: {ns})")
         click.echo()
-        header = f"{'RUNTIME ID':<20} {'STATUS':<15} {'RESTARTS':<10} {'REASON':<10}"
+        header = (
+            f"{'RUNTIME ID':<20} {'TYPE':<8} {'STATUS':<12} {'RESTARTS':<10} {'REASON'}"
+        )
         click.echo(header)
-        click.echo("-" * 60)
+        click.echo("-" * 70)
 
         for pod in pods:
             rid = pod.runtime_id[:18] if len(pod.runtime_id) > 18 else pod.runtime_id
-            st = pod.container_state[:13] if pod.container_state else pod.phase[:13]
-            rsn = (pod.last_restart_reason or "-")[:8]
-            click.echo(f"{rid:<20} {st:<15} {pod.restart_count:<10} {rsn:<10}")
+            runtime_type = "warm" if pod.is_warm else "active"
+            st = pod.container_state[:10] if pod.container_state else pod.phase[:10]
+            rsn = pod.last_restart_reason or "-"
+            click.echo(
+                f"{rid:<20} {runtime_type:<8} {st:<12} {pod.restart_count:<10} {rsn}"
+            )
 
         click.echo()
-        click.echo(f"{len(pods)} runtime(s) found")
+        # Show summary with warm/active counts
+        warm_count = sum(1 for p in pods if p.is_warm)
+        active_count = len(pods) - warm_count
+        click.echo(
+            f"{len(pods)} runtime(s) found ({active_count} active, {warm_count} warm)"
+        )
