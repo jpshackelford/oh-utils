@@ -107,6 +107,12 @@ uv run ohc conv wake CONVERSATION_ID_OR_NUMBER [--server SERVER]
 uv run ohc conv trajectory CONVERSATION_ID_OR_NUMBER [--server SERVER] [--limit N]
 uv run ohc conv traj CONVERSATION_ID_OR_NUMBER  # Short alias
 
+# Show last N agent messages/thoughts
+uv run ohc conv tail CONVERSATION_ID_OR_NUMBER [-n NUMBER] [--server SERVER]
+
+# Follow a conversation in real-time (like 'tail -f')
+uv run ohc conv tail CONVERSATION_ID_OR_NUMBER -f [--interval SECONDS]
+
 # Show workspace file changes (git status)
 uv run ohc conv ws-changes CONVERSATION_ID_OR_NUMBER [--server SERVER]
 
@@ -120,6 +126,41 @@ uv run ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
 - Use conversation number from list (e.g., `1`, `2`, `3`)
 - Use full conversation ID (e.g., `a7f6c3c8-1234-5678-9abc-def012345678`)
 - Use partial conversation ID (e.g., `a7f6c3c8` - must be unique)
+
+#### Tail Follow Mode
+
+The `tail` command supports follow mode with `-f/--follow`, similar to Unix `tail -f` for log files. This lets you monitor a conversation in real-time as new messages and thoughts appear.
+
+```bash
+# Show last message/thought
+ohc conv tail <conversation-id>
+
+# Show last 5 messages/thoughts
+ohc conv tail <conversation-id> -n 5
+
+# Follow a conversation (displays new messages as they arrive)
+ohc conv tail <conversation-id> -f
+
+# Follow with custom polling interval (default is 2 seconds)
+ohc conv tail <conversation-id> -f --interval 1.0
+```
+
+Example output:
+
+```bash
+$ ohc conv tail d1849c3d -f
+Following: My Conversation Title
+Conversation: d1849c3d...
+================================================================================
+(Press Ctrl+C to stop)
+
+Starting to analyze the codebase...
+...
+Found the configuration files...
+...
+^C
+✓ Stopped following conversation
+```
 
 ### Debug Tool (Enterprise)
 
