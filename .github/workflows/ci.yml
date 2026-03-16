@@ -30,7 +30,7 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: uv sync --all-extras --dev
 
       - name: Run ruff linting
@@ -39,8 +39,11 @@ jobs:
       - name: Run ruff formatting check
         run: uv run ruff format --check .
 
-      - name: Run mypy type checking
-        run: uv run mypy ohc/
+      - name: Run mypy on ohc-lib
+        run: uv run mypy packages/ohc-lib/src/ohc_lib/
+
+      - name: Run mypy on ohc
+        run: uv run mypy packages/ohc/src/ohc/
 
   test:
     runs-on: ${{ matrix.os }}
@@ -70,11 +73,11 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: uv sync --all-extras --dev
 
       - name: Run tests
-        run: uv run pytest --cov=conversation_manager --cov=ohc --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=test-results.xml -v
+        run: uv run pytest --cov=packages/ohc-lib/src/ohc_lib --cov=packages/ohc/src/ohc --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=test-results.xml -v
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -240,14 +243,25 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: uv sync --all-extras --dev
 
-      - name: Build package
+      - name: Build ohc-lib
+        working-directory: packages/ohc-lib
         run: uv build
 
-      - name: Upload build artifacts
+      - name: Build ohc
+        working-directory: packages/ohc
+        run: uv build
+
+      - name: Upload ohc-lib build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
+          name: dist-ohc-lib
+          path: packages/ohc-lib/dist/
+
+      - name: Upload ohc build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-ohc
+          path: packages/ohc/dist/

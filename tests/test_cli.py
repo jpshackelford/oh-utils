@@ -12,7 +12,6 @@ from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
-
 from ohc.cli import cli, help_command, main
 
 

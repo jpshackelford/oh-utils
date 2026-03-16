@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import responses
 from click.testing import CliRunner
-
 from ohc.conversation_commands import conv
 
 
@@ -361,7 +360,7 @@ class TestConversationCommandsCLI:
                         mock_manager = MagicMock()
                         mock_manager_class.return_value = mock_manager
 
-                        with patch("ohc.api.create_api_client"):
+                        with patch("ohc_lib.create_api_client"):
                             from ohc.conversation_commands import interactive_mode
 
                             interactive_mode()
@@ -385,7 +384,7 @@ class TestConversationCommandsCLI:
                 mock_manager = MagicMock()
                 mock_manager_class.return_value = mock_manager
 
-                with patch("ohc.api.create_api_client"):
+                with patch("ohc_lib.create_api_client"):
                     from ohc.conversation_commands import interactive_mode
 
                     interactive_mode()
@@ -705,7 +704,7 @@ class TestNewConversationCommand:
                 self.mock_config
             )
 
-            with patch("ohc.api.OpenHandsAPI.create_conversation") as mock_create:
+            with patch("ohc_lib.OpenHandsAPI.create_conversation") as mock_create:
                 mock_create.return_value = create_response
 
                 # Simulate piped input

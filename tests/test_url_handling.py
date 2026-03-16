@@ -9,9 +9,8 @@ from urllib.parse import urljoin
 
 import pytest
 import responses
-
 from ohc.conversation_display import Conversation
-from ohc.v0.api import OpenHandsAPI
+from ohc_lib.v0.api import OpenHandsAPI
 
 
 class TestURLHandling:
@@ -256,7 +255,7 @@ class TestURLHandling:
         import inspect
 
         from ohc import interactive
-        from ohc.v0 import api
+        from ohc_lib.v0 import api
 
         # Get source code of the modules
         api_source = inspect.getsource(api)
@@ -271,7 +270,7 @@ class TestURLHandling:
 
         for pattern in hardcoded_patterns:
             assert pattern not in api_source, (
-                f"Found hardcoded pattern '{pattern}' in ohc.v0.api"
+                f"Found hardcoded pattern '{pattern}' in ohc_lib.v0.api"
             )
             assert pattern not in interactive_source, (
                 f"Found hardcoded pattern '{pattern}' in ohc.interactive"
@@ -281,7 +280,7 @@ class TestURLHandling:
         """Test that method signatures use runtime_url instead of runtime_id."""
         import inspect
 
-        from ohc.v0.api import OpenHandsAPI
+        from ohc_lib.v0.api import OpenHandsAPI
 
         # Check that methods now accept runtime_url parameter
         methods_to_check = [

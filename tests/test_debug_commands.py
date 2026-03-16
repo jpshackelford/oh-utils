@@ -9,7 +9,6 @@ from unittest.mock import patch
 import click
 import pytest
 from click.testing import CliRunner
-
 from ohc.cli import cli
 from ohc.conversation_commands import conv
 from ohc.debug import debug

@@ -1,34 +1,66 @@
 # OpenHands Utilities
 
-A collection of utilities for working with OpenHands (formerly All-Hands-AI / OpenDevin) API and conversations.
+Administrative tools and libraries for OpenHands Cloud and Enterprise deployments.
+
+> **Note:** These tools are for administrators and developers who need programmatic access to OpenHands. For end-user agent interactions, see the main [OpenHands CLI](https://github.com/All-Hands-AI/OpenHands) which wraps the Agent SDK.
+
+## Packages
+
+This monorepo contains two packages:
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| **[ohc-lib](packages/ohc-lib/)** | Python library for OpenHands Cloud & Agent Server REST APIs | `pip install ohc-lib` |
+| **[ohc](packages/ohc/)** | Administrative CLI for managing OpenHands deployments | `pip install ohc` |
+
+### ohc-lib - API Client Library
+
+For programmatic access to OpenHands APIs:
+
+```python
+from ohc_lib import OpenHandsAPI
+
+api = OpenHandsAPI(api_key="your-key", version="v1")
+result = api.search_conversations(limit=10)
+for conv in result["results"]:
+    print(f"{conv['conversation_id']}: {conv.get('title')}")
+```
+
+### ohc - Command-Line Interface
+
+For administrative tasks:
+
+```bash
+# Configure a server
+ohc server add cloud https://app.all-hands.dev/api/ YOUR_API_KEY --default
+
+# List conversations
+ohc conv list
+
+# Interactive mode
+ohc -i
+```
 
 ## Installation
 
-> **Note:** This package is intended as a command-line utility, not an API library.
-> Internal APIs are expected to be very unstable in the short term.
-
-### Using uv (Recommended)
-
-Install directly from GitHub:
+### Install CLI (includes library)
 
 ```bash
-uv pip install git+https://github.com/jpshackelford/oh-utils.git
+pip install ohc
+```
+
+### Install Library Only
+
+```bash
+pip install ohc-lib
 ```
 
 ### Development Installation
 
-For local development, clone the repo and install in editable mode:
-
 ```bash
 git clone https://github.com/jpshackelford/oh-utils.git
 cd oh-utils
-uv pip install -e .
-```
-
-Or run directly without installation:
-
-```bash
-uv run ohc
+uv sync --all-extras --dev
 ```
 
 ## Quick Start

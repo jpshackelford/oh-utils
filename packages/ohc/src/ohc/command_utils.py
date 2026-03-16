@@ -9,8 +9,8 @@ from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
 import click
+from ohc_lib import OpenHandsAPI, create_api_client
 
-from .api import OpenHandsAPI, create_api_client
 from .config import ConfigManager
 
 F = TypeVar("F", bound=Callable[..., Any])

@@ -12,7 +12,6 @@ Tests the ohc.server_commands module including:
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
-
 from ohc.server_commands import add, delete, list, server, set_default, test
 
 

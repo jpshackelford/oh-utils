@@ -11,7 +11,7 @@ from ohc.command_utils import (
     resolve_conversation_id,
     with_server_config,
 )
-from ohc.v0.api import OpenHandsAPI
+from ohc_lib.v0.api import OpenHandsAPI
 
 
 class TestWithServerConfigDecorator:
