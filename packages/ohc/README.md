@@ -43,6 +43,7 @@ print(f"Status: {details.get('status')}")
 ## API Versions
 
 ### V0 API (Legacy)
+
 The original OpenHands API with simpler endpoints. Use for basic conversation management.
 
 ```python
@@ -53,6 +54,7 @@ conversations = api.search_conversations()
 ```
 
 ### V1 API (Recommended)
+
 The newer two-tier architecture with App Server and Agent Server separation. Provides enhanced functionality including event search and better sandbox management.
 
 ```python
@@ -81,6 +83,7 @@ except SandboxNotRunningError as e:
 ## Authentication
 
 Get your API key from:
+
 - **Cloud**: https://app.all-hands.dev/settings/api-keys
 - **Enterprise**: Your organization's OpenHands deployment settings
 

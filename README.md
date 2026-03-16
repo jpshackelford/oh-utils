@@ -8,10 +8,10 @@ Administrative tools and libraries for OpenHands Cloud and Enterprise deployment
 
 This monorepo contains two packages:
 
-| Package | Description | Install |
-|---------|-------------|---------|
+| Package                          | Description                                                 | Install               |
+| -------------------------------- | ----------------------------------------------------------- | --------------------- |
 | **[ohc-lib](packages/ohc-lib/)** | Python library for OpenHands Cloud & Agent Server REST APIs | `pip install ohc-lib` |
-| **[ohc](packages/ohc/)** | Administrative CLI for managing OpenHands deployments | `pip install ohc` |
+| **[ohc](packages/ohc/)**         | Administrative CLI for managing OpenHands deployments       | `pip install ohc`     |
 
 ### ohc-lib - API Client Library
 
