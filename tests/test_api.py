@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 import requests
 import responses
-from ohc_lib.v0.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
 
 
 class TestOpenHandsAPI:

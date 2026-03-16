@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 import pytest
 import responses
-from ohc_lib.v1.api import OpenHandsAPI, SandboxNotRunningError
+from ohc.v1.api import OpenHandsAPI, SandboxNotRunningError
 
 
 class TestOpenHandsV1APIIntegration:

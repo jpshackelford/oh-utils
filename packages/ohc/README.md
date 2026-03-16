@@ -1,12 +1,12 @@
-# ohc - OpenHands Cloud CLI
+# ohc
 
-Administrative command-line tools for managing OpenHands Cloud and Enterprise deployments.
+OpenHands Cloud API Client Library - Programmatic access to OpenHands Cloud and Agent Server REST APIs.
 
 ## Overview
 
-`ohc` is a CLI tool for administrators and developers who need to manage OpenHands deployments, conversations, and debug issues. It provides server configuration, conversation management, and debugging capabilities.
+`ohc` is a Python library for administrators and developers who need programmatic access to OpenHands Cloud and Enterprise deployments. It provides a clean, well-typed interface to both the v0 and v1 REST APIs.
 
-**Note**: This is an administrative tool. For end-user agent interactions, see the main OpenHands CLI which wraps the Agent SDK.
+**Note**: This library is for administrative and automation use cases. For end-user agent interactions, see the main OpenHands CLI which wraps the Agent SDK.
 
 ## Installation
 
@@ -14,94 +14,96 @@ Administrative command-line tools for managing OpenHands Cloud and Enterprise de
 pip install ohc
 ```
 
-This will also install `ohc-lib` as a dependency.
-
 ## Quick Start
 
-### Configure a Server
+```python
+from ohc import OpenHandsAPI
 
-```bash
-# Add OpenHands Cloud
-ohc server add cloud https://app.all-hands.dev/api/ YOUR_API_KEY --default
+# Create a client (defaults to v0 API)
+api = OpenHandsAPI(
+    api_key="your-api-key",
+    base_url="https://app.all-hands.dev/api/",
+    version="v1"  # or "v0"
+)
 
-# Add an Enterprise deployment
-ohc server add enterprise https://your-company.openhands.dev/api/ YOUR_API_KEY
+# Test connection
+if api.test_connection():
+    print("Connected successfully!")
+
+# List conversations
+result = api.search_conversations(limit=10)
+for conv in result["results"]:
+    print(f"{conv['conversation_id']}: {conv.get('title', 'Untitled')}")
+
+# Get conversation details
+details = api.get_conversation("your-conversation-id")
+print(f"Status: {details.get('status')}")
 ```
 
-### List Conversations
+## API Versions
 
-```bash
-# List all conversations
-ohc conv list
+### V0 API (Legacy)
+The original OpenHands API with simpler endpoints. Use for basic conversation management.
 
-# List last 10 conversations
-ohc conv list -n 10
+```python
+from ohc.v0 import OpenHandsAPI
+
+api = OpenHandsAPI(api_key="your-key")
+conversations = api.search_conversations()
 ```
 
-### View Conversation Details
+### V1 API (Recommended)
+The newer two-tier architecture with App Server and Agent Server separation. Provides enhanced functionality including event search and better sandbox management.
 
-```bash
-# By number (from list)
-ohc conv show 1
+```python
+from ohc.v1 import OpenHandsAPI, SandboxNotRunningError
 
-# By partial ID
-ohc conv show abc123
+api = OpenHandsAPI(api_key="your-key")
 
-# By full ID
-ohc conv show 12345678-1234-1234-1234-123456789abc
+# Search events
+events = api.search_events(conversation_id="conv-id", limit=50)
+
+# Handle sandbox state
+try:
+    changes = api.get_conversation_changes("conv-id")
+except SandboxNotRunningError as e:
+    print(f"Sandbox {e.sandbox_id} is {e.status}")
 ```
 
-### Interactive Mode
+## Core Features
 
-```bash
-ohc -i
+- **Conversation Management**: List, search, create, and manage conversations
+- **Workspace Operations**: Download workspace archives, get file contents, view git changes
+- **Event Search** (v1): Search and filter events across conversations
+- **Trajectory Access**: Retrieve conversation trajectories for analysis
+- **Sandbox Management** (v1): Start sandboxes, check status, interact with runtime
+
+## Authentication
+
+Get your API key from:
+- **Cloud**: https://app.all-hands.dev/settings/api-keys
+- **Enterprise**: Your organization's OpenHands deployment settings
+
+## Error Handling
+
+```python
+from ohc import OpenHandsAPI
+from ohc.v1 import SandboxNotRunningError
+import requests
+
+api = OpenHandsAPI(api_key="your-key", version="v1")
+
+try:
+    changes = api.get_conversation_changes("conv-id")
+except SandboxNotRunningError as e:
+    # Sandbox needs to be started
+    api.start_conversation(e.sandbox_id)
+except requests.HTTPError as e:
+    if e.response.status_code == 401:
+        print("Invalid API key")
+    elif e.response.status_code == 404:
+        print("Conversation not found")
 ```
-
-## Commands
-
-### Server Management
-
-```bash
-ohc server add <name> <url> <api-key> [--default]
-ohc server list
-ohc server remove <name>
-ohc server default <name>
-```
-
-### Conversation Management
-
-```bash
-ohc conv list [-n NUMBER]
-ohc conv show <id-or-number>
-ohc conv changes <id-or-number>
-ohc conv download <id-or-number> [--output PATH]
-```
-
-### Debugging (Enterprise)
-
-```bash
-ohc debug health
-ohc debug list
-ohc debug runtime <conversation-id>
-```
-
-## API Version Selection
-
-```bash
-# Use v0 API (legacy)
-ohc --api-version v0 conv list
-
-# Use v1 API (recommended)
-ohc --api-version v1 conv list
-```
-
-## Configuration
-
-Configuration is stored at `~/.config/ohc/config.json` following the XDG Base Directory Specification.
-
-## Related Packages
-
-- **ohc-lib**: The underlying Python library for programmatic API access
 
 ## License
 

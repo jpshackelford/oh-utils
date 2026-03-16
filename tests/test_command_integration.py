@@ -8,8 +8,8 @@ to ensure compatibility with the existing testing approach.
 from unittest.mock import Mock, patch
 
 import responses
-from ohc.command_utils import resolve_conversation_id, with_server_config
-from ohc_lib.v0.api import OpenHandsAPI
+from ohc.v0.api import OpenHandsAPI
+from ohc_cli.command_utils import resolve_conversation_id, with_server_config
 
 
 class TestCommandIntegrationWithFixtures:
@@ -88,7 +88,9 @@ class TestCommandIntegrationWithFixtures:
                 "server": server,
             }
 
-        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
+        with patch(
+            "ohc_cli.command_utils.ConfigManager", return_value=mock_config_manager
+        ):
             result = test_integration_command(server="integration-server")
 
         expected = {
@@ -131,7 +133,9 @@ class TestCommandIntegrationWithFixtures:
                 ),
             }
 
-        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
+        with patch(
+            "ohc_cli.command_utils.ConfigManager", return_value=mock_config_manager
+        ):
             result = test_api_command()
 
         assert result["conversation_count"] == 5

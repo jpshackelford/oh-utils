@@ -1,4 +1,4 @@
 {
-  "packages/ohc-lib": "0.1.0",
-  "packages/ohc": "0.2.0"
+  "packages/ohc": "0.1.0",
+  "packages/ohc-cli": "0.2.0"
 }

@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ohc.config import ConfigManager
+from ohc_cli.config import ConfigManager
 
 
 class TestConfigManager:

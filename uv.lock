@@ -13,7 +13,7 @@ resolution-markers = [
 members = [
     "oh-utils-workspace",
     "ohc",
-    "ohc-lib",
+    "ohc-cli",
 ]
 
 [[package]]
@@ -1460,13 +1460,25 @@ test = [
 
 [[package]]
 name = "ohc"
-version = "0.2.0"
+version = "0.1.0"
 source = { editable = "packages/ohc" }
+dependencies = [
+    { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "requests", specifier = ">=2.25.0" }]
+
+[[package]]
+name = "ohc-cli"
+version = "0.2.0"
+source = { editable = "packages/ohc-cli" }
 dependencies = [
     { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "click", version = "8.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "kubernetes" },
-    { name = "ohc-lib" },
+    { name = "ohc" },
 ]
 
 [package.optional-dependencies]
@@ -1488,25 +1500,13 @@ requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
     { name = "kubernetes", specifier = ">=26.1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "ohc-lib", editable = "packages/ohc-lib" },
+    { name = "ohc", editable = "packages/ohc" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.25.0" },
 ]
 provides-extras = ["dev"]
-
-[[package]]
-name = "ohc-lib"
-version = "0.1.0"
-source = { editable = "packages/ohc-lib" }
-dependencies = [
-    { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "requests", specifier = ">=2.25.0" }]
 
 [[package]]
 name = "packaging"

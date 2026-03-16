@@ -558,7 +558,7 @@ def _add_server_from_url(env_name: str, app_url: str) -> None:
     # Test connection
     click.echo("  Testing connection...")
     try:
-        from ..api import create_api_client
+        from ohc import create_api_client
 
         # Get API version from context if available
         ctx = click.get_current_context(silent=True)

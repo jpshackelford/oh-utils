@@ -1,16 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
-    "packages/ohc-lib": {
-      "package-name": "ohc-lib",
-      "release-type": "python",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "changelog-path": "CHANGELOG.md",
-      "extra-files": [
-        "src/ohc_lib/__init__.py"
-      ]
-    },
     "packages/ohc": {
       "package-name": "ohc",
       "release-type": "python",
@@ -19,6 +9,16 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         "src/ohc/__init__.py"
+      ]
+    },
+    "packages/ohc-cli": {
+      "package-name": "ohc-cli",
+      "release-type": "python",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "src/ohc_cli/__init__.py"
       ]
     }
   },

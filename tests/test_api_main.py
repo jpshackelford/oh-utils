@@ -5,7 +5,7 @@ Tests for the main API module with version selection.
 from unittest.mock import patch
 
 import pytest
-from ohc_lib import OpenHandsAPI, create_api_client
+from ohc import OpenHandsAPI, create_api_client
 
 
 class TestOpenHandsAPIMain:
@@ -99,7 +99,7 @@ class TestOpenHandsAPIMain:
         client = api.client
 
         # Should be the underlying v0 API client
-        from ohc_lib.v0.api import OpenHandsAPI as V0API
+        from ohc.v0.api import OpenHandsAPI as V0API
 
         assert isinstance(client, V0API)
 
@@ -107,7 +107,7 @@ class TestOpenHandsAPIMain:
         client_v1 = api_v1.client
 
         # Should be the underlying v1 API client
-        from ohc_lib.v1.api import OpenHandsAPI as V1API
+        from ohc.v1.api import OpenHandsAPI as V1API
 
         assert isinstance(client_v1, V1API)
 
@@ -115,7 +115,7 @@ class TestOpenHandsAPIMain:
 class TestOpenHandsAPIMethodDelegation:
     """Tests for method delegation and version-specific behavior."""
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.test_connection")
+    @patch("ohc.v0.api.OpenHandsAPI.test_connection")
     def test_test_connection_v0(self, mock_test_connection):
         """Test that test_connection delegates to v0 API correctly."""
         mock_test_connection.return_value = True
@@ -126,7 +126,7 @@ class TestOpenHandsAPIMethodDelegation:
         assert result is True
         mock_test_connection.assert_called_once()
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.test_connection")
+    @patch("ohc.v1.api.OpenHandsAPI.test_connection")
     def test_test_connection_v1(self, mock_test_connection):
         """Test that test_connection delegates to v1 API correctly."""
         mock_test_connection.return_value = False
@@ -137,7 +137,7 @@ class TestOpenHandsAPIMethodDelegation:
         assert result is False
         mock_test_connection.assert_called_once()
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.search_conversations")
+    @patch("ohc.v0.api.OpenHandsAPI.search_conversations")
     def test_search_conversations_v0(self, mock_search):
         """Test search_conversations with v0 API - ignores query and offset."""
         mock_search.return_value = {"results": ["conv1", "conv2"]}
@@ -149,7 +149,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_search.assert_called_once_with(page_id=None, limit=5)
         assert result == {"results": ["conv1", "conv2"]}
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.search_conversations")
+    @patch("ohc.v1.api.OpenHandsAPI.search_conversations")
     def test_search_conversations_v1(self, mock_search):
         """Test search_conversations with v1 API - uses all parameters."""
         mock_search.return_value = [{"id": "conv1"}, {"id": "conv2"}]
@@ -167,7 +167,7 @@ class TestOpenHandsAPIMethodDelegation:
             ]
         }
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_conversation")
+    @patch("ohc.v0.api.OpenHandsAPI.get_conversation")
     def test_get_conversation_v0(self, mock_get):
         """Test get_conversation delegates to v0 API correctly."""
         mock_get.return_value = {"id": "conv123", "title": "Test"}
@@ -178,7 +178,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get.assert_called_once_with("conv123")
         assert result == {"id": "conv123", "title": "Test"}
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_conversation")
+    @patch("ohc.v1.api.OpenHandsAPI.get_conversation")
     def test_get_conversation_v1(self, mock_get):
         """Test get_conversation delegates to v1 API correctly."""
         mock_get.return_value = {"id": "conv123", "title": "Test"}
@@ -189,7 +189,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get.assert_called_once_with("conv123")
         assert result == {"id": "conv123", "title": "Test"}
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.create_conversation")
+    @patch("ohc.v0.api.OpenHandsAPI.create_conversation")
     def test_create_conversation_v0(self, mock_create):
         """Test create_conversation delegates to v0 API correctly."""
         mock_create.return_value = {
@@ -205,7 +205,7 @@ class TestOpenHandsAPIMethodDelegation:
         assert result["status"] == "ok"
         assert result["conversation_id"] == "conv123"
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.create_conversation")
+    @patch("ohc.v1.api.OpenHandsAPI.create_conversation")
     def test_create_conversation_v1(self, mock_create):
         """Test create_conversation delegates to v1 API correctly."""
         mock_create.return_value = {
@@ -221,7 +221,7 @@ class TestOpenHandsAPIMethodDelegation:
         assert result["status"] == "ok"
         assert result["conversation_id"] == "conv123"
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.start_conversation")
+    @patch("ohc.v0.api.OpenHandsAPI.start_conversation")
     def test_start_conversation_v0_success(self, mock_start):
         """Test start_conversation with v0 API - passes conversation_id directly."""
         mock_start.return_value = {"id": "conv123", "status": "started"}
@@ -232,7 +232,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_start.assert_called_once_with("conv123", ["github"])
         assert result == {"id": "conv123", "status": "started"}
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.start_conversation")
+    @patch("ohc.v1.api.OpenHandsAPI.start_conversation")
     def test_start_conversation_v1(self, mock_start):
         """Test start_conversation with v1 API - passes conversation_id directly."""
         mock_start.return_value = {"status": "ok", "conversation_id": "conv123"}
@@ -243,7 +243,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_start.assert_called_once_with("conv123", None)
         assert result == {"status": "ok", "conversation_id": "conv123"}
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_conversation_changes")
+    @patch("ohc.v0.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v0(self, mock_get_changes):
         """Test get_conversation_changes with v0 API - includes session_api_key."""
         mock_get_changes.return_value = [{"file": "test.py", "status": "modified"}]
@@ -258,7 +258,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result == [{"file": "test.py", "status": "modified"}]
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_conversation_changes")
+    @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_with_changes(self, mock_get_changes):
         """Test get_conversation_changes with v1 API - returns list directly."""
         mock_get_changes.return_value = [{"file": "test.py", "status": "modified"}]
@@ -269,7 +269,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_changes.assert_called_once_with("conv123", "http://runtime")
         assert result == [{"file": "test.py", "status": "modified"}]
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_conversation_changes")
+    @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_no_changes(self, mock_get_changes):
         """Test get_conversation_changes with v1 API - handles empty list."""
         mock_get_changes.return_value = []
@@ -280,7 +280,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_changes.assert_called_once_with("conv123", "http://runtime")
         assert result == []
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_conversation_changes")
+    @patch("ohc.v1.api.OpenHandsAPI.get_conversation_changes")
     def test_get_conversation_changes_v1_none_result(self, mock_get_changes):
         """Test get_conversation_changes with v1 API - handles None result."""
         mock_get_changes.return_value = None
@@ -291,7 +291,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_changes.assert_called_once_with("conv123", "http://runtime")
         assert result is None
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_file_content")
+    @patch("ohc.v0.api.OpenHandsAPI.get_file_content")
     def test_get_file_content_v0(self, mock_get_file):
         """Test get_file_content with v0 API - includes session_api_key."""
         mock_get_file.return_value = "file content"
@@ -306,7 +306,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result == "file content"
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_file_content")
+    @patch("ohc.v1.api.OpenHandsAPI.get_file_content")
     def test_get_file_content_v1(self, mock_get_file):
         """Test get_file_content with v1 API - no session_api_key."""
         mock_get_file.return_value = "file content"
@@ -317,7 +317,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_file.assert_called_once_with("conv123", "test.py", "http://runtime")
         assert result == "file content"
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.download_workspace_archive")
+    @patch("ohc.v0.api.OpenHandsAPI.download_workspace_archive")
     def test_download_workspace_archive_v0(self, mock_download):
         """Test download_workspace_archive with v0 API - includes session_api_key."""
         mock_download.return_value = b"archive content"
@@ -332,7 +332,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result == b"archive content"
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.download_workspace_archive")
+    @patch("ohc.v1.api.OpenHandsAPI.download_workspace_archive")
     def test_download_workspace_archive_v1(self, mock_download):
         """Test download_workspace_archive with v1 API - no session_api_key."""
         mock_download.return_value = b"archive content"
@@ -343,7 +343,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_download.assert_called_once_with("conv123", "http://runtime")
         assert result == b"archive content"
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_trajectory")
+    @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
     def test_get_trajectory_v0_success(self, mock_get_trajectory):
         """Test get_trajectory with v0 API - extracts trajectory from dict result."""
         mock_get_trajectory.return_value = {"trajectory": [{"step": 1}, {"step": 2}]}
@@ -356,7 +356,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result == [{"step": 1}, {"step": 2}]
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_trajectory")
+    @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
     def test_get_trajectory_v0_no_runtime_url(self, mock_get_trajectory):
         """Test get_trajectory with v0 API - returns None when no runtime_url."""
         api = OpenHandsAPI("test_key", "https://test.com/api/", "v0")
@@ -366,7 +366,7 @@ class TestOpenHandsAPIMethodDelegation:
         mock_get_trajectory.assert_not_called()
         assert result is None
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_trajectory")
+    @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
     def test_get_trajectory_v0_no_trajectory_key(self, mock_get_trajectory):
         """Test get_trajectory with v0 API - handles missing trajectory key."""
         mock_get_trajectory.return_value = {"status": "no_trajectory"}
@@ -379,7 +379,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result is None
 
-    @patch("ohc_lib.v0.api.OpenHandsAPI.get_trajectory")
+    @patch("ohc.v0.api.OpenHandsAPI.get_trajectory")
     def test_get_trajectory_v0_uses_api_key_as_default_session_key(
         self, mock_get_trajectory
     ):
@@ -394,7 +394,7 @@ class TestOpenHandsAPIMethodDelegation:
         )
         assert result == [{"step": 1}]
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_trajectory")
+    @patch("ohc.v1.api.OpenHandsAPI.get_trajectory")
     def test_get_trajectory_v1(self, mock_get_trajectory):
         """Test get_trajectory with v1 API - direct delegation."""
         mock_get_trajectory.return_value = [{"step": 1}, {"step": 2}]
@@ -409,7 +409,7 @@ class TestOpenHandsAPIMethodDelegation:
 class TestOpenHandsAPIV1SpecificMethods:
     """Tests for v1-specific method implementations."""
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.search_events")
+    @patch("ohc.v1.api.OpenHandsAPI.search_events")
     def test_search_events_v1_implementation(self, mock_search_events):
         """Test search_events actually calls v1 API with correct parameters."""
         mock_search_events.return_value = [{"event": "test"}]
@@ -432,7 +432,7 @@ class TestOpenHandsAPIV1SpecificMethods:
         )
         assert result == [{"event": "test"}]
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_events_count")
+    @patch("ohc.v1.api.OpenHandsAPI.get_events_count")
     def test_get_events_count_v1_implementation(self, mock_get_count):
         """Test get_events_count actually calls v1 API with correct parameters."""
         mock_get_count.return_value = 42
@@ -447,7 +447,7 @@ class TestOpenHandsAPIV1SpecificMethods:
         )
         assert result == 42
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.create_event")
+    @patch("ohc.v1.api.OpenHandsAPI.create_event")
     def test_create_event_v1_implementation(self, mock_create_event):
         """Test create_event actually calls v1 API with correct parameters."""
         event_data = {"type": "action", "data": {"command": "test"}}
@@ -459,7 +459,7 @@ class TestOpenHandsAPIV1SpecificMethods:
         mock_create_event.assert_called_once_with(event_data)
         assert result == {"id": "event123", **event_data}
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.search_app_conversations")
+    @patch("ohc.v1.api.OpenHandsAPI.search_app_conversations")
     def test_search_app_conversations_v1_implementation(self, mock_search_app):
         """Test search_app_conversations actually calls v1 API with correct parameters."""
         mock_search_app.return_value = [{"app_conv": "test"}]
@@ -474,7 +474,7 @@ class TestOpenHandsAPIV1SpecificMethods:
         )
         assert result == [{"app_conv": "test"}]
 
-    @patch("ohc_lib.v1.api.OpenHandsAPI.get_app_conversations_count")
+    @patch("ohc.v1.api.OpenHandsAPI.get_app_conversations_count")
     def test_get_app_conversations_count_v1_implementation(self, mock_get_count):
         """Test get_app_conversations_count actually calls v1 API with correct parameters."""
         mock_get_count.return_value = 15

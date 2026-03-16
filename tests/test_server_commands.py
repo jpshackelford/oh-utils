@@ -12,7 +12,7 @@ Tests the ohc.server_commands module including:
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
-from ohc.server_commands import add, delete, list, server, set_default, test
+from ohc_cli.server_commands import add, delete, list, server, set_default, test
 
 
 class TestServerCommands:
@@ -26,8 +26,8 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "Manage OpenHands server configurations" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_with_options(self, mock_create_api, mock_config_class):
         """Test adding server with all options provided."""
         # Setup mocks
@@ -65,8 +65,8 @@ class TestServerCommands:
             "test-server", "https://test.com/api/", "test-key", True
         )
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_with_prompts(self, mock_create_api, mock_config_class):
         """Test adding server with interactive prompts."""
         # Setup mocks
@@ -95,8 +95,8 @@ class TestServerCommands:
             "test-server", "https://test.com/api/", "test-key", True
         )
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_url_normalization(self, mock_create_api, mock_config_class):
         """Test URL normalization during server addition."""
         # Setup mocks
@@ -123,8 +123,8 @@ class TestServerCommands:
             "test1", "https://test.com/api/", "key1", False
         )
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_connection_failure(self, mock_create_api, mock_config_class):
         """Test adding server with connection failure."""
         # Setup mocks
@@ -155,8 +155,8 @@ class TestServerCommands:
         assert "Save server configuration anyway?" in result.output
         mock_config.add_server.assert_called_once()
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_connection_exception(self, mock_create_api, mock_config_class):
         """Test adding server with connection exception."""
         # Setup mocks
@@ -185,8 +185,8 @@ class TestServerCommands:
         assert result.exit_code == 1  # Should abort
         assert "✗ Connection failed: Network error" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_existing_overwrite(self, mock_create_api, mock_config_class):
         """Test adding server that already exists with overwrite."""
         # Setup mocks
@@ -220,8 +220,8 @@ class TestServerCommands:
             "test-server", "https://test.com/api/", "test-key", False
         )
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_existing_cancel(self, mock_create_api, mock_config_class):
         """Test adding server that already exists with cancel."""
         # Setup mocks
@@ -249,8 +249,8 @@ class TestServerCommands:
         assert "Operation cancelled." in result.output
         mock_config.add_server.assert_not_called()
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_add_server_limited_permissions(self, mock_create_api, mock_config_class):
         """Test adding server with limited API permissions."""
         # Setup mocks
@@ -284,7 +284,7 @@ class TestServerCommands:
             "test-server", "https://test.com/api/", "limited-key", False
         )
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_list_servers_empty(self, mock_config_class):
         """Test listing servers when none are configured."""
         mock_config = MagicMock()
@@ -298,7 +298,7 @@ class TestServerCommands:
         assert "No servers configured." in result.output
         assert "Use 'ohc server add' to add a server." in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_list_servers_with_data(self, mock_config_class):
         """Test listing servers with configured servers."""
         mock_config = MagicMock()
@@ -319,7 +319,7 @@ class TestServerCommands:
         assert "  server2" in result.output  # No default marker
         assert "  server3" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_success(self, mock_config_class):
         """Test successful server deletion."""
         mock_config = MagicMock()
@@ -335,7 +335,7 @@ class TestServerCommands:
         assert "✓ Server 'test-server' deleted" in result.output
         mock_config.remove_server.assert_called_once_with("test-server")
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_force(self, mock_config_class):
         """Test server deletion with force flag."""
         mock_config = MagicMock()
@@ -350,7 +350,7 @@ class TestServerCommands:
         assert "Delete server 'test-server'?" not in result.output  # No confirmation
         assert "✓ Server 'test-server' deleted" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_not_found(self, mock_config_class):
         """Test deleting non-existent server."""
         mock_config = MagicMock()
@@ -364,7 +364,7 @@ class TestServerCommands:
         assert "✗ Server 'nonexistent' not found." in result.output
         mock_config.remove_server.assert_not_called()
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_cancelled(self, mock_config_class):
         """Test server deletion cancelled by user."""
         mock_config = MagicMock()
@@ -378,7 +378,7 @@ class TestServerCommands:
         assert "Operation cancelled." in result.output
         mock_config.remove_server.assert_not_called()
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_failure(self, mock_config_class):
         """Test server deletion failure."""
         mock_config = MagicMock()
@@ -392,7 +392,7 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Failed to delete server 'test-server'" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_delete_server_exception(self, mock_config_class):
         """Test server deletion with exception."""
         mock_config = MagicMock()
@@ -406,7 +406,7 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Failed to delete server: Delete error" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_set_default_success(self, mock_config_class):
         """Test setting default server successfully."""
         mock_config = MagicMock()
@@ -421,7 +421,7 @@ class TestServerCommands:
         assert "✓ Server 'test-server' set as default" in result.output
         mock_config.set_default_server.assert_called_once_with("test-server")
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_set_default_not_found(self, mock_config_class):
         """Test setting default for non-existent server."""
         mock_config = MagicMock()
@@ -435,7 +435,7 @@ class TestServerCommands:
         assert "✗ Server 'nonexistent' not found." in result.output
         mock_config.set_default_server.assert_not_called()
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_set_default_failure(self, mock_config_class):
         """Test setting default server failure."""
         mock_config = MagicMock()
@@ -449,7 +449,7 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Failed to set server 'test-server' as default" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_set_default_exception(self, mock_config_class):
         """Test setting default server with exception."""
         mock_config = MagicMock()
@@ -463,8 +463,8 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Failed to set default server: Set default error" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_test_server_success(self, mock_create_api, mock_config_class):
         """Test server connection test success."""
         mock_config = MagicMock()
@@ -486,7 +486,7 @@ class TestServerCommands:
         assert "Testing connection to server 'test-server'..." in result.output
         assert "✓ Connection successful" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_test_server_not_found(self, mock_config_class):
         """Test server connection test for non-existent server."""
         mock_config = MagicMock()
@@ -499,8 +499,8 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Server 'nonexistent' not found." in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_test_server_connection_failure(self, mock_create_api, mock_config_class):
         """Test server connection test failure."""
         mock_config = MagicMock()
@@ -520,8 +520,8 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Connection test failed" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_test_server_exception(self, mock_create_api, mock_config_class):
         """Test server connection test with exception."""
         mock_config = MagicMock()
@@ -541,7 +541,7 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ Connection failed: Connection error" in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.ConfigManager")
     def test_test_default_server_no_servers(self, mock_config_class):
         """Test testing default server when none configured."""
         mock_config = MagicMock()
@@ -554,8 +554,8 @@ class TestServerCommands:
         assert result.exit_code == 0
         assert "✗ No servers configured." in result.output
 
-    @patch("ohc.server_commands.ConfigManager")
-    @patch("ohc.server_commands.create_api_client")
+    @patch("ohc_cli.server_commands.ConfigManager")
+    @patch("ohc_cli.server_commands.create_api_client")
     def test_test_default_server_success(self, mock_create_api, mock_config_class):
         """Test testing default server successfully."""
         mock_config = MagicMock()

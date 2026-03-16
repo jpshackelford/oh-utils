@@ -12,10 +12,10 @@ from unittest.mock import patch
 import pytest
 import responses
 from click.testing import CliRunner
-from ohc.cli import cli
-from ohc.config import ConfigManager
-from ohc.conversation_commands import conv
-from ohc.server_commands import server
+from ohc_cli.cli import cli
+from ohc_cli.config import ConfigManager
+from ohc_cli.conversation_commands import conv
+from ohc_cli.server_commands import server
 
 
 class TestCLIIntegration:
@@ -49,8 +49,10 @@ class TestCLIIntegration:
             config_manager = ConfigManager()
             # Patch the ConfigManager class in all modules that use it
             with patch(
-                "ohc.command_utils.ConfigManager", return_value=config_manager
-            ), patch("ohc.server_commands.ConfigManager", return_value=config_manager):
+                "ohc_cli.command_utils.ConfigManager", return_value=config_manager
+            ), patch(
+                "ohc_cli.server_commands.ConfigManager", return_value=config_manager
+            ):
                 yield config_manager
 
     def test_cli_help(self, runner, cli_with_commands):
@@ -84,7 +86,7 @@ class TestCLIIntegration:
         # Mock successful connection test
         fixture = fixture_loader.load("conversations_list_success")
 
-        with patch("ohc_lib.v0.api.OpenHandsAPI.search_conversations") as mock_search:
+        with patch("ohc.v0.api.OpenHandsAPI.search_conversations") as mock_search:
             mock_search.return_value = fixture["response"]["json"]
 
             # Add server non-interactively
@@ -130,7 +132,7 @@ class TestCLIIntegration:
         # Mock successful connection test
         fixture = fixture_loader.load("conversations_list_success")
 
-        with patch("ohc_lib.v0.api.OpenHandsAPI.search_conversations") as mock_search:
+        with patch("ohc.v0.api.OpenHandsAPI.search_conversations") as mock_search:
             mock_search.return_value = fixture["response"]["json"]
 
             result = runner.invoke(cli_with_commands, ["server", "test"])
@@ -163,7 +165,7 @@ class TestCLIIntegration:
         fixture = fixture_loader.load("conversations_list_success")
 
         # Mock the OpenHandsAPI.search_conversations method
-        with patch("ohc_lib.v0.api.OpenHandsAPI.search_conversations") as mock_search:
+        with patch("ohc.v0.api.OpenHandsAPI.search_conversations") as mock_search:
             mock_search.return_value = fixture["response"]["json"]
 
             result = runner.invoke(cli_with_commands, ["conv", "list"])
@@ -190,7 +192,7 @@ class TestCLIIntegration:
         fixture = fixture_loader.load("conversations_list_success")
 
         # Mock the OpenHandsAPI.search_conversations method
-        with patch("ohc_lib.v0.api.OpenHandsAPI.search_conversations") as mock_search:
+        with patch("ohc.v0.api.OpenHandsAPI.search_conversations") as mock_search:
             mock_search.return_value = fixture["response"]["json"]
 
             result = runner.invoke(cli_with_commands, ["conv", "list", "-n", "1"])
@@ -216,10 +218,8 @@ class TestCLIIntegration:
         detail_fixture = fixture_loader.load("conversation_details")
 
         with patch(
-            "ohc_lib.v0.api.OpenHandsAPI.search_conversations"
-        ) as mock_search, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation"
-        ) as mock_get:
+            "ohc.v0.api.OpenHandsAPI.search_conversations"
+        ) as mock_search, patch("ohc.v0.api.OpenHandsAPI.get_conversation") as mock_get:
             mock_search.return_value = list_fixture["response"]["json"]
             mock_get.return_value = detail_fixture["response"]["json"]
 
@@ -276,11 +276,11 @@ class TestCLIIntegration:
         start_fixture = fixture_loader.load("conversation_start")
 
         with patch(
-            "ohc_lib.v0.api.OpenHandsAPI.search_conversations"
+            "ohc.v0.api.OpenHandsAPI.search_conversations"
         ) as mock_search, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation"
+            "ohc.v0.api.OpenHandsAPI.get_conversation"
         ) as mock_get, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.start_conversation"
+            "ohc.v0.api.OpenHandsAPI.start_conversation"
         ) as mock_start:
             mock_search.return_value = list_fixture["response"]["json"]
             mock_get.return_value = detail_fixture["response"]["json"]
@@ -312,11 +312,11 @@ class TestCLIIntegration:
         changes_fixture = fixture_loader.load("git_changes")
 
         with patch(
-            "ohc_lib.v0.api.OpenHandsAPI.search_conversations"
+            "ohc.v0.api.OpenHandsAPI.search_conversations"
         ) as mock_search, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation"
+            "ohc.v0.api.OpenHandsAPI.get_conversation"
         ) as mock_get, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation_changes"
+            "ohc.v0.api.OpenHandsAPI.get_conversation_changes"
         ) as mock_changes:
             mock_search.return_value = list_fixture["response"]["json"]
             mock_get.return_value = detail_fixture["response"]["json"]
@@ -347,11 +347,11 @@ class TestCLIIntegration:
         detail_fixture = fixture_loader.load("conversation_details")
 
         with patch(
-            "ohc_lib.v0.api.OpenHandsAPI.search_conversations"
+            "ohc.v0.api.OpenHandsAPI.search_conversations"
         ) as mock_search, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation"
+            "ohc.v0.api.OpenHandsAPI.get_conversation"
         ) as mock_get, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.download_workspace_archive"
+            "ohc.v0.api.OpenHandsAPI.download_workspace_archive"
         ) as mock_download:
             mock_search.return_value = list_fixture["response"]["json"]
             mock_get.return_value = detail_fixture["response"]["json"]
@@ -392,11 +392,11 @@ class TestCLIIntegration:
         trajectory_fixture = fixture_loader.load("trajectory")
 
         with patch(
-            "ohc_lib.v0.api.OpenHandsAPI.search_conversations"
+            "ohc.v0.api.OpenHandsAPI.search_conversations"
         ) as mock_search, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_conversation"
+            "ohc.v0.api.OpenHandsAPI.get_conversation"
         ) as mock_get, patch(
-            "ohc_lib.v0.api.OpenHandsAPI.get_trajectory"
+            "ohc.v0.api.OpenHandsAPI.get_trajectory"
         ) as mock_trajectory:
             mock_search.return_value = list_fixture["response"]["json"]
             mock_get.return_value = detail_fixture["response"]["json"]

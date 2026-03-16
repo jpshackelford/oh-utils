@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ohc.debug_config import (
+from ohc_cli.debug_config import (
     ClusterConfig,
     DebugConfig,
     DebugConfigManager,

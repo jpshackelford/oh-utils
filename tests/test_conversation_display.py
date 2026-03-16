@@ -10,7 +10,7 @@ Tests the conversation_display module including:
 
 from unittest.mock import MagicMock, patch
 
-from ohc.conversation_display import (
+from ohc_cli.conversation_display import (
     Conversation,
     show_conversation_details,
     show_workspace_changes,

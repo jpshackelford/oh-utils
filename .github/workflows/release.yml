@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      ohc-lib--release_created: ${{ steps.release.outputs['packages/ohc-lib--release_created'] }}
-      ohc-lib--tag_name: ${{ steps.release.outputs['packages/ohc-lib--tag_name'] }}
       ohc--release_created: ${{ steps.release.outputs['packages/ohc--release_created'] }}
       ohc--tag_name: ${{ steps.release.outputs['packages/ohc--tag_name'] }}
+      ohc-cli--release_created: ${{ steps.release.outputs['packages/ohc-cli--release_created'] }}
+      ohc-cli--tag_name: ${{ steps.release.outputs['packages/ohc-cli--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -25,48 +25,11 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Publish ohc-lib when released
-  publish-ohc-lib:
-    runs-on: ubuntu-latest
-    needs: release-please
-    if: needs.release-please.outputs['ohc-lib--release_created'] == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v2
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install
-
-      - name: Build ohc-lib
-        working-directory: packages/ohc-lib
-        run: uv build
-
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ needs.release-please.outputs['ohc-lib--tag_name'] }}
-          files: packages/ohc-lib/dist/*
-
-      - name: Publish ohc-lib to PyPI
-        working-directory: packages/ohc-lib
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish
-
-  # Publish ohc when released
+  # Publish ohc (library) when released
   publish-ohc:
     runs-on: ubuntu-latest
-    needs: [release-please, publish-ohc-lib]
-    # Run if ohc was released, OR if ohc-lib was released (since ohc depends on it)
-    # The 'if: always()' ensures this runs even if publish-ohc-lib was skipped
-    if: |
-      always() &&
-      (needs.release-please.outputs['ohc--release_created'] == 'true' ||
-       needs.release-please.outputs['ohc-lib--release_created'] == 'true')
+    needs: release-please
+    if: needs.release-please.outputs['ohc--release_created'] == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +46,6 @@ jobs:
         run: uv build
 
       - name: Upload release artifacts
-        if: needs.release-please.outputs['ohc--release_created'] == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.release-please.outputs['ohc--tag_name'] }}
@@ -91,6 +53,44 @@ jobs:
 
       - name: Publish ohc to PyPI
         working-directory: packages/ohc
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
+
+  # Publish ohc-cli when released
+  publish-ohc-cli:
+    runs-on: ubuntu-latest
+    needs: [release-please, publish-ohc]
+    # Run if ohc-cli was released, OR if ohc was released (since ohc-cli depends on it)
+    # The 'if: always()' ensures this runs even if publish-ohc was skipped
+    if: |
+      always() &&
+      (needs.release-please.outputs['ohc-cli--release_created'] == 'true' ||
+       needs.release-please.outputs['ohc--release_created'] == 'true')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Build ohc-cli
+        working-directory: packages/ohc-cli
+        run: uv build
+
+      - name: Upload release artifacts
+        if: needs.release-please.outputs['ohc-cli--release_created'] == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.release-please.outputs['ohc-cli--tag_name'] }}
+          files: packages/ohc-cli/dist/*
+
+      - name: Publish ohc-cli to PyPI
+        working-directory: packages/ohc-cli
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: uv publish

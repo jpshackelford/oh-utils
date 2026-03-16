@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-from ohc_lib import OpenHandsAPI
+from ohc import OpenHandsAPI
 
 logger = logging.getLogger(__name__)
 

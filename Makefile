@@ -20,7 +20,7 @@ test-integration: ## Run integration tests
 	uv run pytest tests/test_api_integration.py -v
 
 test-cov: ## Run tests with coverage
-	uv run pytest tests/ --cov=packages/ohc-lib/src/ohc_lib --cov=packages/ohc/src/ohc --cov-report=html --cov-report=term-missing
+	uv run pytest tests/ --cov=packages/ohc/src/ohc --cov=packages/ohc-cli/src/ohc_cli --cov-report=html --cov-report=term-missing
 
 update-fixtures: ## Update API test fixtures
 	python scripts/update_fixtures.py
@@ -41,7 +41,7 @@ format-check: ## Check code formatting
 	uv run ruff format --check .
 
 type-check: ## Run type checking
-	uv run mypy packages/ohc-lib/src/ohc_lib packages/ohc/src/ohc
+	uv run mypy packages/ohc/src/ohc packages/ohc-cli/src/ohc_cli
 
 pre-commit-install: ## Install pre-commit hooks
 	uv run pre-commit install
@@ -63,14 +63,14 @@ clean: ## Clean build artifacts
 	find . -type f -name "*.pyc" -delete
 
 build: ## Build all packages
-	cd packages/ohc-lib && uv build
+	cd packages/ohc && uv build
+	cd packages/ohc-cli && uv build
+
+build-ohc: ## Build ohc library package
 	cd packages/ohc && uv build
 
-build-ohc-lib: ## Build ohc-lib package
-	cd packages/ohc-lib && uv build
-
-build-ohc: ## Build ohc CLI package
-	cd packages/ohc && uv build
+build-ohc-cli: ## Build ohc-cli package
+	cd packages/ohc-cli && uv build
 
 publish-test: ## Publish to test PyPI (placeholder)
 	@echo "future state package publishing to test PyPI"

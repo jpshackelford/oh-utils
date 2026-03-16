@@ -1,11 +1,36 @@
 """
-OpenHands Cloud (ohc) CLI
+OpenHands Cloud API Client Library (ohc)
 
-Administrative command-line tools for managing OpenHands Cloud and Enterprise
-deployments. Provides conversation management, server configuration, debugging
-tools, and interactive mode.
+A Python library for programmatic access to OpenHands Cloud and Agent Server REST APIs.
+Designed for administrators and developers who need to automate OpenHands operations.
 
-For programmatic access to the OpenHands APIs, use the ohc-lib package instead.
+Example usage:
+    from ohc import OpenHandsAPI
+
+    # Create a client for the v1 API
+    api = OpenHandsAPI(api_key="your-api-key", version="v1")
+
+    # List conversations
+    result = api.search_conversations(limit=10)
+    for conv in result["results"]:
+        print(f"{conv['conversation_id']}: {conv.get('title', 'Untitled')}")
+
+    # Get conversation details
+    details = api.get_conversation("conversation-id")
+
+For v0 or v1 specific clients:
+    from ohc.v0 import OpenHandsAPI as V0API
+    from ohc.v1 import OpenHandsAPI as V1API
 """
 
-__version__ = "0.2.0"
+__version__ = "0.1.0"
+
+from .api import OpenHandsAPI, create_api_client
+from .v1.api import SandboxNotRunningError
+
+__all__ = [
+    "OpenHandsAPI",
+    "create_api_client",
+    "SandboxNotRunningError",
+    "__version__",
+]

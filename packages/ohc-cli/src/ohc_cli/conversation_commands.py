@@ -9,7 +9,7 @@ import sys
 from typing import List, Optional
 
 import click
-from ohc_lib import OpenHandsAPI
+from ohc import OpenHandsAPI
 
 from .command_utils import resolve_conversation_id, with_server_config
 from .config import ConfigManager
@@ -72,7 +72,7 @@ def interactive_mode(api_version: str = "v0", server: Optional[str] = None) -> N
         api_version: API version to use ("v0" or "v1"), defaults to "v0"
         server: Server name to use (defaults to configured default)
     """
-    from ohc_lib import create_api_client
+    from ohc import create_api_client
 
     from .interactive import ConversationManager
 

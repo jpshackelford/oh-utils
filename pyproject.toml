@@ -25,7 +25,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 # During development, use local package
-ohc-lib = { workspace = true }
+ohc = { workspace = true }
 
 # Ruff configuration
 [tool.ruff]
