@@ -31,7 +31,9 @@ jobs:
         run: uv python install
 
       - name: Install workspace dependencies
-        run: uv sync --all-extras --dev
+        run: |
+          uv sync --all-extras --dev
+          uv pip install -e packages/ohc -e packages/ohc-cli
 
       - name: Run ruff linting
         run: uv run ruff check .
@@ -74,7 +76,9 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install workspace dependencies
-        run: uv sync --all-extras --dev
+        run: |
+          uv sync --all-extras --dev
+          uv pip install -e packages/ohc -e packages/ohc-cli
 
       - name: Run tests
         run: uv run pytest --cov=packages/ohc/src/ohc --cov=packages/ohc-cli/src/ohc_cli --cov-report=xml --cov-report=html --cov-report=term-missing --junitxml=test-results.xml -v
