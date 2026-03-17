@@ -4,15 +4,15 @@ from datetime import datetime, timezone
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
-from ohc.k8s.client import K8sClient, K8sClientError
-from ohc.k8s.detection import DetectedRuntimeConfig, RuntimeDetector
-from ohc.k8s.queries import ClusterHealthSummary, RuntimePod, RuntimeQuery
+from ohc_cli.k8s.client import K8sClient, K8sClientError
+from ohc_cli.k8s.detection import DetectedRuntimeConfig, RuntimeDetector
+from ohc_cli.k8s.queries import ClusterHealthSummary, RuntimePod, RuntimeQuery
 
 
 class TestK8sClientIsolation:
     """Tests proving K8sClient instances don't share global state."""
 
-    @patch("ohc.k8s.client.config.new_client_from_config")
+    @patch("ohc_cli.k8s.client.config.new_client_from_config")
     def test_multiple_clients_have_isolated_api_clients(
         self, mock_new_client: MagicMock
     ) -> None:
@@ -28,7 +28,7 @@ class TestK8sClientIsolation:
         assert client2._api_client is mock_client_2
         assert client1._api_client is not client2._api_client
 
-    @patch("ohc.k8s.client.config.new_client_from_config")
+    @patch("ohc_cli.k8s.client.config.new_client_from_config")
     def test_api_objects_use_instance_specific_client(
         self, mock_new_client: MagicMock
     ) -> None:

@@ -12,11 +12,10 @@ from unittest.mock import patch
 import pytest
 import responses
 from click.testing import CliRunner
-
-from ohc.cli import cli
-from ohc.config import ConfigManager
-from ohc.conversation_commands import conv
-from ohc.server_commands import server
+from ohc_cli.cli import cli
+from ohc_cli.config import ConfigManager
+from ohc_cli.conversation_commands import conv
+from ohc_cli.server_commands import server
 
 
 class TestCLIIntegration:
@@ -50,8 +49,10 @@ class TestCLIIntegration:
             config_manager = ConfigManager()
             # Patch the ConfigManager class in all modules that use it
             with patch(
-                "ohc.command_utils.ConfigManager", return_value=config_manager
-            ), patch("ohc.server_commands.ConfigManager", return_value=config_manager):
+                "ohc_cli.command_utils.ConfigManager", return_value=config_manager
+            ), patch(
+                "ohc_cli.server_commands.ConfigManager", return_value=config_manager
+            ):
                 yield config_manager
 
     def test_cli_help(self, runner, cli_with_commands):

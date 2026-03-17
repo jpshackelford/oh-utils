@@ -11,9 +11,8 @@ from typing import Any, Dict, Generator
 
 import pytest
 import responses
-from requests import Session
-
 from ohc.v0.api import OpenHandsAPI
+from requests import Session
 
 # Try to import VCR.py components
 try:

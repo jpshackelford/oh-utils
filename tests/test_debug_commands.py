@@ -9,12 +9,11 @@ from unittest.mock import patch
 import click
 import pytest
 from click.testing import CliRunner
-
-from ohc.cli import cli
-from ohc.conversation_commands import conv
-from ohc.debug import debug
-from ohc.debug_config import DebugConfigManager
-from ohc.server_commands import server
+from ohc_cli.cli import cli
+from ohc_cli.conversation_commands import conv
+from ohc_cli.debug import debug
+from ohc_cli.debug_config import DebugConfigManager
+from ohc_cli.server_commands import server
 
 
 @pytest.fixture
@@ -278,60 +277,60 @@ class TestParseDuration:
     """Tests for the parse_duration utility function."""
 
     def test_parse_hours(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("1h") == 3600
         assert parse_duration("2h") == 7200
         assert parse_duration("24h") == 86400
 
     def test_parse_minutes(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("1m") == 60
         assert parse_duration("30m") == 1800
         assert parse_duration("60m") == 3600
 
     def test_parse_seconds(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("1s") == 1
         assert parse_duration("60s") == 60
         assert parse_duration("300s") == 300
 
     def test_parse_days(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("1d") == 86400
         assert parse_duration("7d") == 604800
 
     def test_parse_plain_number_defaults_to_minutes(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("10") == 600  # 10 minutes = 600 seconds
         assert parse_duration("30") == 1800  # 30 minutes = 1800 seconds
 
     def test_parse_with_whitespace(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("  1h  ") == 3600
         assert parse_duration("\t30m\n") == 1800
 
     def test_parse_uppercase(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("1H") == 3600
         assert parse_duration("30M") == 1800
         assert parse_duration("60S") == 60
 
     def test_parse_zero_values(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         assert parse_duration("0h") == 0
         assert parse_duration("0m") == 0
         assert parse_duration("0s") == 0
 
     def test_parse_invalid_input_raises_error(self) -> None:
-        from ohc.debug.utils import parse_duration
+        from ohc_cli.debug.utils import parse_duration
 
         # Invalid suffix
         with pytest.raises(ValueError):
@@ -350,33 +349,33 @@ class TestSelectRuntimeContext:
     """Tests for _select_runtime_context helper function."""
 
     def test_same_cluster_selected_returns_app_context(self) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=True):
             result = _select_runtime_context(contexts, "ctx-app")
 
         assert result == "ctx-app"
 
     def test_different_cluster_selected_returns_chosen_context(self) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
-            with patch("ohc.debug.configure_cmd.click.prompt", return_value=2):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc_cli.debug.configure_cmd.click.prompt", return_value=2):
                 result = _select_runtime_context(contexts, "ctx-app")
 
         assert result == "ctx-runtime"
 
     def test_first_context_selected_when_choosing_different(self) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "ctx-first"}, {"name": "ctx-second"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
-            with patch("ohc.debug.configure_cmd.click.prompt", return_value=1):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc_cli.debug.configure_cmd.click.prompt", return_value=1):
                 result = _select_runtime_context(contexts, "ctx-first")
 
         assert result == "ctx-first"
@@ -384,11 +383,11 @@ class TestSelectRuntimeContext:
     def test_output_shows_runtime_cluster_header(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "ctx-app"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=True):
             _select_runtime_context(contexts, "ctx-app")
 
         captured = capsys.readouterr()
@@ -397,11 +396,11 @@ class TestSelectRuntimeContext:
     def test_output_shows_same_as_app_when_confirmed(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "my-context"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=True):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=True):
             _select_runtime_context(contexts, "my-context")
 
         captured = capsys.readouterr()
@@ -410,12 +409,12 @@ class TestSelectRuntimeContext:
     def test_output_lists_contexts_when_different_cluster(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        from ohc.debug.configure_cmd import _select_runtime_context
+        from ohc_cli.debug.configure_cmd import _select_runtime_context
 
         contexts = [{"name": "ctx-app"}, {"name": "ctx-runtime"}]
 
-        with patch("ohc.debug.configure_cmd.click.confirm", return_value=False):
-            with patch("ohc.debug.configure_cmd.click.prompt", return_value=1):
+        with patch("ohc_cli.debug.configure_cmd.click.confirm", return_value=False):
+            with patch("ohc_cli.debug.configure_cmd.click.prompt", return_value=1):
                 _select_runtime_context(contexts, "ctx-app")
 
         captured = capsys.readouterr()

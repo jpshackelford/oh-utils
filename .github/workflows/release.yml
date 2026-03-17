@@ -1,42 +1,37 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
+  push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release (e.g., 1.2.3)"
-        required: false
-        type: string
-      test_mode:
-        description: "Enable test mode (creates draft prerelease)"
-        required: false
-        type: boolean
-        default: false
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch') ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       !contains(github.event.workflow_run.head_commit.message, 'bump:'))
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      ohc--release_created: ${{ steps.release.outputs['packages/ohc--release_created'] }}
+      ohc--tag_name: ${{ steps.release.outputs['packages/ohc--tag_name'] }}
+      ohc-cli--release_created: ${{ steps.release.outputs['packages/ohc-cli--release_created'] }}
+      ohc-cli--tag_name: ${{ steps.release.outputs['packages/ohc-cli--tag_name'] }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Publish ohc (library) when released
+  publish-ohc:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: needs.release-please.outputs['ohc--release_created'] == 'true'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v2
@@ -46,146 +41,32 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Check if release is needed
-        id: check_release
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual release triggered"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-          else
-            # Check if there are any conventional commits since last tag
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [ -z "$LAST_TAG" ]; then
-              echo "No previous tags found, creating initial release"
-              echo "should_release=true" >> $GITHUB_OUTPUT
-            else
-              # Check for conventional commits since last tag
-              COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --grep="^feat\|^fix\|^perf\|BREAKING CHANGE" || true)
-              if [ -n "$COMMITS" ]; then
-                echo "Found conventional commits since last tag: $LAST_TAG"
-                echo "Commits:"
-                echo "$COMMITS"
-                echo "should_release=true" >> $GITHUB_OUTPUT
-              else
-                echo "No conventional commits found since last tag: $LAST_TAG"
-                echo "Skipping release - no changes warrant a new version"
-                echo "should_release=false" >> $GITHUB_OUTPUT
-                exit 0
-              fi
-            fi
-          fi
-
-      - name: Determine version
-        if: steps.check_release.outputs.should_release == 'true'
-        id: version
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            NEW_VERSION="${{ github.event.inputs.version }}"
-          else
-            # Get the latest tag as base version, fallback to pyproject.toml if no tags exist
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [ -n "$LAST_TAG" ]; then
-              # Remove 'v' prefix if present and increment patch version
-              CURRENT_VERSION=$(echo "$LAST_TAG" | sed 's/^v//')
-              echo "Using latest tag as base version: $CURRENT_VERSION"
-            else
-              # Fallback to pyproject.toml for initial release
-              CURRENT_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
-              echo "No tags found, using pyproject.toml version: $CURRENT_VERSION"
-            fi
-
-            # Simple patch increment
-            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-          fi
-
-          # Check if the new version tag already exists
-          if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
-            echo "ERROR: Tag v${NEW_VERSION} already exists!"
-            echo "This suggests the version calculation is incorrect or a release already exists."
-            echo "Existing tags:"
-            git tag --list | sort -V
-            exit 1
-          fi
-
-          # Add test suffix if in test mode and not on main branch
-          if [ "${{ github.event.inputs.test_mode }}" = "true" ] && [ "${{ github.ref_name }}" != "main" ]; then
-            CLEAN_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
-            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-            NEW_VERSION="${NEW_VERSION}-test-${CLEAN_BRANCH}-${TIMESTAMP}"
-          fi
-
-          echo "NEW_VERSION=v${NEW_VERSION}" >> $GITHUB_ENV
-          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          echo "test_mode=${{ github.event.inputs.test_mode }}" >> $GITHUB_OUTPUT
-          echo "Creating release for version: v${NEW_VERSION}"
-
-      - name: Build package
-        if: steps.check_release.outputs.should_release == 'true'
+      - name: Build ohc
+        working-directory: packages/ohc
         run: uv build
 
-      - name: Generate changelog
-        if: steps.check_release.outputs.should_release == 'true'
-        run: |
-          # Create a simple changelog from recent commits
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-
-          if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
-            echo "# Test Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "**⚠️ This is a test release from branch: \`${{ github.ref_name }}\`**" >> RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-          else
-            echo "# Release ${{ env.NEW_VERSION }}" > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-          fi
-
-          if [ -z "$LAST_TAG" ]; then
-            echo "Initial release" >> RELEASE_NOTES.md
-          else
-            echo "## Changes since ${LAST_TAG}" >> RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            git log ${LAST_TAG}..HEAD --oneline --pretty=format:"- %s" >> RELEASE_NOTES.md
-          fi
-
-          if [ "${{ steps.version.outputs.test_mode }}" = "true" ]; then
-            echo "" >> RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "## Test Release Information" >> RELEASE_NOTES.md
-            echo "- **Branch**: ${{ github.ref_name }}" >> RELEASE_NOTES.md
-            echo "- **Commit**: ${{ github.sha }}" >> RELEASE_NOTES.md
-            echo "- **Triggered by**: ${{ github.actor }}" >> RELEASE_NOTES.md
-            echo "- **Timestamp**: $(date -u)" >> RELEASE_NOTES.md
-          fi
-
-      - name: Create GitHub Release
-        if: steps.check_release.outputs.should_release == 'true'
+      - name: Upload release artifacts
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.NEW_VERSION }}
-          name: ${{ steps.version.outputs.test_mode == 'true' && '🧪 Test Release' || 'Release' }} ${{ env.NEW_VERSION }}
-          body_path: RELEASE_NOTES.md
-          draft: ${{ steps.version.outputs.test_mode == 'true' }}
-          prerelease: ${{ steps.version.outputs.test_mode == 'true' }}
-          files: dist/*
-          fail_on_unmatched_files: true
-          make_latest: ${{ steps.version.outputs.test_mode != 'true' }}
+          tag_name: ${{ needs.release-please.outputs['ohc--tag_name'] }}
+          files: packages/ohc/dist/*
 
-      - name: Publish to PyPI
-        if: steps.check_release.outputs.should_release == 'true' && steps.version.outputs.test_mode != 'true'
+      - name: Publish ohc to PyPI
+        working-directory: packages/ohc
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          echo "Publishing version: ${{ env.NEW_VERSION }}"
-          echo "Package files:"
-          ls -la dist/
-          uv publish
+        run: uv publish
 
-  publish-test:
+  # Publish ohc-cli when released
+  publish-ohc-cli:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    needs: [release-please, publish-ohc]
+    # Run if ohc-cli was released, OR if ohc was released (since ohc-cli depends on it)
+    # The 'if: always()' ensures this runs even if publish-ohc was skipped
+    if: |
+      always() &&
+      (needs.release-please.outputs['ohc-cli--release_created'] == 'true' ||
+       needs.release-please.outputs['ohc--release_created'] == 'true')
     steps:
       - uses: actions/checkout@v4
 
@@ -197,17 +78,19 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Build package
+      - name: Build ohc-cli
+        working-directory: packages/ohc-cli
         run: uv build
 
-      - name: Publish to Test PyPI
+      - name: Upload release artifacts
+        if: needs.release-please.outputs['ohc-cli--release_created'] == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.release-please.outputs['ohc-cli--tag_name'] }}
+          files: packages/ohc-cli/dist/*
+
+      - name: Publish ohc-cli to PyPI
+        working-directory: packages/ohc-cli
         env:
-          UV_PUBLISH_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: |
-          echo "Publishing to Test PyPI"
-          echo "Package files:"
-          ls -la dist/
-          uv publish --publish-url https://test.pypi.org/legacy/
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish

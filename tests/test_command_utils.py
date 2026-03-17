@@ -6,12 +6,12 @@ Tests the shared decorators and utilities used across CLI commands.
 
 from unittest.mock import Mock, patch
 
-from ohc.command_utils import (
+from ohc.v0.api import OpenHandsAPI
+from ohc_cli.command_utils import (
     handle_missing_server_config,
     resolve_conversation_id,
     with_server_config,
 )
-from ohc.v0.api import OpenHandsAPI
 
 
 class TestWithServerConfigDecorator:
@@ -29,7 +29,9 @@ class TestWithServerConfigDecorator:
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return f"API base URL: {api.base_url}"
 
-        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
+        with patch(
+            "ohc_cli.command_utils.ConfigManager", return_value=mock_config_manager
+        ):
             result = test_command(server="test-server")
 
         assert result == "API base URL: https://test.example.com/api/"
@@ -44,7 +46,9 @@ class TestWithServerConfigDecorator:
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
-        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
+        with patch(
+            "ohc_cli.command_utils.ConfigManager", return_value=mock_config_manager
+        ):
             result = test_command(server="missing-server")
 
         assert result is None
@@ -60,7 +64,9 @@ class TestWithServerConfigDecorator:
         def test_command(api: OpenHandsAPI, server: str = None) -> str:
             return "Should not reach here"
 
-        with patch("ohc.command_utils.ConfigManager", return_value=mock_config_manager):
+        with patch(
+            "ohc_cli.command_utils.ConfigManager", return_value=mock_config_manager
+        ):
             result = test_command()
 
         assert result is None

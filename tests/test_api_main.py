@@ -5,8 +5,7 @@ Tests for the main API module with version selection.
 from unittest.mock import patch
 
 import pytest
-
-from ohc.api import OpenHandsAPI, create_api_client
+from ohc import OpenHandsAPI, create_api_client
 
 
 class TestOpenHandsAPIMain:

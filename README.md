@@ -1,34 +1,76 @@
 # OpenHands Utilities
 
-A collection of utilities for working with OpenHands (formerly All-Hands-AI / OpenDevin) API and conversations.
+Administrative tools and libraries for OpenHands Cloud and Enterprise deployments.
+
+> **Note:** These tools are for administrators and developers who need programmatic access to OpenHands. For end-user agent interactions, see the main [OpenHands CLI](https://github.com/All-Hands-AI/OpenHands) which wraps the Agent SDK.
+
+## Packages
+
+This monorepo contains two packages:
+
+| Package                          | Description                                                 | Install                   |
+| -------------------------------- | ----------------------------------------------------------- | ------------------------- |
+| **[ohc](packages/ohc/)**         | Python library for OpenHands Cloud & Agent Server REST APIs | `uv pip install ohc`      |
+| **[ohc-cli](packages/ohc-cli/)** | Administrative CLI for managing OpenHands deployments       | `uv tool install ohc-cli` |
+
+### ohc - API Client Library
+
+For programmatic access to OpenHands APIs:
+
+```python
+from ohc import OpenHandsAPI
+
+api = OpenHandsAPI(api_key="your-key", version="v1")
+result = api.search_conversations(limit=10)
+for conv in result["results"]:
+    print(f"{conv['conversation_id']}: {conv.get('title')}")
+```
+
+### ohc-cli - Command-Line Interface
+
+For administrative tasks:
+
+```bash
+# Configure a server
+ohc server add cloud https://app.all-hands.dev/api/ YOUR_API_KEY --default
+
+# List conversations
+ohc conv list
+
+# Interactive mode
+ohc -i
+```
 
 ## Installation
 
-> **Note:** This package is intended as a command-line utility, not an API library.
-> Internal APIs are expected to be very unstable in the short term.
+### Install CLI (Recommended)
 
-### Using uv (Recommended)
-
-Install directly from GitHub:
+The CLI includes the library as a dependency:
 
 ```bash
-uv pip install git+https://github.com/jpshackelford/oh-utils.git
+# Install as a uv tool (recommended - isolated environment)
+uv tool install ohc-cli
+
+# Or install with pip
+pip install ohc-cli
+```
+
+### Install Library Only
+
+For programmatic use without the CLI:
+
+```bash
+uv pip install ohc
+# or
+pip install ohc
 ```
 
 ### Development Installation
 
-For local development, clone the repo and install in editable mode:
-
 ```bash
 git clone https://github.com/jpshackelford/oh-utils.git
 cd oh-utils
-uv pip install -e .
-```
-
-Or run directly without installation:
-
-```bash
-uv run ohc
+uv sync --all-extras --dev
 ```
 
 ## Quick Start
@@ -39,10 +81,10 @@ Before using any commands, you need to configure a server with your API token:
 
 ```bash
 # Add a server configuration
-uv run ohc server add --name my-server --url https://app.all-hands.dev/api/ --apikey YOUR_API_KEY --default
+ohc server add --name my-server --url https://app.all-hands.dev/api/ --apikey YOUR_API_KEY --default
 
 # Or add interactively (will prompt for details)
-uv run ohc server add
+ohc server add
 ```
 
 **Required Information:**
@@ -55,19 +97,19 @@ uv run ohc server add
 
 ```bash
 # List your conversations
-uv run ohc conv list
+ohc conv list
 
 # Show detailed info about a conversation (by number or ID)
-uv run ohc conv show 1
+ohc conv show 1
 
 # Wake up a stopped conversation
-uv run ohc conv wake 2
+ohc conv wake 2
 
 # Download workspace files
-uv run ohc conv ws-download 1
+ohc conv ws-download 1
 
 # Start interactive mode for full-featured management
-uv run ohc -i
+ohc -i
 ```
 
 ## Commands Reference
@@ -76,49 +118,49 @@ uv run ohc -i
 
 ```bash
 # Add a new server configuration
-uv run ohc server add [--name NAME] [--url URL] [--apikey KEY] [--default]
+ohc server add [--name NAME] [--url URL] [--apikey KEY] [--default]
 
 # List configured servers
-uv run ohc server list
+ohc server list
 
 # Test connection to a server
-uv run ohc server test [SERVER_NAME]
+ohc server test [SERVER_NAME]
 
 # Set a server as default
-uv run ohc server set-default SERVER_NAME
+ohc server set-default SERVER_NAME
 
 # Delete a server configuration
-uv run ohc server delete SERVER_NAME [--force]
+ohc server delete SERVER_NAME [--force]
 ```
 
 ### Conversation Management
 
 ```bash
 # List conversations
-uv run ohc conv list [--server SERVER] [-n NUMBER]
+ohc conv list [--server SERVER] [-n NUMBER]
 
 # Show detailed conversation information
-uv run ohc conv show CONVERSATION_ID_OR_NUMBER [--server SERVER]
+ohc conv show CONVERSATION_ID_OR_NUMBER [--server SERVER]
 
 # Wake up (start) a conversation
-uv run ohc conv wake CONVERSATION_ID_OR_NUMBER [--server SERVER]
+ohc conv wake CONVERSATION_ID_OR_NUMBER [--server SERVER]
 
 # Show conversation trajectory (action history)
-uv run ohc conv trajectory CONVERSATION_ID_OR_NUMBER [--server SERVER] [--limit N]
-uv run ohc conv traj CONVERSATION_ID_OR_NUMBER  # Short alias
+ohc conv trajectory CONVERSATION_ID_OR_NUMBER [--server SERVER] [--limit N]
+ohc conv traj CONVERSATION_ID_OR_NUMBER  # Short alias
 
 # Show last N agent messages/thoughts
-uv run ohc conv tail CONVERSATION_ID_OR_NUMBER [-n NUMBER] [--server SERVER]
+ohc conv tail CONVERSATION_ID_OR_NUMBER [-n NUMBER] [--server SERVER]
 
 # Follow a conversation in real-time (like 'tail -f')
-uv run ohc conv tail CONVERSATION_ID_OR_NUMBER -f [--interval SECONDS]
+ohc conv tail CONVERSATION_ID_OR_NUMBER -f [--interval SECONDS]
 
 # Show workspace file changes (git status)
-uv run ohc conv ws-changes CONVERSATION_ID_OR_NUMBER [--server SERVER]
+ohc conv ws-changes CONVERSATION_ID_OR_NUMBER [--server SERVER]
 
 # Download workspace as ZIP archive
-uv run ohc conv ws-download CONVERSATION_ID_OR_NUMBER [-o OUTPUT_FILE] [--server SERVER]
-uv run ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
+ohc conv ws-download CONVERSATION_ID_OR_NUMBER [-o OUTPUT_FILE] [--server SERVER]
+ohc conv ws-dl CONVERSATION_ID_OR_NUMBER  # Short alias
 ```
 
 **Conversation ID/Number Options:**
@@ -179,7 +221,7 @@ Before using debug commands, configure your environment:
 
 ```bash
 # Interactive configuration (recommended)
-uv run ohc debug configure
+ohc debug configure
 
 # This will:
 # 1. List available kubectl contexts
@@ -192,29 +234,29 @@ uv run ohc debug configure
 
 ```bash
 # List configured environments
-uv run ohc debug configure --list
+ohc debug configure --list
 
 # Show full configuration details (includes runtime routing config)
-uv run ohc debug configure --show
+ohc debug configure --show
 
 # Test cluster connectivity
-uv run ohc debug configure --test
+ohc debug configure --test
 
 # Re-run detection to refresh configuration for an environment
-uv run ohc debug configure --refresh production
+ohc debug configure --refresh production
 
 # Set default environment
-uv run ohc debug configure --default production
+ohc debug configure --default production
 
 # Remove an environment
-uv run ohc debug configure --remove staging
+ohc debug configure --remove staging
 ```
 
 #### Cluster Health
 
 ```bash
 # Show cluster health overview
-uv run ohc debug health
+ohc debug health
 
 # Output includes:
 # - App cluster status and deployment health
@@ -225,64 +267,64 @@ uv run ohc debug health
 # - Top issues with affected runtimes
 
 # JSON output for automation
-uv run ohc debug health --output json
+ohc debug health --output json
 ```
 
 #### Runtime Investigation
 
 ```bash
 # Investigate a specific runtime by ID, session ID, or pod name
-uv run ohc debug runtime <RUNTIME_ID>
+ohc debug runtime <RUNTIME_ID>
 
 # Show with events
-uv run ohc debug runtime <RUNTIME_ID> --events
+ohc debug runtime <RUNTIME_ID> --events
 
 # Show with container logs
-uv run ohc debug runtime <RUNTIME_ID> --logs
+ohc debug runtime <RUNTIME_ID> --logs
 
 # Show everything (events + logs)
-uv run ohc debug runtime <RUNTIME_ID> --all
+ohc debug runtime <RUNTIME_ID> --all
 ```
 
 #### List Runtimes
 
 ```bash
 # List all runtime pods
-uv run ohc debug list
+ohc debug list
 
 # Filter by issues
-uv run ohc debug list --errors      # Pods with errors
-uv run ohc debug list --restarts    # Pods with restarts
-uv run ohc debug list --oom         # OOMKilled pods
-uv run ohc debug list --recent      # Created in last hour
+ohc debug list --errors      # Pods with errors
+ohc debug list --restarts    # Pods with restarts
+ohc debug list --oom         # OOMKilled pods
+ohc debug list --recent      # Created in last hour
 
 # JSON output for automation
-uv run ohc debug list --output json
+ohc debug list --output json
 ```
 
 #### App Server Diagnostics
 
 ```bash
 # Show app server logs
-uv run ohc debug app logs
-uv run ohc debug app logs --since 30m --component api
+ohc debug app logs
+ohc debug app logs --since 30m --component api
 
 # Show deployment status
-uv run ohc debug app status
+ohc debug app status
 
 # List app pods
-uv run ohc debug app pods
+ohc debug app pods
 ```
 
 #### Multi-Environment Support
 
 ```bash
 # Use specific environment
-uv run ohc debug -e staging health
-uv run ohc debug -e production list --oom
+ohc debug -e staging health
+ohc debug -e production list --oom
 
 # Add additional environments
-uv run ohc debug configure --add staging
+ohc debug configure --add staging
 ```
 
 ### Interactive Mode
@@ -290,7 +332,7 @@ uv run ohc debug configure --add staging
 Launch the full-featured interactive conversation manager:
 
 ```bash
-uv run ohc -i
+ohc -i
 ```
 
 **Interactive Commands:**
@@ -330,29 +372,31 @@ Get your OpenHands API token from: [https://app.all-hands.dev/settings/api-keys]
 
 ## Architecture
 
-This project features a unified architecture with:
+This is a monorepo with two independently releasable packages:
 
-- **Consolidated API Client** (`ohc/api.py`): Single, well-tested API client used by all components
-- **Modular CLI Commands** (`ohc/`): Server management and conversation commands with shared infrastructure
-- **Interactive Mode** (`ohc -i`): Full-featured terminal interface using the same unified backend
-- **Legacy Support** (`conversation_manager/`): Original interface maintained for compatibility, now using the unified API client
-
-### Unified Design Benefits
-
-- **Single Source of Truth**: All components use the same API client for consistency
-- **Shared Command Infrastructure**: Common patterns like server configuration and conversation ID resolution
-- **Comprehensive Testing**: Fixture-based integration tests with >78% coverage
-- **Type Safety**: Full type annotations throughout the codebase
-
-## Legacy Command
-
-The original conversation manager is still available as:
-
-```bash
-uv run oh-conversation-manager
+```
+packages/
+├── ohc/              # API client library
+│   └── src/ohc/
+│       ├── api.py    # Unified API client
+│       ├── v0/       # V0 API implementation
+│       └── v1/       # V1 API implementation
+│
+└── ohc-cli/          # Administrative CLI
+    └── src/ohc_cli/
+        ├── cli.py
+        ├── conversation_commands.py
+        ├── server_commands.py
+        ├── debug/    # Enterprise debugging tools
+        └── k8s/      # Kubernetes integration
 ```
 
-**Note**: The legacy command now uses the same unified API client as the modern `ohc` CLI, ensuring consistent behavior across all interfaces.
+### Design Principles
+
+- **Separation of Concerns**: The library (`ohc`) has minimal dependencies (just `requests`), while the CLI (`ohc-cli`) includes heavier deps like `click` and `kubernetes`
+- **Single Source of Truth**: Both packages share the same API client for consistency
+- **Type Safety**: Full type annotations throughout the codebase
+- **Comprehensive Testing**: Fixture-based integration tests with high coverage
 
 ## Troubleshooting
 
@@ -361,18 +405,24 @@ uv run oh-conversation-manager
 If you see "No servers configured", run:
 
 ```bash
-uv run ohc server add
+ohc server add
 ```
 
 ### Connection failed
 
 - Verify your API key is correct
 - Check that the server URL ends with `/api/`
-- Test the connection: `uv run ohc server test`
+- Test the connection: `ohc server test`
 
 ### Command not found
 
-Make sure you're in the project directory and using `uv run ohc` or install the package first.
+If `ohc` is not found, install it first:
+
+```bash
+uv tool install ohc-cli
+```
+
+For development, use `uv run ohc` from within the repository.
 
 ## Development
 

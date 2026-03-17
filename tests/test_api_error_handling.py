@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-
 from ohc.v0.api import OpenHandsAPI
 
 

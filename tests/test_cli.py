@@ -12,8 +12,7 @@ from unittest.mock import patch
 
 import click
 from click.testing import CliRunner
-
-from ohc.cli import cli, help_command, main
+from ohc_cli.cli import cli, help_command, main
 
 
 class TestCLI:
@@ -71,7 +70,7 @@ class TestCLI:
             if "test-cmd" in cli.commands:
                 del cli.commands["test-cmd"]
 
-    @patch("ohc.conversation_commands.interactive_mode")
+    @patch("ohc_cli.conversation_commands.interactive_mode")
     def test_cli_interactive_mode(self, mock_interactive):
         """Test CLI interactive mode invocation."""
         runner = CliRunner()
@@ -106,7 +105,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "No help available" in result.output
 
-    @patch("ohc.cli.cli")
+    @patch("ohc_cli.cli.cli")
     def test_main_function(self, mock_cli):
         """Test main function registers commands and calls CLI."""
         main()
@@ -119,7 +118,7 @@ class TestCLI:
         # Test that main function can be called without error
         # We can't easily test the actual command registration
         # without triggering the full CLI, so we test basic functionality
-        from ohc.cli import main
+        from ohc_cli.cli import main
 
         # Test that main is callable
         assert callable(main)
@@ -159,7 +158,7 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Usage:" in result.output
 
-    @patch("ohc.conversation_commands.interactive_mode")
+    @patch("ohc_cli.conversation_commands.interactive_mode")
     def test_cli_interactive_mode_exception_handling(self, mock_interactive):
         """Test CLI handles interactive mode exceptions."""
         # Make interactive_mode raise an exception

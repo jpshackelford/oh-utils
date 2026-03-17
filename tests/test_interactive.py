@@ -11,8 +11,8 @@ Note: Conversation dataclass tests are in test_conversation_display.py
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from ohc.conversation_display import Conversation
-from ohc.interactive import ConversationManager, TerminalFormatter
+from ohc_cli.conversation_display import Conversation
+from ohc_cli.interactive import ConversationManager, TerminalFormatter
 
 
 class TestTerminalFormatter:

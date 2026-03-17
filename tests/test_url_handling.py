@@ -9,9 +9,8 @@ from urllib.parse import urljoin
 
 import pytest
 import responses
-
-from ohc.conversation_display import Conversation
 from ohc.v0.api import OpenHandsAPI
+from ohc_cli.conversation_display import Conversation
 
 
 class TestURLHandling:
@@ -255,8 +254,8 @@ class TestURLHandling:
         # This is a meta-test to ensure we haven't missed any hardcoded references
         import inspect
 
-        from ohc import interactive
         from ohc.v0 import api
+        from ohc_cli import interactive
 
         # Get source code of the modules
         api_source = inspect.getsource(api)
@@ -274,7 +273,7 @@ class TestURLHandling:
                 f"Found hardcoded pattern '{pattern}' in ohc.v0.api"
             )
             assert pattern not in interactive_source, (
-                f"Found hardcoded pattern '{pattern}' in ohc.interactive"
+                f"Found hardcoded pattern '{pattern}' in ohc_cli.interactive"
             )
 
     def test_url_parameter_names_updated(self):

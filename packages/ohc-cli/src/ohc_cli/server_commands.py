@@ -5,8 +5,8 @@ Handles adding, listing, deleting, and managing server configurations.
 """
 
 import click
+from ohc import create_api_client
 
-from .api import create_api_client
 from .config import ConfigManager
 
 

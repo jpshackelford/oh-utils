@@ -6,8 +6,7 @@ from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import responses
 from click.testing import CliRunner
-
-from ohc.conversation_commands import conv
+from ohc_cli.conversation_commands import conv
 
 
 class TestConversationCommandsCLI:
@@ -53,7 +52,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -75,7 +74,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -104,7 +103,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -138,7 +137,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -150,7 +149,7 @@ class TestConversationCommandsCLI:
 
     def test_list_command_no_server_config(self):
         """Test list command with no server configuration."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = None
 
             result = self.runner.invoke(conv, ["list"])
@@ -160,7 +159,7 @@ class TestConversationCommandsCLI:
 
     def test_show_command_invalid_server(self):
         """Test show command with invalid server name."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = None
 
             result = self.runner.invoke(conv, ["show", "1", "--server", "invalid"])
@@ -197,7 +196,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -231,7 +230,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -263,7 +262,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -290,7 +289,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -302,12 +301,12 @@ class TestConversationCommandsCLI:
 
     def test_api_error_handling(self):
         """Test error handling when API calls fail."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.side_effect = Exception("API Error")
                 mock_create_api.return_value = mock_api
@@ -320,7 +319,7 @@ class TestConversationCommandsCLI:
     def test_interactive_mode_no_server_config(self):
         """Test interactive mode when no server is configured."""
         with patch(
-            "ohc.conversation_commands.ConfigManager"
+            "ohc_cli.conversation_commands.ConfigManager"
         ) as mock_config_manager_class:
             mock_config_manager = MagicMock()
             mock_config_manager.get_server_config.return_value = None
@@ -328,7 +327,7 @@ class TestConversationCommandsCLI:
 
             with patch("click.confirm", return_value=False):
                 with patch("click.echo") as mock_echo:
-                    from ohc.conversation_commands import interactive_mode
+                    from ohc_cli.conversation_commands import interactive_mode
 
                     interactive_mode()
 
@@ -340,7 +339,7 @@ class TestConversationCommandsCLI:
     def test_interactive_mode_add_server_accepted(self):
         """Test interactive mode when user accepts to add server."""
         with patch(
-            "ohc.conversation_commands.ConfigManager"
+            "ohc_cli.conversation_commands.ConfigManager"
         ) as mock_config_manager_class:
             mock_config_manager = MagicMock()
             # First call returns None, second call returns config after adding server
@@ -356,13 +355,13 @@ class TestConversationCommandsCLI:
                     mock_context_class.return_value = mock_context
 
                     with patch(
-                        "ohc.interactive.ConversationManager"
+                        "ohc_cli.interactive.ConversationManager"
                     ) as mock_manager_class:
                         mock_manager = MagicMock()
                         mock_manager_class.return_value = mock_manager
 
-                        with patch("ohc.api.create_api_client"):
-                            from ohc.conversation_commands import interactive_mode
+                        with patch("ohc.create_api_client"):
+                            from ohc_cli.conversation_commands import interactive_mode
 
                             interactive_mode()
 
@@ -371,7 +370,7 @@ class TestConversationCommandsCLI:
     def test_interactive_mode_success(self):
         """Test successful interactive mode launch."""
         with patch(
-            "ohc.conversation_commands.ConfigManager"
+            "ohc_cli.conversation_commands.ConfigManager"
         ) as mock_config_manager_class:
             mock_config_manager = MagicMock()
             mock_config_manager.get_server_config.return_value = {
@@ -381,12 +380,12 @@ class TestConversationCommandsCLI:
             }
             mock_config_manager_class.return_value = mock_config_manager
 
-            with patch("ohc.interactive.ConversationManager") as mock_manager_class:
+            with patch("ohc_cli.interactive.ConversationManager") as mock_manager_class:
                 mock_manager = MagicMock()
                 mock_manager_class.return_value = mock_manager
 
-                with patch("ohc.api.create_api_client"):
-                    from ohc.conversation_commands import interactive_mode
+                with patch("ohc.create_api_client"):
+                    from ohc_cli.conversation_commands import interactive_mode
 
                     interactive_mode()
 
@@ -395,13 +394,13 @@ class TestConversationCommandsCLI:
     def test_interactive_mode_exception(self):
         """Test interactive mode with exception."""
         with patch(
-            "ohc.conversation_commands.ConfigManager"
+            "ohc_cli.conversation_commands.ConfigManager"
         ) as mock_config_manager_class:
             mock_config_manager_class.side_effect = Exception("Config error")
 
             with patch("click.echo") as mock_echo:
                 with patch("sys.exit") as mock_exit:
-                    from ohc.conversation_commands import interactive_mode
+                    from ohc_cli.conversation_commands import interactive_mode
 
                     interactive_mode()
 
@@ -449,7 +448,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -499,7 +498,7 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -515,12 +514,12 @@ class TestConversationCommandsCLI:
 
     def test_download_command_error(self):
         """Test workspace download with error."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
 
                 # Mock ID resolution - return matching conversation
@@ -567,13 +566,13 @@ class TestConversationCommandsCLI:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
             with patch(
-                "ohc.conversation_commands.show_workspace_changes"
+                "ohc_cli.conversation_commands.show_workspace_changes"
             ) as mock_show_changes:
                 result = self.runner.invoke(conv, ["ws-changes", "1"])
 
@@ -627,7 +626,7 @@ class TestNewConversationCommand:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -657,7 +656,7 @@ class TestNewConversationCommand:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -680,7 +679,7 @@ class TestNewConversationCommand:
             status=200,
         )
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
@@ -700,12 +699,12 @@ class TestNewConversationCommand:
             "conversation_status": "STOPPED",
         }
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.api.OpenHandsAPI.create_conversation") as mock_create:
+            with patch("ohc.OpenHandsAPI.create_conversation") as mock_create:
                 mock_create.return_value = create_response
 
                 # Simulate piped input
@@ -719,14 +718,14 @@ class TestNewConversationCommand:
 
     def test_get_prompt_from_sources_argument(self):
         """Test _get_prompt_from_sources with argument."""
-        from ohc.conversation_commands import _get_prompt_from_sources
+        from ohc_cli.conversation_commands import _get_prompt_from_sources
 
         result = _get_prompt_from_sources("Test prompt")
         assert result == "Test prompt"
 
     def test_get_prompt_from_sources_none(self):
         """Test _get_prompt_from_sources with no input."""
-        from ohc.conversation_commands import _get_prompt_from_sources
+        from ohc_cli.conversation_commands import _get_prompt_from_sources
 
         with patch("sys.stdin.isatty", return_value=True):
             with patch("builtins.input", side_effect=KeyboardInterrupt):
@@ -768,12 +767,12 @@ class TestTailCommand:
             },
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [
@@ -828,12 +827,12 @@ class TestTailCommand:
             },
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "test-conv-123"}]
@@ -866,12 +865,12 @@ class TestTailCommand:
             {"id": 1, "source": "user", "action": "message", "message": "User message"}
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "test-conv-123"}]
@@ -917,12 +916,12 @@ class TestTailCommand:
             },
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "test-conv-123"}]
@@ -947,12 +946,12 @@ class TestTailCommand:
 
     def test_tail_command_conversation_not_running(self):
         """Test tail command when conversation is not running."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "test-conv-123"}]
@@ -971,12 +970,12 @@ class TestTailCommand:
 
     def test_tail_command_conversation_not_found(self):
         """Test tail command when conversation is not found."""
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "other-conv-456"}]
@@ -1017,12 +1016,12 @@ class TestTailCommand:
             },
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [{"conversation_id": "test-conv-123"}]
@@ -1086,12 +1085,12 @@ class TestTailCommand:
             },
         ]
 
-        with patch("ohc.command_utils.ConfigManager") as mock_config_manager:
+        with patch("ohc_cli.command_utils.ConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_server_config.return_value = (
                 self.mock_config
             )
 
-            with patch("ohc.command_utils.create_api_client") as mock_create_api:
+            with patch("ohc_cli.command_utils.create_api_client") as mock_create_api:
                 mock_api = Mock()
                 mock_api.search_conversations.return_value = {
                     "results": [

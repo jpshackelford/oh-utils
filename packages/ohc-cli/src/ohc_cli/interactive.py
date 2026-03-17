@@ -15,7 +15,8 @@ import zipfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from .api import OpenHandsAPI
+from ohc import OpenHandsAPI
+
 from .conversation_display import Conversation, show_conversation_details
 
 logger = logging.getLogger(__name__)

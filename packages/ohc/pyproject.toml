@@ -1,0 +1,46 @@
+[project]
+name = "ohc"
+version = "0.1.0"
+description = "OpenHands Cloud API Client Library - Programmatic access to OpenHands Cloud and Agent Server REST APIs"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "JP Shackelford" }]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
+keywords = ["openhands", "api", "client", "cloud", "automation"]
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jpshackelford/oh-utils"
+Repository = "https://github.com/jpshackelford/oh-utils"
+Documentation = "https://github.com/jpshackelford/oh-utils#readme"
+Issues = "https://github.com/jpshackelford/oh-utils/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ohc"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
